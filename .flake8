@@ -1,0 +1,17 @@
+[flake8]
+# Black-compatible: 88 columns, Black's slice spacing (E203), and Black's
+# one-line stub bodies (E701/E704). W503 is off by default in flake8 7.
+max-line-length = 88
+extend-ignore = E203, E701, E704
+exclude =
+    .git,
+    __pycache__,
+    .nox,
+    .venv,
+    venv,
+    build,
+    dist,
+    *.egg-info
+per-file-ignores =
+    # Re-export modules list names only.
+    trading_core/__init__.py: F401
