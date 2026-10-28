@@ -1,0 +1,386 @@
+{
+ "CYYZ": {
+  "city": "Toronto",
+  "name": "Toronto/Pearson Intl",
+  "lat": 43.679,
+  "lon": -79.629,
+  "elev": 171,
+  "country": "CA"
+ },
+ "EDDM": {
+  "city": "Munich",
+  "name": "Munich Intl",
+  "lat": 48.348,
+  "lon": 11.813,
+  "elev": 445,
+  "country": "DE"
+ },
+ "EFHK": {
+  "city": "Helsinki",
+  "name": "Helsinki/Vantaa Arpt",
+  "lat": 60.327,
+  "lon": 24.957,
+  "elev": 56,
+  "country": "FI"
+ },
+ "EGLC": {
+  "city": "London",
+  "name": "London City Arpt",
+  "lat": 51.505,
+  "lon": 0.055,
+  "elev": 10,
+  "country": "GB"
+ },
+ "EHAM": {
+  "city": "Amsterdam",
+  "name": "Amsterdam/Schiphol Arpt",
+  "lat": 52.315,
+  "lon": 4.79,
+  "elev": -2,
+  "country": "NL"
+ },
+ "EPWA": {
+  "city": "Warsaw",
+  "name": "Warsaw/Chopin Arpt",
+  "lat": 52.163,
+  "lon": 20.961,
+  "elev": 107,
+  "country": "PL"
+ },
+ "FACT": {
+  "city": "Cape Town",
+  "name": "Capetown Intl",
+  "lat": -33.965,
+  "lon": 18.602,
+  "elev": 48,
+  "country": "ZA"
+ },
+ "KATL": {
+  "city": "Atlanta",
+  "name": "Atlanta/Hartsfield-Jackson Intl",
+  "lat": 33.62972,
+  "lon": -84.44223,
+  "elev": 309,
+  "country": "US"
+ },
+ "KAUS": {
+  "city": "Austin",
+  "name": "Austin/Bergstrom Intl",
+  "lat": 30.1831,
+  "lon": -97.68063,
+  "elev": 148,
+  "country": "US"
+ },
+ "KDAL": {
+  "city": "Dallas",
+  "name": "Dallas/Love Fld",
+  "lat": 32.83836,
+  "lon": -96.83584,
+  "elev": 148,
+  "country": "US"
+ },
+ "KDEN": {
+  "city": "Denver",
+  "name": "Denver Intl",
+  "lat": 39.84657,
+  "lon": -104.65623,
+  "elev": 1656,
+  "country": "US"
+ },
+ "KHOU": {
+  "city": "Houston",
+  "name": "Houston/Hobby Arpt",
+  "lat": 29.64582,
+  "lon": -95.28214,
+  "elev": 13,
+  "country": "US"
+ },
+ "KLAX": {
+  "city": "Los Angeles",
+  "name": "Los Angeles Intl",
+  "lat": 33.93817,
+  "lon": -118.3866,
+  "elev": 30,
+  "country": "US"
+ },
+ "KLGA": {
+  "city": "NYC",
+  "name": "New York/La Guardia Arpt",
+  "lat": 40.77945,
+  "lon": -73.88027,
+  "elev": 9,
+  "country": "US"
+ },
+ "KMIA": {
+  "city": "Miami",
+  "name": "Miami Intl",
+  "lat": 25.78806,
+  "lon": -80.31692,
+  "elev": 1,
+  "country": "US"
+ },
+ "KORD": {
+  "city": "Chicago",
+  "name": "Chicago/O'Hare Intl",
+  "lat": 41.96017,
+  "lon": -87.93161,
+  "elev": 202,
+  "country": "US"
+ },
+ "KSEA": {
+  "city": "Seattle",
+  "name": "Seattle-Tacoma Intl",
+  "lat": 47.44467,
+  "lon": -122.31442,
+  "elev": 115,
+  "country": "US"
+ },
+ "KSFO": {
+  "city": "San Francisco",
+  "name": "San Francisco Intl",
+  "lat": 37.61961,
+  "lon": -122.36561,
+  "elev": 2,
+  "country": "US"
+ },
+ "LEMD": {
+  "city": "Madrid",
+  "name": "Madrid/Barajas Arpt",
+  "lat": 40.466,
+  "lon": -3.555,
+  "elev": 589,
+  "country": "ES"
+ },
+ "LFPB": {
+  "city": "Paris",
+  "name": "Paris/Le Bourge Arpt",
+  "lat": 48.967,
+  "lon": 2.428,
+  "elev": 50,
+  "country": "FR"
+ },
+ "LIMC": {
+  "city": "Milan",
+  "name": "Milan/Malpensa Arpt",
+  "lat": 45.631,
+  "lon": 8.728,
+  "elev": 221,
+  "country": "IT"
+ },
+ "LLBG": {
+  "city": "Tel Aviv",
+  "name": "Tel Aviv/Ben Gurion Arpt",
+  "lat": 32.011,
+  "lon": 34.887,
+  "elev": 35,
+  "country": "IL"
+ },
+ "LTAC": {
+  "city": "Ankara",
+  "name": "Ankara/Esenbo\u011fa Intl",
+  "lat": 40.128,
+  "lon": 32.995,
+  "elev": 952,
+  "country": "TR"
+ },
+ "LTFM": {
+  "city": "Istanbul",
+  "name": "Istanbul Arpt",
+  "lat": 41.262,
+  "lon": 28.74,
+  "elev": 99,
+  "country": "TR"
+ },
+ "MMMX": {
+  "city": "Mexico City",
+  "name": "Mexico City Intl",
+  "lat": 19.436,
+  "lon": -99.072,
+  "elev": 2224,
+  "country": "MX"
+ },
+ "MPMG": {
+  "city": "Panama City",
+  "name": "Panama/Gelabert Intl",
+  "lat": 8.967,
+  "lon": -79.555,
+  "elev": 6,
+  "country": "PA"
+ },
+ "NZWN": {
+  "city": "Wellington",
+  "name": "Wellington Intl",
+  "lat": -41.331,
+  "lon": 174.806,
+  "elev": 12,
+  "country": "NZ"
+ },
+ "OEJN": {
+  "city": "Jeddah",
+  "name": "Jeddah/King Abdulaziz Intl",
+  "lat": 21.685,
+  "lon": 39.166,
+  "elev": 8,
+  "country": "SA"
+ },
+ "OPKC": {
+  "city": "Karachi",
+  "name": "Karachi/Jinnah Intl",
+  "lat": 24.902,
+  "lon": 67.139,
+  "elev": 20,
+  "country": "PK"
+ },
+ "RCSS": {
+  "city": "Taipei",
+  "name": "Taipei/Songshan Arpt",
+  "lat": 25.069,
+  "lon": 121.552,
+  "elev": 8,
+  "country": "TW"
+ },
+ "RJTT": {
+  "city": "Tokyo",
+  "name": "Tokyo/Haneda Intl",
+  "lat": 35.553,
+  "lon": 139.781,
+  "elev": 5,
+  "country": "JP"
+ },
+ "RKPK": {
+  "city": "Busan",
+  "name": "Busan/Gimhae Intl",
+  "lat": 35.179,
+  "lon": 128.938,
+  "elev": 3,
+  "country": "KR"
+ },
+ "RKSI": {
+  "city": "Seoul (Incheon)",
+  "name": "Seoul/Incheon Intl",
+  "lat": 37.469,
+  "lon": 126.451,
+  "elev": 7,
+  "country": "KR"
+ },
+ "RPLL": {
+  "city": "Manila",
+  "name": "Manila/Aquino Intl",
+  "lat": 14.507,
+  "lon": 121.004,
+  "elev": 15,
+  "country": "PH"
+ },
+ "SAEZ": {
+  "city": "Buenos Aires",
+  "name": "Buenos Aires/Pistarini Arpt",
+  "lat": -34.822,
+  "lon": -58.536,
+  "elev": 16,
+  "country": "AR"
+ },
+ "SBGR": {
+  "city": "Sao Paulo",
+  "name": "Sao Paulo Intl",
+  "lat": -23.432,
+  "lon": -46.469,
+  "elev": 745,
+  "country": "BR"
+ },
+ "UUWW": {
+  "city": "Moscow",
+  "name": "Moscow/Vnukovo Arpt",
+  "lat": 55.592,
+  "lon": 37.261,
+  "elev": 195,
+  "country": "RU"
+ },
+ "VILK": {
+  "city": "Lucknow",
+  "name": "Lucknow/Singh Arpt",
+  "lat": 26.761,
+  "lon": 80.889,
+  "elev": 121,
+  "country": "IN"
+ },
+ "WMKK": {
+  "city": "Kuala Lumpur",
+  "name": "Kuala Lumpur Intl",
+  "lat": 2.747,
+  "lon": 101.714,
+  "elev": 21,
+  "country": "MY"
+ },
+ "WSSS": {
+  "city": "Singapore",
+  "name": "Singapore/Changi Intl",
+  "lat": 1.368,
+  "lon": 103.982,
+  "elev": 17,
+  "country": "SG"
+ },
+ "ZBAA": {
+  "city": "Beijing",
+  "name": "Beijing Intl",
+  "lat": 40.082,
+  "lon": 116.603,
+  "elev": 31,
+  "country": "CN"
+ },
+ "ZGGG": {
+  "city": "Guangzhou",
+  "name": "Guangzhou/Baiyun Intl",
+  "lat": 23.392,
+  "lon": 113.307,
+  "elev": 11,
+  "country": "CN"
+ },
+ "ZGSZ": {
+  "city": "Shenzhen",
+  "name": "Shenzhen/Boan Intl",
+  "lat": 22.639,
+  "lon": 113.803,
+  "elev": 18,
+  "country": "CN"
+ },
+ "ZHHH": {
+  "city": "Wuhan",
+  "name": "Wuhan/Tianhe Intl",
+  "lat": 30.783,
+  "lon": 114.205,
+  "elev": 33,
+  "country": "CN"
+ },
+ "ZSPD": {
+  "city": "Shanghai",
+  "name": "Shanghai/Pudong Intl",
+  "lat": 31.146,
+  "lon": 121.8,
+  "elev": 4,
+  "country": "CN"
+ },
+ "ZSQD": {
+  "city": "Qingdao",
+  "name": "Qingdao/Jiaodong Arpt",
+  "lat": 36.362,
+  "lon": 120.087,
+  "elev": 2,
+  "country": "CN"
+ },
+ "ZUCK": {
+  "city": "Chongqing",
+  "name": "Chongqing/Jiangbei Intl",
+  "lat": 29.718,
+  "lon": 106.639,
+  "elev": 416,
+  "country": "CN"
+ },
+ "ZUUU": {
+  "city": "Chengdu",
+  "name": "Chengdu/Shuangliu Intl",
+  "lat": 30.576,
+  "lon": 103.95,
+  "elev": 494,
+  "country": "CN"
+ }
+}

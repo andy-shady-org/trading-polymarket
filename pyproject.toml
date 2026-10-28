@@ -1,0 +1,120 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trading-polymarket"
+authors = [
+    {name="Andy Wilson", email="andy@shady.org"},
+]
+version = "0.1.0"
+description = "Polymarket trading module for trading-core: free market data, book-walking paper fills, weather and favourite strategies, research and GO/No-Go tooling (proprietary, private use only)"
+readme = "README.md"
+requires-python = ">=3.11"
+# Proprietary, all rights reserved: see LICENSE. Never publish to PyPI or any
+# other package index. "Private :: Do Not Upload" makes PyPI reject uploads.
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+classifiers = [
+    "Private :: Do Not Upload",
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+# trading-core is private: install it first (noxfile.py, docs/dev/TESTING.md),
+# then this package resolves the requirement against the installed copy.
+dependencies = [
+  "trading-core>=0.1.0",
+]
+
+[project.scripts]
+trading-polymarket = "trading_polymarket.cli:main"
+
+[project.entry-points."trading_core.modules"]
+polymarket = "trading_polymarket.module:PolymarketModule"
+
+[project.urls]
+Repository = "https://github.com/andy-shady-org/trading-polymarket"
+
+[tool.setuptools.packages.find]
+include = ["trading_polymarket*"]
+exclude = ["trading_polymarket.tests", "trading_polymarket.tests.*"]
+
+[tool.setuptools.package-data]
+trading_polymarket = ["data/*.json"]
+
+[project.optional-dependencies]
+dev = [
+    "black>=26.1.0",
+    "flake8>=7.1.0",
+    "ruff>=0.15.0",
+    "mypy>=1.18.0",
+    "nox>=2025.5.1",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "hypothesis>=6.140.0",
+    "pip-audit>=2.9.0",
+    "build>=1.3.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311", "py312", "py313", "py314"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "C", "I", "B", "UP"]
+ignore = ["C901", "B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["trading_polymarket"]
+known-third-party = ["trading_core"]
+
+[tool.mypy]
+# Type-check against the oldest supported interpreter.
+python_version = "3.11"
+packages = ["trading_polymarket"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["trading_polymarket/tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "unit: fast, isolated test of one module (applied by directory)",
+    "integration: cross-component flow (applied by directory)",
+    "property: Hypothesis property test (applied by directory)",
+    "regression(bug_id): guards a resolved bug, e.g. regression(\"TP-1\")",
+    "slow: needs real waiting or heavy computation; excluded from `nox -s tests-fast`",
+]
+
+[tool.coverage.run]
+source = ["trading_polymarket"]
+branch = true
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 100
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+    "raise NotImplementedError",
+]

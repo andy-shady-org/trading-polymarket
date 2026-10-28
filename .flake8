@@ -14,4 +14,4 @@ exclude =
     *.egg-info
 per-file-ignores =
     # Re-export modules list names only.
-    trading_core/__init__.py: F401
+    trading_polymarket/__init__.py: F401

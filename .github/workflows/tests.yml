@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main, master]
 
+# trading-core is a private repository. Create a fine-grained personal access
+# token with read-only "Contents" access to andy-shady-org/trading-core and
+# store it as the TRADING_CORE_TOKEN secret of this repository.
+env:
+  TRADING_CORE_REF: main
+
 jobs:
   test:
     name: tests (Python ${{ matrix.python-version }})
@@ -19,6 +25,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: trading-polymarket
+
+      - name: Checkout trading-core (private)
+        uses: actions/checkout@v4
+        with:
+          repository: andy-shady-org/trading-core
+          ref: ${{ env.TRADING_CORE_REF }}
+          token: ${{ secrets.TRADING_CORE_TOKEN }}
+          path: trading-core
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,6 +47,9 @@ jobs:
           python -m pip install nox
 
       - name: Run tests with coverage
+        working-directory: trading-polymarket
+        env:
+          TRADING_CORE_SOURCE: ${{ github.workspace }}/trading-core
         run: nox -s "tests-${{ matrix.python-version }}"
 
       - name: Upload coverage report
@@ -38,7 +57,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
+          files: ./trading-polymarket/coverage.xml
           fail_ci_if_error: false
 
   checks:
@@ -48,6 +67,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: trading-polymarket
+
+      - name: Checkout trading-core (private)
+        uses: actions/checkout@v4
+        with:
+          repository: andy-shady-org/trading-core
+          ref: ${{ env.TRADING_CORE_REF }}
+          token: ${{ secrets.TRADING_CORE_TOKEN }}
+          path: trading-core
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -60,4 +89,7 @@ jobs:
           python -m pip install nox
 
       - name: Run lint, typing, dependency audit and wheel check
+        working-directory: trading-polymarket
+        env:
+          TRADING_CORE_SOURCE: ${{ github.workspace }}/trading-core
         run: nox -s lint mypy audit package

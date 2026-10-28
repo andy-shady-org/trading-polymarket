@@ -1,0 +1,33 @@
+{
+  "_comment": "Template for the stage-2 live canary ONLY after every stage-1 gate is GO (docs/GO-NO-GO.md). Live order placement is NOT implemented yet: with this config the module refuses every order and the balance read (docs/LIVE-TRADING.md). Needs BOTH this mode AND the --live flag. Keep paths separate from paper runs.",
+  "module": "polymarket",
+  "mode": "live",
+  "strategy_name": "polymarket",
+  "order_size": 5,
+  "cycle_seconds": 60,
+  "max_signals_per_cycle": 2,
+  "risk": {
+    "max_total_exposure": 50,
+    "max_position_size": 5,
+    "max_active_positions": 10,
+    "max_concentration_pct": 0.10,
+    "max_loss_per_trade": 0,
+    "reserve_balance": 20
+  },
+  "breaker": {
+    "max_daily_drawdown_pct": 0.05,
+    "max_cumulative_drawdown_pct": 0.15
+  },
+  "exits": {},
+  "close_positions_on_shutdown": false,
+  "module_settings": {
+    "bankroll": 100,
+    "weather": {"enabled": true, "max_notional": 5, "bias_path": "data/weather_bias.json"},
+    "favourite": {"enabled": false},
+    "momentum": {"enabled": false}
+  },
+  "status_path": "data/live/status.json",
+  "audit_log_path": "data/live/audit.jsonl",
+  "event_log_path": "data/live/events.jsonl",
+  "log_file": "data/live/trading-core.log"
+}

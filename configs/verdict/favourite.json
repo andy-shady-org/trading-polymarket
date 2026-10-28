@@ -1,0 +1,15 @@
+{
+  "_comment": "Favourite lane. Small per-trade edges need a larger sample; fixed before the run. See docs/GO-NO-GO.md.",
+  "min_positions": 200,
+  "min_net": 0.0,
+  "exit_haircut_bps": 0,
+  "cost_floor": 0.0,
+  "cost_floor_component": null,
+  "split_at": "mid",
+  "min_positive_day_share": 0.55,
+  "drop_top": 5,
+  "bootstrap_samples": 10000,
+  "confidence": 0.9,
+  "seed": 7,
+  "strategy": "favourite"
+}

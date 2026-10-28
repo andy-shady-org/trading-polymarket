@@ -1,0 +1,15 @@
+{
+  "_comment": "Weather lane. Fixed before the pilot starts; never edited after (record its sha256 in docs/GO-NO-GO.md). Positions resolve rather than sell, so the exit haircut is 0; 150 positions is about three weeks at the default caps. See docs/GO-NO-GO.md.",
+  "min_positions": 150,
+  "min_net": 0.0,
+  "exit_haircut_bps": 0,
+  "cost_floor": 0.0,
+  "cost_floor_component": null,
+  "split_at": "mid",
+  "min_positive_day_share": 0.55,
+  "drop_top": 5,
+  "bootstrap_samples": 10000,
+  "confidence": 0.9,
+  "seed": 7,
+  "strategy": "weather"
+}

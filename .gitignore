@@ -162,3 +162,5 @@ configs/*.json
 !configs/*.example.json
 .envrc
 .junie/*
+# Research caches and recordings (large, regenerable)
+coverage.xml

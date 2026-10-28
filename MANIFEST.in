@@ -1,0 +1,3 @@
+# The test suite lives inside the package but is not distributed.
+prune trading_polymarket/tests
+global-exclude *.py[cod] __pycache__
