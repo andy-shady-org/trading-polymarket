@@ -61,4 +61,5 @@ All notable changes. Format: Keep a Changelog; versions: SemVer (see
   the late-day blend beats the market's Brier score in both halves of 12–27
   October but the held-out PnL is not positive. Paper pilot allowed for the
   late-day window only (`lead_days: 0`, `min_local_hour: 15`).
-- Capital stage: none (paper not started).
+- Capital stage: weather lane in Stage 1 (paper) from 2026-10-28; pre-registered
+  hashes in `docs/dev/releases/0.1.0-weather-stage1.md`. Other lanes: none.

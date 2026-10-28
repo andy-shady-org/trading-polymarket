@@ -30,7 +30,7 @@ Update this table whenever a gate run finishes; link the release record.
 | Item | Status | Evidence |
 |---|---|---|
 | Release gate, `0.1.0` | PASS locally (2026-10-28): Ruff, Black, flake8, mypy clean; 320 tests, 100% statement + branch coverage on Python 3.11, 3.12, 3.13 and 3.14. CI matrix not yet run (needs the `TRADING_CORE_TOKEN` secret, [`dev/TESTING.md`](dev/TESTING.md)) | `CHANGELOG.md` 0.1.0 |
-| Weather lane | **Stage 0: INCONCLUSIVE – PROCEED** (2026-10-28, data-limited exception §3.3): day-ahead NO-GO (2,458 trades Aug–Oct, −$4,604); late-day blend beats the market's Brier score in both halves but PnL out of sample is not positive. **Stage 1 (paper) may start, late-day window only** (`lead_days: 0`, `min_local_hour: 15`) | [`RESEARCH.md` §6](RESEARCH.md#6-results-log) |
+| Weather lane | **Stage 0: INCONCLUSIVE – PROCEED** (2026-10-28, data-limited exception §3.3): day-ahead NO-GO (2,458 trades Aug–Oct, −$4,604); late-day blend beats the market's Brier score in both halves but PnL out of sample is not positive. **Stage 1 (paper) started 2026-10-28**, late-day window only (`lead_days: 0`, `min_local_hour: 15`) | [`RESEARCH.md` §6](RESEARCH.md#6-results-log); [`dev/releases/0.1.0-weather-stage1.md`](dev/releases/0.1.0-weather-stage1.md) |
 | Favourite lane | **Stage 0 – Backtest: NO-GO** (2026-10-28): every variant loses out of sample; lane off | [`RESEARCH.md` §6](RESEARCH.md#6-results-log) |
 | Momentum lane | Research only, off by default; no stage | – |
 | Arbitrage scanner | Record only; no execution exists | – |
