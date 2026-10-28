@@ -116,11 +116,17 @@ def test_regression_known_untagged_list_only_shrinks() -> None:
     assert stale == [], "remove these from KNOWN_UNTAGGED"
 
 
-def _oldest_supported_python() -> tuple[int, int]:
-    pyproject = (PACKAGE_ROOT.parent / "pyproject.toml").read_text()
-    match = re.search(r'requires-python = ">=(\d+)\.(\d+)"', pyproject)
-    assert match, "requires-python must be a >=X.Y floor"
+def _python_floor(pyproject: str) -> tuple[int, int]:
+    """The ``>=X.Y`` floor of ``requires-python``, whatever else it lists."""
+    match = re.search(
+        r'^requires-python\s*=\s*"[^"]*>=\s*(\d+)\.(\d+)', pyproject, re.M
+    )
+    assert match, "requires-python must include a >=X.Y floor"
     return int(match.group(1)), int(match.group(2))
+
+
+def _oldest_supported_python() -> tuple[int, int]:
+    return _python_floor((PACKAGE_ROOT.parent / "pyproject.toml").read_text())
 
 
 def test_source_parses_on_the_oldest_supported_python() -> None:
@@ -132,6 +138,18 @@ def test_source_parses_on_the_oldest_supported_python() -> None:
         except SyntaxError as exc:
             failures.append(f"{path.relative_to(PACKAGE_ROOT)}:{exc.lineno}: {exc.msg}")
     assert failures == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        'requires-python = ">=3.11"',
+        'requires-python = ">=3.11, <3.15"',
+        'requires-python = "<3.15,>= 3.11"',
+    ],
+)
+def test_python_floor_reads_any_specifier_list(line: str) -> None:
+    assert _python_floor(f"[project]\n{line}\n") == (3, 11)
 
 
 def test_regression_tags_name_real_bugs() -> None:
