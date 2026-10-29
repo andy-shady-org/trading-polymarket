@@ -4,14 +4,25 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 import pytest
-from trading_core.strategy.pipeline import Analyst, Candidate, Scout, Signal
+from trading_core.strategy.pipeline import (
+    Analyst,
+    Candidate,
+    Filter,
+    Scout,
+    Screening,
+    Signal,
+)
 
 from trading_polymarket.catalogue import BookCache
 from trading_polymarket.clients.clob import ClobClient
 from trading_polymarket.config import PolymarketSettings
 from trading_polymarket.strategies.common import KEY_LANE
 from trading_polymarket.strategies.filters import BookFilter, MarketStateFilter
-from trading_polymarket.strategies.router import LaneRouter, build_pipeline
+from trading_polymarket.strategies.router import (
+    LanePipeline,
+    LaneRouter,
+    build_pipeline,
+)
 from trading_polymarket.tests.support.fakes import FakeTransport, fake_http
 
 
@@ -37,6 +48,33 @@ async def test_router_dispatches_by_lane() -> None:
         await router.evaluate(Candidate("t", data={KEY_LANE: "other"}), {})
     with pytest.raises(ValueError):
         LaneRouter({})
+
+
+class Offer(Scout):
+    name = "offer"
+
+    async def discover(self) -> Sequence[Candidate]:
+        return [Candidate(t, data={KEY_LANE: "weather"}) for t in ("yes", "no", "x")]
+
+
+class Pass(Filter):
+    async def screen(self, candidate: Candidate) -> Screening:
+        return Screening.accept()
+
+
+@pytest.mark.regression("TP-8")
+async def test_pipeline_never_offers_the_other_side_of_a_held_token() -> None:
+    pairs = {"yes": "no", "no": "yes"}
+    pipeline = LanePipeline(
+        scouts=[Offer()],
+        analyst=Echo(),
+        filters=[Pass()],
+        complement_of=pairs.get,
+    )
+    result = await pipeline.run(exclude=["yes"])
+    assert [s.instrument_id for s in result.signals] == ["x"]
+    plain = LanePipeline(scouts=[Offer()], analyst=Echo())
+    assert len((await plain.run(exclude=["yes"])).signals) == 2
 
 
 def test_build_pipeline() -> None:

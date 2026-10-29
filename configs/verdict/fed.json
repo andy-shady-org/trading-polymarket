@@ -1,0 +1,15 @@
+{
+  "_comment": "Fed lane (Polymarket vs Kalshi). Convergence exits sell into the bid, so every exit is haircut 50 bps on top of the modelled half-spread. Few meetings a year: 60 positions is a long pilot (four meetings are usually listed at once). Fixed before the pilot starts; never edited after (record its sha256 in the release record). See docs/GO-NO-GO.md.",
+  "min_positions": 60,
+  "min_net": 0.0,
+  "exit_haircut_bps": 50,
+  "cost_floor": 0.0,
+  "cost_floor_component": null,
+  "split_at": "mid",
+  "min_positive_day_share": 0.55,
+  "drop_top": 3,
+  "bootstrap_samples": 10000,
+  "confidence": 0.9,
+  "seed": 7,
+  "strategy": "fed"
+}

@@ -1,8 +1,8 @@
 # Command line
 
 Trading runs through trading-core; research and inspection through
-`trading-polymarket`. Every command is read-only towards Polymarket and uses
-free, keyless APIs.
+`trading-polymarket`. Every command is read-only towards Polymarket and Kalshi
+and uses free, keyless APIs.
 
 ## Trading (trading-core)
 
@@ -35,9 +35,15 @@ Exit codes: 0 ok, 1 nothing to do (no lane, no data), 2 bad input.
 | `bias` | Per-station forecast bias (METAR max − day-ahead forecast) → `data/weather_bias.json` | `--days N` (≤ 15), `--station ICAO` (repeatable), `--out` |
 | `history` | Resolved binary markets + hourly prices → `data/history/markets.jsonl` (resumable) | `--start`, `--end` (YYYY-MM-DD, UTC, end exclusive), `--min-volume`, `--tag`, `--max-markets`, `--out` |
 | `weather-history` | Resolved temperature events + every bucket's prices → `data/history/weather.jsonl` (resumable) | `--start`, `--end`, `--city`, `--max-pages`, `--out` |
+| `fed-history` | Settled Fed meetings listed on both venues: every matched bucket's outcome on each venue, Polymarket's hourly Yes price and Kalshi's hourly bid/ask/volume → `data/history/fed.jsonl` (resumable) | `--days N` (history before each close, default 14), `--out` |
 | `calibrate` | Builds the favourite lane's calibration table and prints the reliability table | `--input`, `--split DATE` or `--all`, `--prior`, `--out` |
 | `backtest favourite` | Calibrates before `--split`, replays after it; audit-format output | `--input`, `--split`, `--half-spread`, `--out` |
 | `backtest weather` | Replays the weather lane at `--entry-hour` (local) with day-ahead forecasts; `--intraday` adds the METAR maximum observed so far (AWC's ~15 days plus the `metars` archive); prints Brier scores of model, market and blend | `--input`, `--entry-hour`, `--intraday`, `--metar-archive DIR`, `--half-spread`, `--out` |
+
+| `backtest fed` | Replays the `fed` lane hour by hour on that history (Yes and No sides, convergence exit or resolution); prints Brier scores of Polymarket, Kalshi and their average 168/72/24/6/1 h before each close | `--input`, `--half-spread`, `--out` |
+| `pairs suggest` | Scores Polymarket's busiest open markets against Kalshi's open markets by title similarity and end date → `data/pairs_suggested.jsonl` (nothing is traded from it) | `--pages N`, `--min-similarity` (0.5), `--max-days-apart` (3), `--limit`, `--out` |
+| `pairs approve TOKEN TICKER` | Adds a reviewed pair to the crossvenue pairs file (`crossvenue.pairs_path`) | `--side yes\|no`, `--label`, `--pairs FILE` |
+| `pairs remove TOKEN` / `pairs list` | Removes a token's pairs / lists the file | `--pairs FILE` |
 
 Backtests print a one-line JSON summary and the exact `trading-core-audit
 verdict` command to judge them. Examples are in [`RESEARCH.md`](RESEARCH.md).

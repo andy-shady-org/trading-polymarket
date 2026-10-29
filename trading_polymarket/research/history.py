@@ -145,51 +145,70 @@ async def collect(
     # Spread the sample over the whole range, not the first windows only.
     per_window = max(1, max_markets // max(1, len(windows)))
     for low, high in windows:
-        taken = 0
         markets = await gamma.closed_markets(
             end_date_min=low, end_date_max=high, max_pages=max_pages, tag_slug=tag_slug
         )
-        for market in markets:
-            if (
-                market.resolved
-                and len(market.token_ids) == 2
-                and market.end_time is not None
-                and market.volume >= min_volume
-                and market.market_id not in seen
-                and taken < per_window
-            ):
-                seen.add(market.market_id)
-                picked.append(market)
-                taken += 1
+        picked.extend(_pick(markets, seen, per_window, min_volume))
         if progress is not None:
             progress(f"{low[:10]}..{high[:10]}: {len(picked)} markets so far")
     gate = asyncio.Semaphore(concurrency)
-
-    async def one(market: Market) -> dict | None:
-        async with gate:
-            try:
-                end_time = float(market.end_time or 0.0)
-                points = await clob.prices_history(
-                    market.token_ids[0],
-                    start=end_time - lookback_hours * 3600.0,
-                    end=end_time + 3600.0,
-                )
-            except Exception as exc:  # skip the market, keep the collection going
-                if progress is not None:
-                    progress(f"{market.market_id}: {exc}")
-                return None
-        if not points:
-            return None
-        return market_row(market, ((p.t, p.p) for p in points))
-
     written = 0
     batch = 50
     for index in range(0, len(picked), batch):
-        rows = await asyncio.gather(*(one(m) for m in picked[index : index + batch]))
+        rows = await asyncio.gather(
+            *(
+                _market_history(clob, gate, m, lookback_hours, progress)
+                for m in picked[index : index + batch]
+            )
+        )
         written += append_jsonl(path, (r for r in rows if r is not None))
         if progress is not None:
             progress(f"price histories: {written} written")
     return written
+
+
+def _pick(
+    markets: Iterable[Market], seen: set[str], limit: int, min_volume: float
+) -> list[Market]:
+    """Up to ``limit`` resolved binary markets not yet seen (``seen`` grows)."""
+    picked: list[Market] = []
+    for market in markets:
+        if len(picked) >= limit:
+            break
+        if (
+            market.resolved
+            and len(market.token_ids) == 2
+            and market.end_time is not None
+            and market.volume >= min_volume
+            and market.market_id not in seen
+        ):
+            seen.add(market.market_id)
+            picked.append(market)
+    return picked
+
+
+async def _market_history(
+    clob: ClobClient,
+    gate: asyncio.Semaphore,
+    market: Market,
+    lookback_hours: float,
+    progress: Callable[[str], None] | None,
+) -> dict | None:
+    async with gate:
+        try:
+            end_time = float(market.end_time or 0.0)
+            points = await clob.prices_history(
+                market.token_ids[0],
+                start=end_time - lookback_hours * 3600.0,
+                end=end_time + 3600.0,
+            )
+        except Exception as exc:  # skip the market, keep the collection going
+            if progress is not None:
+                progress(f"{market.market_id}: {exc}")
+            return None
+    if not points:
+        return None
+    return market_row(market, ((p.t, p.p) for p in points))
 
 
 def parse_day(text: str) -> date:

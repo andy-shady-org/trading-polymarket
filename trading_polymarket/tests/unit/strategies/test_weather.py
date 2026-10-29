@@ -19,6 +19,7 @@ from trading_polymarket.strategies.weather import (
     WeatherEvent,
     WeatherModel,
     WeatherScout,
+    applied_bias,
     blend,
     lead_sigma,
     load_bias,
@@ -419,6 +420,40 @@ async def test_scout_skips_far_events_and_survives_station_errors() -> None:
     assert await scout.discover() == []
 
 
+@pytest.mark.regression("TP-6")
+async def test_analyst_rechecks_band_and_guard_on_the_live_book() -> None:
+    scout, _ = scout_for([weather_event()], max_edge=0.6)
+    candidate = (await scout.discover())[0]
+
+    def analyst(asks: list[tuple[float, float]], **lane: Any) -> WeatherAnalyst:
+        books = BookCache(
+            ClobClient(fake_http(FakeTransport({"/book": book_payload(asks=asks)})))
+        )
+        settings = WeatherLane(**{"models": LANE.models, "max_edge": 0.6, **lane})
+        return WeatherAnalyst(books, settings, bankroll=1000)
+
+    # Gamma said ~0.10; the live book's 0.005 is below the lane's band.
+    assert await analyst([(0.005, 500)]).evaluate(candidate, {}) is None
+    # On the live book the gap to the model exceeds max_edge: model error.
+    gap_lane = analyst([(0.05, 500)], max_edge=0.1)
+    assert await gap_lane.evaluate(candidate, {}) is None
+    # One-sided book: no mid, the model alone (still guarded) is the fair value.
+    one_sided = FakeTransport({"/book": book_payload(bids=[], asks=[(0.10, 500)])})
+    settings = WeatherLane(models=LANE.models, max_edge=0.6)
+    lone = WeatherAnalyst(
+        BookCache(ClobClient(fake_http(one_sided))), settings, bankroll=1000
+    )
+    signal = await lone.evaluate(candidate, {})
+    assert signal is not None and signal.metrics["book_mid"] is None
+
+
+@pytest.mark.regression("TP-7")
+def test_daily_max_bias_is_not_added_after_the_peak() -> None:
+    assert applied_bias(1.5, first_hour=12, peak_hour=15) == 1.5
+    assert applied_bias(1.5, first_hour=16, peak_hour=15) == 1.5
+    assert applied_bias(1.5, first_hour=17, peak_hour=15) == 0.0
+
+
 async def test_analyst_prices_on_the_live_book() -> None:
     scout, _ = scout_for([weather_event()])
     candidate = (await scout.discover())[0]
@@ -429,6 +464,7 @@ async def test_analyst_prices_on_the_live_book() -> None:
     assert signal is not None and signal.strategy == "weather"
     assert signal.limit_price == 0.10 and signal.edge is not None and signal.edge > 0
     assert KEY_MARKET not in signal.metrics and signal.metrics[KEY_FAIR] > 0
+    assert signal.metrics["book_mid"] is not None
     dear = FakeTransport({"/book": book_payload(asks=[(0.97, 500)])})
     analyst = WeatherAnalyst(
         BookCache(ClobClient(fake_http(dear))), scout.lane, bankroll=1000

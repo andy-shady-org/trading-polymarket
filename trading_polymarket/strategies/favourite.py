@@ -61,6 +61,36 @@ class FavouriteScout(Scout):
     def _excluded(self, market: Market) -> bool:
         return bool(set(market.tags) & set(self.lane.exclude_tags))
 
+    def _score(
+        self, market: Market, token: str, hours: float
+    ) -> tuple[float, Candidate] | None:
+        """``(net edge, candidate)`` for a calibrated favourite, else ``None``."""
+        ask = token_ask(market, token)
+        if ask is None or not self.lane.min_price <= ask <= self.lane.max_price:
+            return None
+        samples = self.calibration.samples(ask, hours)
+        if samples < self.lane.min_samples:
+            return None
+        fair = self.calibration.win_rate(ask, hours)
+        gap = net_edge(fair, ask, market.fee)
+        if gap < self.lane.min_edge:
+            return None
+        return (
+            gap,
+            Candidate(
+                instrument_id=token,
+                name=market.label(token),
+                source=self.name,
+                data={
+                    KEY_LANE: LANE_FAVOURITE,
+                    KEY_MARKET: market,
+                    KEY_FAIR: fair,
+                    "calibration_n": samples,
+                    "gamma_ask": ask,
+                },
+            ),
+        )
+
     async def discover(self) -> Sequence[Candidate]:
         now = self.clock()
         markets = await self.gamma.markets(
@@ -80,33 +110,9 @@ class FavouriteScout(Scout):
             if hours is None:
                 continue
             for token in market.token_ids:
-                ask = token_ask(market, token)
-                if ask is None or not self.lane.min_price <= ask <= self.lane.max_price:
-                    continue
-                samples = self.calibration.samples(ask, hours)
-                if samples < self.lane.min_samples:
-                    continue
-                fair = self.calibration.win_rate(ask, hours)
-                gap = net_edge(fair, ask, market.fee)
-                if gap < self.lane.min_edge:
-                    continue
-                scored.append(
-                    (
-                        gap,
-                        Candidate(
-                            instrument_id=token,
-                            name=market.label(token),
-                            source=self.name,
-                            data={
-                                KEY_LANE: LANE_FAVOURITE,
-                                KEY_MARKET: market,
-                                KEY_FAIR: fair,
-                                "calibration_n": samples,
-                                "gamma_ask": ask,
-                            },
-                        ),
-                    )
-                )
+                found = self._score(market, token, hours)
+                if found is not None:
+                    scored.append(found)
         scored.sort(key=lambda item: item[0], reverse=True)
         return [c for _, c in scored[: self.lane.max_candidates]]
 

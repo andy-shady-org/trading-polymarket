@@ -89,6 +89,35 @@ trading-core-audit verdict --path data/backtest/weather.jsonl --rules configs/ve
   all buckets it priced. A model whose Brier score is not below the market's
   is not an edge, whatever the PnL says.
 
+## 4a. Fed decisions and cross-venue pairs (Kalshi)
+
+```bash
+trading-polymarket fed-history                       # data/history/fed.jsonl (resumable)
+trading-polymarket backtest fed [--half-spread 0.01]
+trading-core-audit verdict --path data/backtest/fed.jsonl --rules configs/verdict/fed.json
+trading-polymarket pairs suggest                     # data/pairs_suggested.jsonl, for review
+```
+
+- **fed-history**: every settled "Fed Decision in <Month>?" event on
+  Polymarket matched to Kalshi's `KXFEDDECISION` event for the meeting
+  (archived Kalshi events are read from the historical endpoints). Per
+  bucket: both venues' outcomes, Polymarket's hourly Yes price and Kalshi's
+  hourly candles for the `--days` before Kalshi's close. About 10 requests
+  per bucket.
+- **backtest fed**: for each bucket and side, hour by hour, with only the
+  last *closed* Kalshi candle, the reference volume of the 24 h before, and
+  Polymarket's last price ± `--half-spread`: buy when the live lane would,
+  sell at convergence (or hold, with `exit_on_convergence: false`). One round
+  trip per token and meeting. Meetings the venues settled differently are
+  skipped and counted (`disagreements`).
+- The summary's **Brier scores** compare Polymarket (`market`), Kalshi
+  (`model`) and their average (`blend`) at fixed hours before the close.
+  If Kalshi is not the better forecaster, the lane's edge can only be the
+  venues' temporary disagreement, which is what convergence exits harvest.
+- **pairs suggest** has no backtest: arbitrary pairs have no history until
+  someone pairs them. The `crossvenue` lane's evidence is forward only
+  (`record --lane crossvenue`, then paper).
+
 ## 5. Dry-run recording and arbitrage logging (during the pilot)
 
 ```bash
@@ -105,6 +134,66 @@ structural gaps to `data/arb.jsonl`.
 
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
+
+### 2026-10-29 — Fed lane Stage 0; weather pilot day 1 (0.2.0)
+
+**Fed lane.** `fed-history --days 14` on 29 October 2026: 17 settled
+meetings that both venues listed (Dec 2024 – Oct 2026), 58 matched
+buckets. The older Polymarket bucket `25+ bps increase` has no one-to-one
+Kalshi market and is not paired. One meeting disagrees: Polymarket's thin
+duplicate "Fed Decision in September?" (2026) resolved `No change` while
+the Fed hiked and Kalshi's `H25` paid; it is skipped (16 meetings used).
+
+Brier scores over the buckets with both prices (lower is better):
+
+| Hours before close | Buckets | Polymarket | Kalshi | Average | Mean abs gap |
+|---|---|---|---|---|---|
+| 168 | 34 | 0.01844 | 0.01846 | 0.01842 | 0.0096 |
+| 72 | 28 | 0.00646 | 0.00680 | 0.00661 | 0.0061 |
+| 24 | 22 | 0.00580 | 0.00646 | 0.00612 | 0.0062 |
+| 6 | 22 | 0.00806 | 0.00769 | 0.00785 | 0.0078 |
+| 1 | 21 | 0.00854 | 0.01035 | 0.00940 | 0.0091 |
+
+Kalshi is not the better forecaster; the venues sit about a cent apart.
+
+Replay, default `fed` settings (`min_edge` 0.02, reference `mid`,
+convergence exit), rules `configs/verdict/fed.json` (sha256
+`4964977089bc5b3d…`, full hash in the release record):
+
+| Variant | Trades | Net | Verdict | Failed checks |
+|---|---|---|---|---|
+| default, half-spread 0.01 | 23 | +$25.08 (adjusted +$23.15) | NO-GO | `min_positions` (23 < 60) only; halves +$5.02 / +$18.13, 67% positive days, +$7.22 without the best 3, bootstrap 90% lower bound +$0.21 per position |
+| half-spread 0.02 (Stage 0 +1 c check) | 16 | +$17.89 | – | – |
+| half-spread 0.005 / 0.015 | 27 / 19 | +$20.44 / +$15.95 | – | – |
+| `reference: bid` | 17 | +$21.45 | – | – |
+| `min_edge` 0.03 | 16 | +$24.99 | – | – |
+| hold to resolution | 23 | −$2.51 | – | – |
+
+Reading: the PnL comes from selling into convergence; held to resolution
+the same entries lose, consistent with the Brier table. The sample is all
+the history both venues have, so `min_positions` cannot be met by any
+backtest. Stage 0 closes **INCONCLUSIVE – PROCEED (sample-limited)**
+([`GO-NO-GO.md` §3.3](GO-NO-GO.md#33-stage-0--backtest-exit-criteria)):
+every other check passes, and so does the +1 c spread check.
+
+**Crossvenue lane.** No backtest is possible (see §4a). The first
+`pairs suggest` (8,866 Polymarket and 17,579 Kalshi open markets) returned
+53 candidates, mostly 2028 nomination markets (long-dated) and two traps a
+title match cannot see (nomination vs Iowa caucus; "by Dec 31 2026" vs
+"before 2028"). No pair is approved; the lane stays off.
+
+**Weather pilot, day 1 (0.1.0).** 31 paper buys ($312), 2 resolved sells
+(−$15.00, −$8.67). The circuit breaker tripped at 09:01 on a "profit run
+retracement" from a **phantom** $3,725 equity peak: one-sided books were
+valued at ~1 and the status page showed 0.999 marks on both Yes and No of a
+market (TP-5). The day also exposed TP-6 (the analyst trusted the scout's
+Gamma ask), TP-7 (the day's bias added to hours after the peak) and TP-8
+(the pipeline could buy the other side of a held token). All four touch the
+money path, so the pilot's day 1 is **void** and the weather lane restarts
+Stage 1 under 0.2.0 ([`GO-NO-GO.md` §3.1](GO-NO-GO.md#31-stages-per-lane)).
+With TP-7 fixed, the intraday sweep's test half at 17:00 local turned from
+−$29 to +$159; the blend still beats the market's Brier score at 15–18 h
+in both halves.
 
 ### 2026-10-28 — first collection (0.1.0)
 

@@ -29,10 +29,13 @@ Update this table whenever a gate run finishes; link the release record.
 
 | Item | Status | Evidence |
 |---|---|---|
+| Release gate, `0.2.0` | PASS locally (2026-10-29): Ruff, Black, flake8, mypy clean; 100% statement + branch coverage on Python 3.11, 3.12, 3.13 and 3.14 against trading-core 0.2.0. CI on the tag pending | [`dev/releases/0.2.0.md`](dev/releases/0.2.0.md) |
 | Release gate, `0.1.0` | PASS locally (2026-10-28): Ruff, Black, flake8, mypy clean; 320 tests, 100% statement + branch coverage on Python 3.11, 3.12, 3.13 and 3.14. CI matrix not yet run (needs the `TRADING_CORE_TOKEN` secret, [`dev/TESTING.md`](dev/TESTING.md)) | `CHANGELOG.md` 0.1.0 |
-| Weather lane | **Stage 0: INCONCLUSIVE – PROCEED** (2026-10-28, data-limited exception §3.3): day-ahead NO-GO (2,458 trades Aug–Oct, −$4,604); late-day blend beats the market's Brier score in both halves but PnL out of sample is not positive. **Stage 1 (paper) started 2026-10-28**, late-day window only (`lead_days: 0`, `min_local_hour: 15`) | [`RESEARCH.md` §6](RESEARCH.md#6-results-log); [`dev/releases/0.1.0-weather-stage1.md`](dev/releases/0.1.0-weather-stage1.md) |
+| Weather lane | **Stage 0: INCONCLUSIVE – PROCEED** (2026-10-28, data-limited exception §3.3): day-ahead NO-GO (2,458 trades Aug–Oct, −$4,604); late-day blend beats the market's Brier score in both halves but PnL out of sample is not positive. Stage 1 started 2026-10-28 under 0.1.0; **day 1 void** (TP-5..TP-8 changed the money path, §3.1): **Stage 1 restarts under 0.2.0**, late-day window only (`lead_days: 0`, `min_local_hour: 15`) | [`RESEARCH.md` §6](RESEARCH.md#6-results-log); [`dev/releases/0.1.0-weather-stage1.md`](dev/releases/0.1.0-weather-stage1.md) |
 | Favourite lane | **Stage 0 – Backtest: NO-GO** (2026-10-28): every variant loses out of sample; lane off | [`RESEARCH.md` §6](RESEARCH.md#6-results-log) |
 | Momentum lane | Research only, off by default; no stage | – |
+| Fed lane | **Stage 0: INCONCLUSIVE – PROCEED (sample-limited)** (2026-10-29, §3.3): every verdict check passes except `min_positions` (23 < 60 — all the history both venues have); +$25.08 on 23 trades, +$17.89 at +1 c spread; Kalshi's Brier score is **not** below Polymarket's, so the edge is convergence, not forecasting. Stage 1 (paper, own instance `paper-fed`) starts with 0.2.0 | [`RESEARCH.md` §6](RESEARCH.md#6-results-log); [`dev/releases/0.2.0.md`](dev/releases/0.2.0.md) |
+| Crossvenue lane | **Stage 0: not started** — no history exists for arbitrary pairs; needs reviewed pairs (`pairs approve`), then a recorded dry run (§3.3) | [`STRATEGIES.md`](STRATEGIES.md#fed-and-crossvenue-polymarket-against-kalshi) |
 | Arbitrage scanner | Record only; no execution exists | – |
 | Live execution | **Not implemented.** Every live order and balance read is refused | [`LIVE-TRADING.md`](LIVE-TRADING.md) |
 
@@ -131,6 +134,21 @@ its verdict must be GO **and** the intraday backtest re-run on the archive
 collected during the pilot (`trading-polymarket metars`) must meet the
 calibration criterion again. Record the exception in the release record.
 
+**Sample-limited exception** (added 0.2.0 for the `fed` lane). When the
+backtest already uses **all** the history that exists and still cannot
+reach `min_positions` (the fed lane: 16 meetings since both venues listed
+them, 23 trades), Stage 0 may close as **INCONCLUSIVE – PROCEED** only if
+*every other* verdict check passes **and** the +1 c spread check passes.
+Stage 1 then carries the whole burden of proof: its verdict, with the same
+pre-registered rules, must be GO on its own positions (backtest positions
+never count towards it). Record the exception in the release record.
+
+**Pairs without history** (`crossvenue`). A reviewed pair has no history
+until someone pairs it. Stage 0 for such a lane is a recorded dry run:
+`trading-polymarket record --lane crossvenue` for ≥ 2 weeks on the approved
+pairs, with no `max_edge` rejection left unexplained (a gap that large means
+the pair is not the same question: remove it). Then Stage 1 as usual.
+
 ### 3.4 Stage 1 – Paper pilot exit criteria
 
 Procedure: [`PAPER-TRADING.md`](PAPER-TRADING.md).
@@ -207,6 +225,8 @@ Keep one record per release or stage in `CHANGELOG.md` (or a linked file in
     window <dates>; GO / NO-GO (failed checks: …); net <$>; positions <n>
   - favourite: stage <n>; rules sha256 <hash>; calibration sha256 <hash>;
     train/test split <date>; GO / NO-GO …
+  - fed / crossvenue: stage <n>; rules sha256 <hash>; history sha256 (fed) or
+    pairs file sha256 (crossvenue); GO / NO-GO …
 - Live canary daily log (stage 2+): date | wallet Δ | audit net | gap | resolved | fees
 - Sign-off: <operator>
 ```

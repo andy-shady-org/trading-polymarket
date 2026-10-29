@@ -13,7 +13,9 @@ from trading_core.positions import Position
 
 from trading_polymarket.calibration import CalibrationTable, Observation
 from trading_polymarket.clients.http import JsonHttp
-from trading_polymarket.module import EXIT_BID_TARGET, PolymarketModule
+from trading_polymarket.markets import Market
+from trading_polymarket.module import EXIT_BID_TARGET, EXIT_CONVERGED, PolymarketModule
+from trading_polymarket.pairs import Reference
 from trading_polymarket.tests.support.factories import (
     CONDITION,
     NO,
@@ -90,6 +92,45 @@ async def test_quote_when_the_book_is_gone() -> None:
     unknown = FakeTransport({"/markets?": []})
     with pytest.raises(Exception, match="no order book"):
         await build(unknown).get_quote(YES)
+
+
+@pytest.mark.regression("TP-5")
+async def test_quotes_and_values_use_each_tokens_own_price() -> None:
+    # Gamma's lastTradePrice (0.6) is the Yes token's; the No token is 0.4.
+    pending = FakeTransport({"/markets?": [gamma_market(closed=True)]})
+    module = build(pending)
+    quote = await module.get_quote(NO)
+    assert quote.stale and quote.last == 0.4
+    # Closed, awaiting resolution: valued at the token's final Gamma price.
+    assert module.exit_value(position(10, token=NO)) == pytest.approx(4.0)
+    # Open market whose book has no bids: nothing can be sold, worth 0 -
+    # never a mark of ~1 from the ask side or another token's price.
+    one_sided = FakeTransport(
+        {
+            "/markets?": [gamma_market()],
+            "/book": book_payload(bids=[], asks=[(0.999, 10)]),
+        }
+    )
+    module = build(one_sided)
+    quote = await module.get_quote(YES)
+    assert quote.bid is None and quote.mark == 0.6  # the token's own price
+    assert module.exit_value(position(1000)) == 0.0
+
+
+def test_complement_of_cached_binary_markets() -> None:
+    module = build()
+    assert module.complement_of(YES) is None
+    module.catalogue.put([market()])
+    assert module.complement_of(YES) == NO
+    three = Market.from_gamma(
+        gamma_market(
+            clobTokenIds='["a","b","c"]',
+            outcomes='["A","B","C"]',
+            outcomePrices='["0.1","0.2","0.7"]',
+        )
+    )
+    module.catalogue.put([three])
+    assert module.complement_of("a") is None
 
 
 async def test_balance_and_live_orders_are_refused() -> None:
@@ -209,3 +250,36 @@ def test_calibration_file_is_loaded(tmp_path) -> None:  # noqa: ANN001
     path = CalibrationTable.build([Observation(0.9, 1, True)]).save(tmp_path / "c.json")
     module = PolymarketModule(http=fake_http(), favourite={"calibration_path": path})
     assert module.calibration.samples(0.9, 1) == 1
+
+
+def test_reference_lanes_join_the_pipeline_and_rows() -> None:
+    module = build(
+        weather={"enabled": False},
+        fed={"enabled": True},
+        crossvenue={"enabled": True, "reference": "bid"},
+    )
+    pipeline = module.pipeline()
+    assert pipeline is not None
+    assert [s.name for s in pipeline.scouts] == [
+        "fed-vs-kalshi",
+        "crossvenue-vs-kalshi",
+    ]
+    rows = dict(module.strategy_rows())
+    assert rows["lanes"] == "fed, crossvenue"
+    assert rows["fed"].startswith("vs Kalshi mid") and "bid" in rows["crossvenue"]
+    assert module.kalshi.base_url == module.settings.kalshi_url
+    assert module.references.ttl == 60.0
+
+
+def test_reference_positions_exit_on_convergence() -> None:
+    module = build(fed={"enabled": True})
+    held = position(strategy="fed")
+    quote = MarketQuote(YES, bid=0.61, ask=0.62)
+    assert module.should_exit(held, quote, NOW) is None  # no reference yet
+    module.references.remember(YES, Reference(0.60, 0.62, 5000.0, NOW))
+    decision = module.should_exit(held, quote, NOW)
+    assert decision is not None and decision.reason == EXIT_CONVERGED
+    assert "Kalshi 0.610" in decision.detail
+    assert module.should_exit(held, MarketQuote(YES, bid=0.55), NOW) is None
+    assert module.should_exit(held, None, NOW) is None
+    assert module.should_exit(position(strategy="weather"), quote, NOW) is None

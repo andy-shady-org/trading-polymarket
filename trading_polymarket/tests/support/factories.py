@@ -210,19 +210,125 @@ def history_row(
     }
 
 
+# -- Kalshi and the Fed decision lane ------------------------------------------
+FED_MEETING = NOW + 10 * 86400  # the meeting statement, ~18:00 UTC
+FED_BUCKETS = (
+    # Polymarket bucket, Kalshi subtitle, Kalshi code
+    ("50+ bps decrease", "Cut >25bps", "C26"),
+    ("25 bps decrease", "Cut 25bps", "C25"),
+    ("No change", "Fed maintains rate", "H0"),
+    ("25 bps increase", "Hike 25bps", "H25"),
+    ("50+ bps increase", "Hike >25bps", "H26"),
+)
+
+
+def kalshi_market(
+    ticker: str = "KXFEDDECISION-26NOV-H0", **overrides: Any
+) -> dict[str, Any]:
+    """A Kalshi ``/markets`` item (prices as dollar strings)."""
+    data: dict[str, Any] = {
+        "ticker": ticker,
+        "event_ticker": ticker.rsplit("-", 1)[0],
+        "title": "Fed decision in Nov 2026?",
+        "yes_sub_title": "Fed maintains rate",
+        "yes_bid_dollars": "0.6000",
+        "yes_ask_dollars": "0.6200",
+        "last_price_dollars": "0.6100",
+        "volume_24h_fp": "25000.00",
+        "open_interest_fp": "100000.00",
+        "close_time": iso(FED_MEETING - 3600),
+        "status": "active",
+        "result": "",
+    }
+    data.update(overrides)
+    return data
+
+
+def fed_kalshi_event(
+    quotes: dict[str, tuple[str, str]] | None = None, *, meeting: float = FED_MEETING
+) -> dict[str, Any]:
+    """Kalshi's KXFEDDECISION event for a meeting: ``code -> (bid, ask)``."""
+    quotes = quotes or {"H0": ("0.6000", "0.6200"), "H25": ("0.3500", "0.3700")}
+    event = "KXFEDDECISION-26NOV"
+    markets = []
+    for _, subtitle, code in FED_BUCKETS:
+        bid, ask = quotes.get(code, ("0.0000", "0.0100"))
+        markets.append(
+            kalshi_market(
+                f"{event}-{code}",
+                yes_sub_title=subtitle,
+                yes_bid_dollars=bid,
+                yes_ask_dollars=ask,
+                close_time=iso(meeting - 3600),
+            )
+        )
+    return {
+        "event_ticker": event,
+        "series_ticker": "KXFEDDECISION",
+        "title": "Fed decision in Nov 2026",
+        "markets": markets,
+    }
+
+
+def fed_pm_event(
+    asks: dict[str, float] | None = None,
+    *,
+    meeting: float = FED_MEETING,
+    title: str = "Fed Decision in November?",
+) -> dict[str, Any]:
+    """Polymarket's "Fed Decision in <Month>?" event: ``bucket -> Yes ask``."""
+    asks = asks or {"No change": 0.55, "25 bps increase": 0.36}
+    markets = []
+    for index, (bucket, _, _) in enumerate(FED_BUCKETS):
+        ask = asks.get(bucket, 0.01)
+        markets.append(
+            gamma_market(
+                id=str(700 + index),
+                question=f"Will the Fed {bucket}?",
+                groupItemTitle=bucket,
+                yes=f"7{index}" * 20,
+                no=f"8{index}" * 20,
+                bestAsk=ask,
+                bestBid=round(max(0.0, ask - 0.01), 4),
+                feesEnabled=False,
+                feeSchedule=None,
+                negRisk=True,
+                endDate=iso(meeting),
+            )
+        )
+    return {"id": "9000", "title": title, "slug": "fed-decision", "markets": markets}
+
+
+def fed_yes(bucket: str) -> str:
+    index = [b for b, _, _ in FED_BUCKETS].index(bucket)
+    return f"7{index}" * 20
+
+
+def fed_no(bucket: str) -> str:
+    index = [b for b, _, _ in FED_BUCKETS].index(bucket)
+    return f"8{index}" * 20
+
+
 __all__ = [
     "CONDITION",
+    "FED_BUCKETS",
+    "FED_MEETING",
     "FIXTURES",
     "NO",
     "NOW",
     "YES",
     "book",
     "book_payload",
+    "fed_kalshi_event",
+    "fed_no",
+    "fed_pm_event",
+    "fed_yes",
     "fixture",
     "forecast_payload",
     "gamma_market",
     "history_row",
     "iso",
+    "kalshi_market",
     "market",
     "metar_row",
     "resolved",

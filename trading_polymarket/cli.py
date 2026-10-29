@@ -12,11 +12,14 @@ these commands collect evidence and look at what the lanes see:
 ``metars``         append recent METARs to the archive (intraday backtests)
 ``history``        collect resolved markets + price histories
 ``weather-history``collect resolved temperature events + price histories
+``fed-history``    collect settled Fed meetings on Polymarket and Kalshi
 ``calibrate``      build the favourite lane's calibration table
 ``backtest``       replay a lane on collected history (audit-format output)
+``pairs``          suggest, approve and list cross-venue pairs
 =================  ==========================================================
 
-Every command is read-only towards Polymarket and uses free, keyless APIs.
+Every command is read-only towards Polymarket and Kalshi and uses free,
+keyless APIs.
 """
 
 from __future__ import annotations
@@ -31,13 +34,17 @@ from pathlib import Path
 from typing import Any
 
 from trading_polymarket import __version__
+from trading_polymarket import pairs as pairs_mod
+from trading_polymarket.clients.http import HttpError
 from trading_polymarket.config import LANES, PolymarketSettings
 from trading_polymarket.module import PolymarketModule
 from trading_polymarket.research import arb as arb_mod
 from trading_polymarket.research import backtest as bt
 from trading_polymarket.research import bias as bias_mod
+from trading_polymarket.research import fed as fed_mod
 from trading_polymarket.research import history as hist
 from trading_polymarket.research import metar_archive, recorder
+from trading_polymarket.research import pairs_suggest as suggest_mod
 from trading_polymarket.research import weather_backtest as wbt
 from trading_polymarket.research.records import append_jsonl
 from trading_polymarket.strategies.weather import (
@@ -231,6 +238,20 @@ async def cmd_weather_history(args: argparse.Namespace, out: Printer) -> int:
     return 0
 
 
+async def cmd_fed_history(args: argparse.Namespace, out: Printer) -> int:
+    module = build_module(args)
+    written = await fed_mod.collect_fed(
+        module.gamma,
+        module.clob,
+        module.kalshi,
+        path=args.out,
+        days=args.days,
+        progress=out,
+    )
+    out(f"{written} meetings appended to {args.out}")
+    return 0
+
+
 def _split(rows: Sequence[hist.HistoryRow], text: str | None) -> float:
     if text:
         return datetime.fromisoformat(text).replace(tzinfo=UTC).timestamp()
@@ -277,6 +298,17 @@ async def cmd_backtest(args: argparse.Namespace, out: Printer) -> int:
             bankroll=settings.bankroll,
             half_spread=args.half_spread,
         )
+    elif args.lane == "fed":
+        meetings = fed_mod.load_meetings(args.input or fed_mod.DEFAULT_FED_HISTORY)
+        if not meetings:
+            out("no meetings: run `trading-polymarket fed-history` first")
+            return 1
+        result = fed_mod.backtest_fed(
+            meetings,
+            settings.fed,
+            bankroll=settings.bankroll,
+            half_spread=args.half_spread,
+        )
     else:
         events = wbt.load_events(args.input or wbt.DEFAULT_WEATHER_HISTORY)
         if not events:
@@ -318,6 +350,61 @@ async def cmd_backtest(args: argparse.Namespace, out: Printer) -> int:
         f"  trading-core-audit verdict --path {path} "
         f"--rules configs/verdict/{args.lane}.json"
     )
+    return 0
+
+
+async def cmd_pairs(args: argparse.Namespace, out: Printer) -> int:
+    settings = PolymarketSettings.from_mapping(
+        module_settings(getattr(args, "config", None))
+    )
+    path = args.pairs or settings.crossvenue.pairs_path
+    if args.action == "suggest":
+        module = build_module(args)
+        pm, kalshi = await suggest_mod.gather(
+            module.gamma,
+            module.kalshi,
+            pm_pages=args.pages,
+            kalshi_pages=args.pages * 2,
+        )
+        found = suggest_mod.suggest(
+            pm,
+            kalshi,
+            min_similarity=args.min_similarity,
+            max_days_apart=args.max_days_apart,
+        )
+        written = _write(args.out, [s.to_dict() for s in found])
+        out(f"{len(pm)} Polymarket and {len(kalshi)} Kalshi markets read")
+        for s in found[: args.limit]:
+            out(
+                f"{s.score:.2f} {s.pm_question[:44]:<44} | "
+                f"{s.kalshi_ticker} {s.kalshi_title[:40]}"
+            )
+        out(f"{len(found)} candidates written to {written}.")
+        out("Check both venues' rules, then: pairs approve TOKEN TICKER")
+        return 0
+    pairs = pairs_mod.load_pairs(path)
+    if args.action == "approve":
+        if not args.token or not args.ticker:
+            out("approve needs a Polymarket token and a Kalshi ticker")
+            return 2
+        pair = pairs_mod.VenuePair(
+            pm_token=args.token,
+            kalshi_ticker=args.ticker,
+            kalshi_side=args.side,
+            label=args.label or "",
+        )
+        written = pairs_mod.save_pairs([*pairs, pair], path)
+        out(f"{len(pairs_mod.load_pairs(written))} pairs in {written}")
+        return 0
+    if args.action == "remove":
+        kept = [p for p in pairs if p.pm_token != args.token]
+        written = pairs_mod.save_pairs(kept, path)
+        out(f"{len(pairs) - len(kept)} removed; {len(kept)} pairs in {written}")
+        return 0
+    for pair in pairs:
+        token = f"{pair.pm_token[:12]}…"
+        out(f"{token} {pair.kalshi_ticker} ({pair.kalshi_side}) {pair.label}")
+    out(f"{len(pairs)} pairs in {path}")
     return 0
 
 
@@ -377,6 +464,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--city", action="append", default=[])
     p.add_argument("--out", default=wbt.DEFAULT_WEATHER_HISTORY)
 
+    p = command("fed-history", "collect settled Fed meetings on both venues")
+    p.add_argument("--days", type=float, default=14.0, help="history before each close")
+    p.add_argument("--out", default=fed_mod.DEFAULT_FED_HISTORY)
+
     p = command("calibrate", "build the favourite calibration table")
     p.add_argument("--input", default=hist.DEFAULT_HISTORY_PATH)
     p.add_argument("--split", help="train on markets closing before this date")
@@ -385,7 +476,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default="data/calibration.json")
 
     p = command("backtest", "replay a lane on collected history")
-    p.add_argument("lane", choices=["favourite", "weather"])
+    p.add_argument("lane", choices=["favourite", "weather", "fed"])
     p.add_argument("--input")
     p.add_argument("--split", help="favourite: test on markets closing after this")
     p.add_argument("--half-spread", type=float, default=0.01)
@@ -401,6 +492,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="weather: use METARs observed before the entry hour (last ~15 days)",
     )
     p.add_argument("--out")
+
+    p = command("pairs", "suggest, approve, remove and list cross-venue pairs")
+    p.add_argument("action", choices=["suggest", "approve", "remove", "list"])
+    p.add_argument("token", nargs="?", help="approve/remove: Polymarket token id")
+    p.add_argument("ticker", nargs="?", help="approve: Kalshi market ticker")
+    p.add_argument("--side", choices=["yes", "no"], default="yes")
+    p.add_argument("--label")
+    p.add_argument("--pairs", help="pairs file (default: crossvenue.pairs_path)")
+    p.add_argument("--pages", type=int, default=5, help="suggest: Gamma pages read")
+    p.add_argument("--min-similarity", type=float, default=0.5)
+    p.add_argument("--max-days-apart", type=float, default=3.0)
+    p.add_argument("--limit", type=int, default=30)
+    p.add_argument("--out", default=suggest_mod.DEFAULT_SUGGESTIONS)
     return parser
 
 
@@ -414,7 +518,9 @@ COMMANDS = {
     "history": cmd_history,
     "weather-history": cmd_weather_history,
     "calibrate": cmd_calibrate,
+    "fed-history": cmd_fed_history,
     "backtest": cmd_backtest,
+    "pairs": cmd_pairs,
 }
 
 
@@ -424,7 +530,7 @@ def main(argv: Sequence[str] | None = None, *, out: Printer = print) -> int:
         return asyncio.run(COMMANDS[args.command](args, out))
     except BrokenPipeError:  # output piped into `head`: not an error
         return 0
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, HttpError) as exc:
         out(f"error: {exc}")
         return 2
 

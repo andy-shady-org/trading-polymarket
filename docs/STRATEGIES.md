@@ -10,6 +10,8 @@ trade with its name as the `strategy`, so each one is judged on its own
 | `weather` | **on** (late-day window in the paper config) | A forecast + live-observation model of a known settlement rule | Resolution |
 | `favourite` | off (needs a calibration file) | Favourite–longshot bias, measured on resolved Polymarket markets | Resolution |
 | `momentum` | off | None (research lane collecting evidence) | Resolution, or the engine's generic exits if you configure them |
+| `fed` | off (Stage 0 inconclusive, see GO-NO-GO) | Polymarket's Fed-decision buckets drifting away from Kalshi's quote for the same meeting, then converging | Convergence (sold), or resolution |
+| `crossvenue` | off (needs reviewed pairs) | The same, for any question a human paired across the two venues | Convergence (sold), or resolution |
 | arbitrage scanner | record only | Structural (Yes + No < 1, Σ Yes < 1) | Not traded |
 
 Every lane goes through the same pipeline:
@@ -162,6 +164,74 @@ exit haircut because, unlike the other lanes, its positions may be sold.
 X/Twitter trends are not used: the API is paid. Google News RSS is the free
 attention proxy ([`DATA-SOURCES.md`](DATA-SOURCES.md)).
 
+## `fed` and `crossvenue`: Polymarket against Kalshi
+
+Kalshi (a CFTC-regulated exchange) lists many of Polymarket's questions. Its
+public market data is free and keyless, so its quote for the **same**
+question is a second, independent price: different users, different market
+makers, different fees. Both lanes treat it as the fair value and buy on
+Polymarket when the ask is below it by at least `min_edge` after
+Polymarket's fee ([`strategies/crossvenue.py`](../trading_polymarket/strategies/crossvenue.py)).
+**Kalshi is only read, never traded**: there is no hedge leg.
+
+```text
+pair source ──► ReferenceScout ──────────► filters ──► ReferenceAnalyst ──► Signal
+(matched or      reference per token,                 live Polymarket book,
+ reviewed)       Gamma ask prefilter                  same guards, buy plan
+```
+
+**Pairs.** A pair says "this Polymarket token pays 1 exactly when this
+Kalshi market's Yes (or No) pays 1" ([`pairs.py`](../trading_polymarket/pairs.py)).
+
+- `fed`: matched every cycle, deterministically. Polymarket's "Fed Decision
+  in <Month>?" events are found by Gamma public search; Kalshi's
+  `KXFEDDECISION` event for the same meeting is the one whose close is
+  within 3 days of the Polymarket end date. Buckets map by move:
+  `No change` = `Fed maintains rate` (`H0`), `25 bps decrease` = `Cut 25bps`
+  (`C25`), `50+ bps decrease` = `Cut >25bps` (`C26`), and the hikes alike.
+  Both Yes and No tokens are paired (the No side's reference is
+  `1 − Kalshi Yes`). Buckets that do not map one to one (the older
+  `25+ bps increase`, `75+ bps decrease`) are not paired.
+- `crossvenue`: only pairs in the **reviewed** file `pairs_path`. Look-alike
+  markets are not the same bet when the settlement source, cut-off time or
+  tie rule differ, so nothing fuzzy is traded: `trading-polymarket pairs
+  suggest` lists candidates by title similarity and end date, a human reads
+  both venues' rules, and `pairs approve TOKEN TICKER [--side no]` adds the
+  ones that really are one question ([`CLI.md`](CLI.md)). The first live
+  run of `suggest` shows why: "J.D. Vance wins the 2028 Republican
+  nomination" scored high against "J.D. Vance wins the 2028 Iowa caucus".
+
+**Guards.** A reference prices nothing when its spread is wider than
+`max_reference_spread`, it traded less than `min_reference_volume`
+contracts in 24 h, or it is older than `max_reference_age_seconds`. A gap
+above `max_edge` (0.15) is read as "these two markets do not settle the
+same way", not as money. `reference: "bid"` prices from Kalshi's bid
+instead of its mid (fewer, safer trades). Markets closing within
+`min_hours` are skipped.
+
+**Exit.** Every cycle refreshes the reference of every paired token, held or
+not. A held position is sold (`converged`) as soon as its Polymarket bid
+reaches the Kalshi mid − `convergence_margin`, while the reference is fresh;
+otherwise it is held to resolution. Selling pays the spread, so the verdict
+rules haircut every exit by 50 bps.
+
+**What the evidence says (2026-10-29, [`RESEARCH.md` §6](RESEARCH.md#6-results-log)).**
+Over the 16 settled meetings both venues listed (Dec 2024 – Oct 2026), the
+two prices are within ~1 cent on average and **Kalshi is not the better
+forecaster**: Polymarket's Brier score is equal or lower at every horizon
+from 7 days to 1 hour. The replay still made +$25 on 23 trades by selling
+into convergence (holding to resolution instead: −$2.5): the lane earns the
+venues' *temporary* disagreements, not a better forecast. That is a small,
+capacity-limited edge (a few trades per meeting), and the sample is all
+the history there is.
+
+**A trap the guard caught.** Polymarket listed two "Fed Decision in
+September?" events for the 2026 meeting; the thin duplicate resolved
+`No change` while the Fed hiked 25 bps (and Kalshi's `H25` paid). The
+replay skips any meeting the venues settled differently, and the live lane's
+volume filters keep thin duplicates out, but the case is why pairs are
+matched on rules, not titles.
+
 ## Arbitrage scanner (record only)
 
 `trading-polymarket arb` checks, on live books, two structural gaps:
@@ -181,4 +251,6 @@ their Yes set may be incomplete, so the sum is not a guaranteed payout.
   orders and live signing; revisit after live execution.
 - **LLM news analyst** (TradingAgents, AutoPilotPM): costs per call and no
   measured edge; the momentum lane's metrics must first show attention matters.
-- **Cross-venue (Kalshi) arbitrage**: another venue, another module.
+- **Two-legged cross-venue arbitrage** (buy on one venue, sell on the
+  other): needs a Kalshi account and order signing; the `fed` and
+  `crossvenue` lanes use Kalshi as a reference price only.

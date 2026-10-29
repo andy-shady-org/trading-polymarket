@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -104,51 +104,58 @@ class ArbScanner:
         except BookUnavailable:
             return []
 
+    async def _pair(self, market: Market, now: float) -> Opportunity | None:
+        """Yes + No of one binary market (Gamma's quotes pre-screen it)."""
+        if market.best_ask is None or market.best_bid is None:
+            return None
+        if market.best_ask + (1 - market.best_bid) > 1 + self.prefilter:
+            return None
+        books = await self._books(market.token_ids)
+        return _evaluate(
+            KIND_PAIR,
+            market.question,
+            [(book, market) for book in books],
+            augmented=False,
+            min_profit=self.min_profit,
+            min_size=self.min_size,
+            now=now,
+        )
+
+    async def _set(
+        self, event: Mapping[str, Any], live: list[Market], now: float
+    ) -> Opportunity | None:
+        """Every Yes of a neg-risk event (Gamma's asks pre-screen it)."""
+        if len(live) < 2 or not all(m.neg_risk for m in live):
+            return None
+        asks = [m.best_ask for m in live]
+        if any(a is None for a in asks) or sum(a or 0 for a in asks) > (
+            1 + self.prefilter
+        ):
+            return None
+        books = await self._books([m.yes_token for m in live])
+        return _evaluate(
+            KIND_SET,
+            str(event.get("title") or ""),
+            list(zip(books, live, strict=False)),
+            augmented=bool(event.get("negRiskAugmented")),
+            min_profit=self.min_profit,
+            min_size=self.min_size,
+            now=now,
+        )
+
     async def scan(self, *, max_pages: int = 5) -> list[Opportunity]:
         found: list[Opportunity] = []
         now = self.clock()
         for event, markets in await self.gamma.events(
             max_pages=max_pages, closed=False, order="volume24hr", ascending=False
         ):
-            title = str(event.get("title") or "")
             live = [m for m in markets if m.tradable and len(m.token_ids) == 2]
-            # Gamma's quotes pre-screen; only near-misses cost book reads.
-            for market in live:
-                if market.best_ask is None or market.best_bid is None:
-                    continue
-                if market.best_ask + (1 - market.best_bid) > 1 + self.prefilter:
-                    continue
-                books = await self._books(market.token_ids)
-                opportunity = _evaluate(
-                    KIND_PAIR,
-                    market.question,
-                    [(book, market) for book in books],
-                    augmented=False,
-                    min_profit=self.min_profit,
-                    min_size=self.min_size,
-                    now=now,
-                )
+            for opportunity in [
+                *[await self._pair(market, now) for market in live],
+                await self._set(event, live, now),
+            ]:
                 if opportunity is not None:
                     found.append(opportunity)
-            if len(live) < 2 or not all(m.neg_risk for m in live):
-                continue
-            asks = [m.best_ask for m in live]
-            if any(a is None for a in asks) or sum(a or 0 for a in asks) > (
-                1 + self.prefilter
-            ):
-                continue
-            books = await self._books([m.yes_token for m in live])
-            opportunity = _evaluate(
-                KIND_SET,
-                title,
-                list(zip(books, live, strict=False)),
-                augmented=bool(event.get("negRiskAugmented")),
-                min_profit=self.min_profit,
-                min_size=self.min_size,
-                now=now,
-            )
-            if opportunity is not None:
-                found.append(opportunity)
         found.sort(key=lambda o: o.profit, reverse=True)
         return found
 

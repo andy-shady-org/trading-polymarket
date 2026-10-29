@@ -30,6 +30,7 @@ You must automatically append a new rule to the **"Local Norms"** or **"Learning
 - **Read The Rules Of Each Market:** Resolution rules change (weather moved from NOAA time series to METAR in October 2026). Parse the rules text; trade only rule shapes the model implements (TP-2).
 - **Evidence Before Money:** A lane moves up a stage only on a pre-registered `trading-core-audit verdict` GO (`configs/verdict/<lane>.json`, sha256 recorded). Backtests calibrate on data before a split and test after it.
 - **Mirrored Test Layout, 100% Coverage:** Every source module has `tests/unit/<pkg>/test_<m>.py`; integration and property tests in their folders; builders in `tests/support/`. Statement and branch coverage stay at 100% on Python 3.11–3.14. No network in tests: route HTTP through `FakeTransport`.
+- **Small Functions:** flake8 runs with `max-complexity = 7` (McCabe). Split a function into named steps rather than raising the limit or adding `noqa`.
 - **Docs Track Code:** A change to settings, a lane, a CLI command or a gate updates the matching `docs/` page in the same change; `test_config.py` fails on an undocumented setting.
 - **Resolving A Bug Means Tagging A Test:** `docs/dev/BUGS.md` row (`TP-<n>`) plus `@pytest.mark.regression("TP-<n>")`.
 - **Never Touch Other Repos From Here:** Work here never edits `pumpfun-trading`; trading-core changes are made in trading-core (its own tests, docs and changelog).
@@ -46,13 +47,19 @@ You must automatically append a new rule to the **"Local Norms"** or **"Learning
 - **[API] Shared IPs Share Quotas:** Open-Meteo's free allowance is per IP; the cloud workspace hit "Daily API request limit exceeded". Cache forecasts per station and run research locally.
 - **[TYPES] Ship py.typed:** mypy saw trading-core as untyped until it shipped a PEP 561 marker. A library other packages type-check against must ship `py.typed`.
 - **[COMPAT] 3.11 Coverage And `continue`:** Python 3.11's tracer missed `continue` lines right after an `await` in a loop. Restructure (return empty, let the evaluator decline) instead of adding pragmas.
+- **[VALUATION] A One-Sided Book Is Worth What Its Bids Pay:** day 1 of the weather pilot valued no-bid tokens at the market-wide last trade (~1), so both sides of one market marked at 0.999, equity peaked at a phantom $3,725 and the breaker tripped (TP-5). Mark a token by its own price; value it by walking its own bids, and at 0 when there are none.
+- **[PIPELINE] Re-check On The Live Book:** a scout's Gamma ask is a prefilter, not a price; the analyst must re-apply every band and guard to the live book (TP-6). And a lane must never offer the complement of a held token (TP-8).
+- **[MODEL] A Daily Bias Belongs To The Whole Day:** adding the day's max-temperature bias to the remaining hours after the peak double-counted it (TP-7).
+- **[PAIRS] Same Title, Different Bet:** Polymarket listed a thin duplicate Fed event that resolved "No change" while the Fed hiked. Pair markets on their rules, check that both venues settled a pair the same way before trusting a replay, and never trade a fuzzy match unreviewed.
+- **[API] Kalshi Archives:** settled Kalshi events older than a few weeks list no nested markets and 404 on the series candlesticks; read `/historical/markets` and `/historical/markets/{t}/candlesticks` (their candle prices are `close`, not `close_dollars`). Older Fed events call the hold bucket "No change".
+- **[EVIDENCE] Know Where The PnL Comes From:** the fed replay made money selling into convergence and lost holding the same entries to resolution, and Kalshi's Brier score was no better than Polymarket's. The edge is temporary disagreement between venues, not a better forecast; size and exit accordingly.
 - **[EVIDENCE] A Few Longshots Are Not An Edge:** on a partial sample the wide favourite backtest made +$537 on 435 trades yet was NO-GO (without the 5 best positions it lost); on the full out-of-sample window it lost $147. Trust `drop_top`, the bootstrap and a held-out window, not the total — and do not assume the literature's bias holds on this venue.
 
 ## Project Overview
 
-`trading-polymarket` is the Polymarket trading module for trading-core. It reads Gamma (markets), CLOB (books, price history), Open-Meteo (forecasts), Aviation Weather Center (METARs) and Google News RSS — all free and keyless — prices markets in independent lanes, simulates fills against the live book, redeems at resolution, and ships the research tools (history collection, calibration, backtests, bias tables, arbitrage logging) whose output trading-core's audit tools judge.
+`trading-polymarket` is the Polymarket trading module for trading-core. It reads Gamma (markets), CLOB (books, price history), Kalshi (reference quotes, read only), Open-Meteo (forecasts), Aviation Weather Center (METARs) and Google News RSS — all free and keyless — prices markets in independent lanes, simulates fills against the live book, redeems at resolution, and ships the research tools (history collection, calibration, backtests, bias tables, arbitrage logging) whose output trading-core's audit tools judge.
 
-Lanes: **weather** (daily-temperature markets: multi-model forecast + live METAR max-so-far against a known settlement rule; on by default), **favourite** (favourite–longshot bias from a calibration on resolved markets; off until calibrated and backtested), **momentum** (research; off). Live order placement is not implemented; it comes after a lane passes the paper stage.
+Lanes: **weather** (daily-temperature markets: multi-model forecast + live METAR max-so-far against a known settlement rule; on by default), **favourite** (favourite–longshot bias from a calibration on resolved markets; off until calibrated and backtested), **momentum** (research; off), **fed** and **crossvenue** (Polymarket priced against Kalshi's free quote for the same question, convergence exits; off by default). Kalshi is read only. Live order placement is not implemented; it comes after a lane passes the paper stage.
 
 ---
 
@@ -62,16 +69,17 @@ Lanes: **weather** (daily-temperature markets: multi-model forecast + live METAR
 trading-polymarket/
 ├── trading_polymarket/
 │   ├── module.py        # PolymarketModule (entry point "polymarket")
-│   ├── config.py        # module_settings: top level, paper, weather / favourite / momentum lanes
+│   ├── config.py        # module_settings: top level, paper, weather / favourite / momentum / fed / crossvenue lanes
+│   ├── pairs.py         # VenuePair, Reference, Fed bucket matcher, reviewed pairs file
 │   ├── markets.py       # Market from Gamma: tokens, resolution, payout
 │   ├── book.py          # OrderBook from the CLOB: depth, imbalance, walks
 │   ├── fees.py          # FeeSchedule (taker fee formula)
 │   ├── catalogue.py     # MarketCatalogue, BookCache
 │   ├── execution.py     # PaperExecutor (fills, fees, redemption), LiveExecutor (refuses)
 │   ├── calibration.py   # CalibrationTable (price × hours bins, shrunk win rates)
-│   ├── clients/         # http (paced, retrying), gamma, clob, weather, news
-│   ├── strategies/      # common, filters, weather, favourite, momentum, router
-│   ├── research/        # records, history, backtest, weather_backtest, bias, arb, recorder
+│   ├── clients/         # http (paced, retrying), gamma, clob, kalshi, weather, news
+│   ├── strategies/      # common, filters, weather, favourite, momentum, crossvenue, router
+│   ├── research/        # records, history, backtest, weather_backtest, fed, pairs_suggest, bias, arb, recorder
 │   ├── data/            # stations.json
 │   ├── cli.py           # trading-polymarket
 │   └── tests/           # unit (mirrored), integration, property, support, fixtures

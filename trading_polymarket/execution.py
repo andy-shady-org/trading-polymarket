@@ -129,31 +129,18 @@ class PaperExecutor:
             return await self.buy(order)
         return await self.sell(order)
 
-    async def buy(self, order: OrderRequest) -> Fill:
-        token = order.instrument_id
-        market = await self._market(token, max_age=None)
-        if market.resolved or not market.tradable:
-            raise ExecutionRefused(f"market {market.market_id} is not open for orders")
-        book = await self._book(token)
-        if book.best_ask is None:
-            raise ExecutionRefused("no asks on the book")
+    def _buy_limit(self, order: OrderRequest, best_ask: float) -> float:
         limit = order.limit_price
         if limit is None:
-            limit = book.best_ask + self.settings.max_slippage
+            limit = best_ask + self.settings.max_slippage
         limit = min(limit, self.settings.price_cap)
-        if book.best_ask > limit + 1e-12:
+        if best_ask > limit + 1e-12:
             raise ExecutionRefused(
-                f"best ask {book.best_ask:.3f} is above the limit {limit:.3f}"
+                f"best ask {best_ask:.3f} is above the limit {limit:.3f}"
             )
-        notional = order.notional
-        if notional is None:  # a size-based buy: spend what that many shares cost
-            notional = float(order.size or 0.0) * limit
-        walk = book.walk_buy(notional, limit=limit)
-        size = floor_to(walk.size, self.settings.share_decimals)
-        if order.size is not None:
-            size = min(size, floor_to(order.size, self.settings.share_decimals))
-        walk = trim_walk(walk, size)
-        minimum = max(market.min_order_size, book.min_order_size)
+        return limit
+
+    def _check_fill_size(self, walk: Walk, minimum: float) -> None:
         if walk.size <= 0 or walk.size + 1e-9 < minimum:
             raise ExecutionRefused(
                 f"fill of {walk.size:.2f} shares is below the minimum {minimum:g}"
@@ -162,6 +149,25 @@ class PaperExecutor:
             raise ExecutionRefused(
                 f"fill of ${walk.notional:.2f} is below ${self.settings.min_notional:g}"
             )
+
+    async def buy(self, order: OrderRequest) -> Fill:
+        token = order.instrument_id
+        market = await self._market(token, max_age=None)
+        if market.resolved or not market.tradable:
+            raise ExecutionRefused(f"market {market.market_id} is not open for orders")
+        book = await self._book(token)
+        if book.best_ask is None:
+            raise ExecutionRefused("no asks on the book")
+        limit = self._buy_limit(order, book.best_ask)
+        notional = order.notional
+        if notional is None:  # a size-based buy: spend what that many shares cost
+            notional = float(order.size or 0.0) * limit
+        walk = book.walk_buy(notional, limit=limit)
+        size = floor_to(walk.size, self.settings.share_decimals)
+        if order.size is not None:
+            size = min(size, floor_to(order.size, self.settings.share_decimals))
+        walk = trim_walk(walk, size)
+        self._check_fill_size(walk, max(market.min_order_size, book.min_order_size))
         fee = walk_fee(walk, market.fee)
         return Fill(
             instrument_id=token,

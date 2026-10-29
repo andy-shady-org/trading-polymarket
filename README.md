@@ -18,9 +18,11 @@ trading-core run --config configs/paper.json       # paper trading on the live b
 | **weather** | Daily highest-temperature buckets, priced from multi-model forecasts plus the live METAR maximum against the published settlement rule | on (paper config: late-day window) |
 | **favourite** | Near-resolution favourites where a calibration on resolved markets beats price + fee | off until calibrated |
 | **momentum** | Research: sharp moves, with attention metrics | off |
+| **fed** | Fed-decision buckets bought below Kalshi's quote for the same meeting, sold when the venues converge | off (paper config: `paper-fed.example.json`) |
+| **crossvenue** | The same for any Polymarket/Kalshi pair a human reviewed (`pairs approve`) | off until pairs are approved |
 | arbitrage | Yes + No < 1 and neg-risk Σ Yes < 1, logged only | record only |
 
-- Every data source is free and keyless ([docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)).
+- Every data source is free and keyless, Kalshi included (read only) ([docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)).
 - Live order placement is not implemented; it comes after a lane passes the
   paper stage ([docs/GO-NO-GO.md](docs/GO-NO-GO.md), [docs/LIVE-TRADING.md](docs/LIVE-TRADING.md)).
 - Start with [docs/USER-GUIDE.md](docs/USER-GUIDE.md).

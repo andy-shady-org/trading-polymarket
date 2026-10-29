@@ -315,9 +315,13 @@ def test_backtest_weather(transport: FakeTransport, tmp_path: Path) -> None:
     assert code == 0 and json.loads(lines[-3])["markets"] == 0
 
 
-def test_errors_are_reported_not_raised(tmp_path: Path) -> None:
+def test_errors_are_reported_not_raised(
+    transport: FakeTransport, tmp_path: Path
+) -> None:
     code, lines = run("scan", "--config", str(tmp_path / "missing.json"))
     assert code == 2 and lines[0].startswith("error:")
+    code, lines = run("fed-history", "--out", str(tmp_path / "f.jsonl"))
+    assert code == 2 and lines[-1] == "error: HTTP 404"  # unrouted public search
 
 
 def test_a_closed_pipe_is_not_an_error(tmp_path: Path) -> None:
@@ -331,3 +335,89 @@ def test_a_closed_pipe_is_not_an_error(tmp_path: Path) -> None:
 def test_parser_requires_a_command() -> None:
     with pytest.raises(SystemExit):
         cli.build_parser().parse_args([])
+
+
+def test_fed_history_and_backtest(transport: FakeTransport, tmp_path: Path) -> None:
+    out = tmp_path / "fed.jsonl"
+    transport.add("/public-search", {"events": []}).add("/events?", {"events": []})
+    code, lines = run("fed-history", "--out", str(out), "--days", "1")
+    assert code == 0 and lines[-1] == f"0 meetings appended to {out}"
+    assert transport.count("/public-search") == 1
+    assert run("backtest", "fed", "--input", str(tmp_path / "none"))[0] == 1
+    close = NOW
+    meeting = {
+        "event_id": "1",
+        "title": "Fed Decision in November?",
+        "kalshi_event": "KXFEDDECISION-26NOV",
+        "close_time": close,
+        "buckets": [
+            {
+                "bucket": "No change",
+                "code": "H0",
+                "yes_token": "y",
+                "no_token": "n",
+                "kalshi_ticker": "KXFEDDECISION-26NOV-H0",
+                "won": True,
+                "kalshi_won": True,
+                "pm": [[close - 36000, 0.55]],
+                "kalshi": [
+                    [close - h * 3600, 0.6, 0.62, 1000] for h in range(10, 0, -1)
+                ],
+            }
+        ],
+    }
+    append_jsonl(tmp_path / "m.jsonl", [meeting])
+    code, lines = run(
+        "backtest", "fed", "--input", str(tmp_path / "m.jsonl"), "--out", str(out)
+    )
+    summary = json.loads(lines[0])
+    assert code == 0 and summary["trades"] == 1 and "1h" in summary["scores"]
+    assert "configs/verdict/fed.json" in lines[-1]
+
+
+def test_pairs_commands(transport: FakeTransport, tmp_path: Path) -> None:
+    pairs = str(tmp_path / "pairs.json")
+    transport.add(
+        "/events?",
+        {
+            "events": [
+                {
+                    "event_ticker": "K",
+                    "markets": [
+                        {
+                            "ticker": "KX-ALICE",
+                            "title": "Highest temperature in Dallas 74-75°F?",
+                            "yes_sub_title": "",
+                            "close_time": "2026-10-28T12:00:00Z",
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+    suggested = str(tmp_path / "s.jsonl")
+    code, lines = run("pairs", "suggest", "--out", suggested, "--pages", "1")
+    assert code == 0 and "candidates written" in lines[-2]
+    assert any("KX-ALICE" in line for line in lines)
+    assert run("pairs", "approve", "--pairs", pairs)[0] == 2
+    code, lines = run(
+        "pairs",
+        "approve",
+        "tok1",
+        "KX-1",
+        "--side",
+        "no",
+        "--label",
+        "A",
+        "--pairs",
+        pairs,
+    )
+    assert code == 0 and lines[-1] == f"1 pairs in {pairs}"
+    run("pairs", "approve", "tok2", "KX-2", "--pairs", pairs)
+    code, lines = run("pairs", "list", "--pairs", pairs)
+    assert lines[0].startswith("tok1…") and "(no) A" in lines[0]
+    assert lines[-1] == f"2 pairs in {pairs}"
+    code, lines = run("pairs", "remove", "tok1", "--pairs", pairs)
+    assert lines[-1] == f"1 removed; 1 pairs in {pairs}"
+    settings = config(tmp_path, {"crossvenue": {"pairs_path": pairs}})
+    assert run("pairs", "list", "--config", settings)[1][-1] == f"1 pairs in {pairs}"
