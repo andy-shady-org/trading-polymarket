@@ -1,0 +1,60 @@
+{
+  "_comment": "Stage-1 paper pilot of the fed lane, run as its OWN trading-core instance beside the weather pilot (own status, audit and breaker; docs/PAPER-TRADING.md). Copy to configs/paper-fed.json, then: trading-core run --config configs/paper-fed.json. Positions are sold when Polymarket converges on Kalshi's mid (the module's exit, no engine exits needed) or held to resolution. Amounts are USDC.",
+  "module": "polymarket",
+  "mode": "paper",
+  "strategy_name": "polymarket-fed",
+  "order_size": 10,
+  "paper_starting_balance": 1000,
+  "cycle_seconds": 60,
+  "max_signals_per_cycle": 5,
+  "risk": {
+    "max_total_exposure": 200,
+    "max_position_size": 25,
+    "max_active_positions": 20,
+    "max_concentration_pct": 0.1,
+    "max_loss_per_trade": 0,
+    "reserve_balance": 100
+  },
+  "breaker": {
+    "max_daily_drawdown_pct": 0.1,
+    "emergency_hard_lock_hours": 24,
+    "drawdown_reference_mode": "adaptive_ratchet",
+    "profit_ratchet_ratio": 0.5,
+    "profit_ratchet_min_gain_pct": 0.02,
+    "profit_drawdown_tolerance_pct": 0.35,
+    "max_cumulative_drawdown_pct": 0.25
+  },
+  "exits": {},
+  "close_positions_on_shutdown": false,
+  "module_settings": {
+    "bankroll": 1000,
+    "weather": {
+      "enabled": false
+    },
+    "favourite": {
+      "enabled": false
+    },
+    "momentum": {
+      "enabled": false
+    },
+    "fed": {
+      "enabled": true,
+      "min_edge": 0.02,
+      "max_edge": 0.15,
+      "reference": "mid",
+      "max_notional": 25,
+      "exit_on_convergence": true
+    },
+    "crossvenue": {
+      "enabled": false,
+      "pairs_path": "data/pairs.json"
+    }
+  },
+  "health_timeout_seconds": 600,
+  "degradation_alert_minutes": 15,
+  "daily_summary_hour_utc": 8,
+  "status_path": "data/paper-fed/status.json",
+  "audit_log_path": "data/paper-fed/audit.jsonl",
+  "event_log_path": "data/paper-fed/events.jsonl",
+  "log_file": "data/paper-fed/trading-core.log"
+}

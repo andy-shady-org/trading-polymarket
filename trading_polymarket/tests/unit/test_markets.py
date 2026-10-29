@@ -105,6 +105,12 @@ def test_resolution_and_payouts() -> None:
     assert not won.tradable
 
 
+def test_price_of_each_token() -> None:
+    m = market()
+    assert m.price_of(YES) == 0.6 and m.price_of(NO) == 0.4
+    assert market(outcomePrices="[]").price_of(YES) is None
+
+
 def test_tokens_helpers() -> None:
     m = market()
     assert m.yes_token == YES and m.no_token == NO

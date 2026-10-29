@@ -45,6 +45,7 @@ from trading_polymarket.strategies.weather import (
     WEATHER_TAG,
     TempDistribution,
     WeatherEvent,
+    applied_bias,
     blend,
     lead_sigma,
     station_zone,
@@ -154,7 +155,6 @@ async def collect_weather(
     stored, so a later run can collect it (TP-4).
     """
     seen = {str(r.get("event_id")) for r in read_jsonl(path)}
-    wanted = {c.lower() for c in cities}
     pairs = await gamma.events(
         max_pages=max_pages,
         closed=True,
@@ -163,32 +163,28 @@ async def collect_weather(
         end_date_max=f"{end.isoformat()}T23:59:59Z",
     )
     gate = asyncio.Semaphore(concurrency)
-
-    async def series(token: str, end_time: float) -> list[list[float]]:
-        async with gate:
-            points = await clob.prices_history(
-                token, start=end_time - 4 * 86400.0, end=end_time + 86400.0
+    todo = _todo(pairs, seen, {c.lower() for c in cities})
+    written = 0
+    for index in range(0, len(todo), batch):
+        rows = await asyncio.gather(
+            *(
+                _fetch_event(clob, gate, e, progress)
+                for e in todo[index : index + batch]
             )
-        return [[round(p.t), round(p.p, 5)] for p in points]
+        )
+        written += append_jsonl(path, (r for r in rows if r is not None))
+        if progress is not None:
+            done = min(index + batch, len(todo))
+            progress(f"{done}/{len(todo)} events: {written} collected")
+    return written
 
-    async def fetch(event: WeatherEvent) -> dict[str, Any] | None:
-        try:
-            histories = await asyncio.gather(
-                *(
-                    series(b.market.yes_token, b.market.end_time or 0.0)
-                    for b in event.buckets
-                )
-            )
-        except Exception as exc:  # skip this event, keep collecting
-            if progress is not None:
-                progress(f"{event.title}: {exc}")
-            return None
-        if not any(histories):  # TP-4: nothing to replay; retry next run
-            if progress is not None:
-                progress(f"{event.title}: no price history")
-            return None
-        return _event_row(event, histories)
 
+def _todo(
+    pairs: Sequence[tuple[Mapping[str, Any], Sequence[Any]]],
+    seen: set[str],
+    wanted: set[str],
+) -> list[WeatherEvent]:
+    """Resolved METAR events not collected yet (``seen`` grows)."""
     todo: list[WeatherEvent] = []
     for raw, markets in pairs:
         event = WeatherEvent.parse(raw, markets, legacy=True)
@@ -199,14 +195,41 @@ async def collect_weather(
         if all(b.market.resolved for b in event.buckets):
             seen.add(event.event_id)
             todo.append(event)
-    written = 0
-    for index in range(0, len(todo), batch):
-        rows = await asyncio.gather(*(fetch(e) for e in todo[index : index + batch]))
-        written += append_jsonl(path, (r for r in rows if r is not None))
+    return todo
+
+
+async def _series(
+    clob: ClobClient, gate: asyncio.Semaphore, token: str, end_time: float
+) -> list[list[float]]:
+    async with gate:
+        points = await clob.prices_history(
+            token, start=end_time - 4 * 86400.0, end=end_time + 86400.0
+        )
+    return [[round(p.t), round(p.p, 5)] for p in points]
+
+
+async def _fetch_event(
+    clob: ClobClient,
+    gate: asyncio.Semaphore,
+    event: WeatherEvent,
+    progress: Callable[[str], None] | None,
+) -> dict[str, Any] | None:
+    try:
+        histories = await asyncio.gather(
+            *(
+                _series(clob, gate, b.market.yes_token, b.market.end_time or 0.0)
+                for b in event.buckets
+            )
+        )
+    except Exception as exc:  # skip this event, keep collecting
         if progress is not None:
-            done = min(index + batch, len(todo))
-            progress(f"{done}/{len(todo)} events: {written} collected")
-    return written
+            progress(f"{event.title}: {exc}")
+        return None
+    if not any(histories):  # TP-4: nothing to replay; retry next run
+        if progress is not None:
+            progress(f"{event.title}: no price history")
+        return None
+    return _event_row(event, histories)
 
 
 def _event_row(
@@ -310,6 +333,45 @@ def _observed_max(
     return covered, best
 
 
+def _distribution(
+    event: EventHistory,
+    runs: PreviousRuns,
+    lane: WeatherLane,
+    entry_hour: int,
+    observations: Mapping[str, Sequence[Metar]] | None,
+    history: _StationErrors,
+) -> tuple[TempDistribution, list[float], float] | None:
+    """The live lane's distribution at ``entry_hour``, its day-ahead maxima
+    and the entry moment; ``None`` when the forecasts or METARs miss the day."""
+    day_text = event.day.isoformat()
+    daily = [v[day_text] for v in runs.maxima.values() if day_text in v]
+    if not daily:
+        return None
+    zone = station_zone(runs)
+    start = datetime.combine(event.day, datetime.min.time(), zone)
+    moment = (start + timedelta(hours=entry_hour)).timestamp()
+    floor: float | None = None
+    values = daily
+    if observations is not None:
+        covered, floor = _observed_max(
+            observations.get(event.icao, ()), event.day, zone, moment
+        )
+        remaining = runs.remaining_maxima(day_text, entry_hour)
+        if not covered or not remaining:
+            return None
+        values = remaining
+    lead_hours = max(0.0, float(lane.peak_hour - entry_hour))
+    spread = statistics.pstdev(values) if len(values) > 1 else 0.0
+    sigma = lead_sigma(lane, lead_hours, spread=spread, measured_sd=history.sd())
+    bias = history.bias()
+    if observations is not None:  # remaining hours only: see applied_bias
+        bias = applied_bias(bias, entry_hour, lane.peak_hour)
+    dist = TempDistribution(
+        mu=statistics.fmean(values) + bias, sigma=sigma, floor=floor
+    )
+    return dist, daily, moment
+
+
 def backtest_weather(
     events: Sequence[EventHistory],
     forecasts: Mapping[str, PreviousRuns],
@@ -338,31 +400,12 @@ def backtest_weather(
         runs = forecasts.get(event.icao)
         if runs is None:
             continue
-        day_text = event.day.isoformat()
-        daily = [v[day_text] for v in runs.maxima.values() if day_text in v]
-        if not daily:
-            continue
-        zone = station_zone(runs)
-        start = datetime.combine(event.day, datetime.min.time(), zone)
-        moment = (start + timedelta(hours=entry_hour)).timestamp()
-        floor: float | None = None
-        values = daily
-        if observations is not None:
-            covered, floor = _observed_max(
-                observations.get(event.icao, ()), event.day, zone, moment
-            )
-            remaining = runs.remaining_maxima(day_text, entry_hour)
-            if not covered or not remaining:
-                continue
-            values = remaining
-        used += 1
         history = learnt.setdefault(event.icao, _StationErrors())
-        lead_hours = max(0.0, float(lane.peak_hour - entry_hour))
-        spread = statistics.pstdev(values) if len(values) > 1 else 0.0
-        sigma = lead_sigma(lane, lead_hours, spread=spread, measured_sd=history.sd())
-        dist = TempDistribution(
-            mu=statistics.fmean(values) + history.bias(), sigma=sigma, floor=floor
-        )
+        built = _distribution(event, runs, lane, entry_hour, observations, history)
+        if built is None:
+            continue
+        dist, daily, moment = built
+        used += 1
         for bucket in event.buckets:
             price = bucket.price_at(moment)
             if price is not None:

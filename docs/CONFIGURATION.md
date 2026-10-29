@@ -35,8 +35,9 @@ Amounts are USDC. Probabilities and prices are 0–1.
 | `bankroll` | `1000.0` | What lane Kelly sizing is a fraction of; keep equal to the paper balance |
 | `max_candidates` | `80` | Candidates the pipeline screens per cycle, all lanes together |
 | `exit_at_bid` | `0.0` | Sell a position once its bid reaches this (0: hold to resolution). Off until proven ([`GO-NO-GO.md` §3.6](GO-NO-GO.md#36-features-that-stay-off-until-proven)) |
+| `kalshi_url` | `https://api.elections.kalshi.com/trade-api/v2` | Kalshi public API base (read only, no key) for the reference lanes |
 | `paper` | object | Paper fill model (below) |
-| `weather`, `favourite`, `momentum` | objects | Lanes (below) |
+| `weather`, `favourite`, `momentum`, `fed`, `crossvenue` | objects | Lanes (below) |
 
 ## `paper`
 
@@ -131,12 +132,43 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `news` | `false` | Record Google News headlines in the last 6 h as a metric |
 | `max_pages` | `2` | |
 
+## `fed` and `crossvenue` (reference lanes)
+
+Both price a Polymarket token from Kalshi's quote for the same question
+([`STRATEGIES.md`](STRATEGIES.md#fed-and-crossvenue-polymarket-against-kalshi)).
+They share these keys; `fed` defaults are listed where they differ.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `false` | Off until the lane passes its Stage 0 gate |
+| `min_volume_24h`, `min_liquidity` | `1000`, `1000` (`fed`: `5000`, `5000`) | |
+| `max_spread` | `0.04` | |
+| `min_ask_depth` | `20.0` | |
+| `depth_window` | `0.03` | |
+| `min_edge` | `0.02` | Net edge per share against the reference, after Polymarket's fee |
+| `max_edge` | `0.15` | A bigger gap suggests the two markets do not settle the same way; not traded |
+| `kelly_fraction` | `0.25` | |
+| `min_notional`, `max_notional` | `2.0`, `25.0` | |
+| `max_candidates` | `40` | |
+| `min_price`, `max_price` | `0.03`, `0.97` | Polymarket ask band |
+| `reference` | `"mid"` | Fair value: Kalshi's `"mid"`, or its `"bid"` (conservative) |
+| `max_reference_spread` | `0.04` | A wider Kalshi quote is no reference |
+| `min_reference_volume` | `500` | Kalshi 24 h contracts traded, below which it is no reference |
+| `reference_ttl_seconds` | `60.0` | Kalshi markets/events reused this long (the shorter of the two lanes wins) |
+| `max_reference_age_seconds` | `600.0` | A reference older than this neither opens nor closes a trade |
+| `min_hours` | `1.0` | Skip Polymarket markets closing sooner |
+| `exit_on_convergence` | `true` | Sell once the Polymarket bid reaches the Kalshi mid − `convergence_margin` (else hold to resolution) |
+| `convergence_margin` | `0.0` | |
+| `search_query` | `"Fed Decision in"` | `fed` only: Gamma public search that finds the meeting events |
+| `pairs_path` | `"data/pairs.json"` | `crossvenue` only: the reviewed pairs file (`trading-polymarket pairs approve`) |
+
 ## Files the module reads
 
 | Path (setting) | Written by | Used by |
 |---|---|---|
 | `weather.bias_path` | `trading-polymarket bias` | weather lane |
 | `favourite.calibration_path` | `trading-polymarket calibrate` | favourite lane |
+| `crossvenue.pairs_path` | `trading-polymarket pairs approve` | crossvenue lane |
 | `trading_polymarket/data/stations.json` (package) | shipped | weather lane (station coordinates) |
 
 There are no environment variables and no secrets: every source is keyless.

@@ -3,6 +3,65 @@
 All notable changes. Format: Keep a Changelog; versions: SemVer (see
 `docs/GO-NO-GO.md` §6).
 
+## 0.2.0: Kalshi reference lanes; day-1 pilot fixes (2026-10-29)
+
+Requires trading-core 0.2.0. A money-path release: the weather lane restarts
+Stage 1 ([`docs/GO-NO-GO.md`](docs/GO-NO-GO.md) §3.1).
+
+### Added
+- **Kalshi client** (`clients/kalshi.py`), free and keyless, read only:
+  events (cursor paging), markets, hourly candlesticks, and the historical
+  endpoints for archived events. New setting `kalshi_url`.
+- **`fed` lane**: Polymarket's "Fed Decision in <Month>?" buckets matched
+  every cycle to Kalshi's `KXFEDDECISION` markets for the same meeting
+  (`pairs.match_fed`, Yes and No sides); buys when the Polymarket ask is
+  `min_edge` below Kalshi's mid (or bid) after fees, with reference guards
+  (spread, 24 h volume, age, `max_edge`), sells on convergence (exit reason
+  `converged`) or holds to resolution. Off by default.
+- **`crossvenue` lane**: the same pricing for pairs in a reviewed file
+  (`crossvenue.pairs_path`); off until pairs are approved.
+- Research: `fed-history` (settled meetings on both venues, hourly prices
+  and candles), `backtest fed` (hourly replay, convergence or resolution,
+  Brier scores of Polymarket vs Kalshi at 168/72/24/6/1 h), `pairs suggest`
+  (title-similarity candidates for review), `pairs approve|remove|list`.
+- Configs: `paper-fed.example.json` (the fed pilot as its own instance),
+  pre-registered `verdict/fed.json` and `verdict/crossvenue.json`; the
+  example paper config lists the new lanes (off).
+- Docs: STRATEGIES (Kalshi lanes, evidence, the duplicate-event trap),
+  DATA-SOURCES (Kalshi endpoints), CONFIGURATION, CLI, RESEARCH §4a and the
+  2026-10-29 results, GO-NO-GO (status, sample-limited exception, pairs
+  without history), PAPER-TRADING (second instance), AGENTS learnings.
+
+### Fixed
+- TP-5 (critical): one-sided books were valued at the market's last trade:
+  phantom equity peak, breaker trip on day 1. Tokens now mark at their own
+  price and are valued by walking their own bids (0 without bids).
+- TP-6: the weather analyst trusted the scout's Gamma ask; it now re-checks
+  the band and `max_edge` on the live book.
+- TP-7: the daily-max bias was added to the remaining hours after the peak.
+- TP-8: the pipeline could buy the complement of a held token.
+- The CLI reports an API failure as `error: HTTP …` (exit 2) instead of a
+  traceback.
+
+### Changed
+- flake8 enforces McCabe `max-complexity = 7`; ten functions were split into
+  named steps (paper buy, quotes without a book, arbitrage scan, favourite
+  scout, history and weather collectors, weather replay). Behaviour is
+  unchanged: the fed replay's audit records are byte-identical before and
+  after.
+
+### Release record – 0.2.0 (2026-10-29)
+- See [`docs/dev/releases/0.2.0.md`](docs/dev/releases/0.2.0.md).
+- Release gate: Ruff, Black, flake8, mypy clean; 425 tests, 100% statement
+  and branch coverage on Python 3.11, 3.12, 3.13 and 3.14 against
+  trading-core 0.2.0. CI on the tag pending.
+- Weather lane: Stage 1 restarts (0.1.0 day 1 void, TP-5..TP-8).
+- Fed lane: Stage 0 **INCONCLUSIVE – PROCEED (sample-limited)**: 16
+  meetings, 23 trades, +$25.08 (adjusted +$23.15), every verdict check but
+  `min_positions` passes; +$17.89 at +1 c spread. Kalshi's Brier score is
+  not below Polymarket's. Stage 1 starts on its own instance.
+- Crossvenue lane: Stage 0 not started (no approved pairs).
+
 ## 0.1.0: first module release (2026-10-28)
 
 ### Added

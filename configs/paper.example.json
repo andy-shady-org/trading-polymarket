@@ -11,12 +11,12 @@
     "max_total_exposure": 300,
     "max_position_size": 25,
     "max_active_positions": 40,
-    "max_concentration_pct": 0.10,
+    "max_concentration_pct": 0.1,
     "max_loss_per_trade": 0,
     "reserve_balance": 100
   },
   "breaker": {
-    "max_daily_drawdown_pct": 0.10,
+    "max_daily_drawdown_pct": 0.1,
     "emergency_hard_lock_hours": 24,
     "drawdown_reference_mode": "adaptive_ratchet",
     "profit_ratchet_ratio": 0.5,
@@ -44,6 +44,13 @@
     },
     "momentum": {
       "enabled": false
+    },
+    "fed": {
+      "enabled": false
+    },
+    "crossvenue": {
+      "enabled": false,
+      "pairs_path": "data/pairs.json"
     }
   },
   "health_timeout_seconds": 600,

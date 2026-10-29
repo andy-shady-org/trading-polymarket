@@ -52,6 +52,26 @@ Alongside, from cron:
 read-out (the weather lane's Stage 1 also requires it, [`GO-NO-GO.md` §3.3](GO-NO-GO.md#33-stage-0--backtest-exit-criteria)).
 `trading-polymarket record --cycles 288 --interval 300` (daily) is optional.
 
+### The fed lane: a second instance
+
+The `fed` lane pilots in its **own** trading-core process, so its breaker,
+exposure and audit trail never mix with the weather pilot's:
+
+```bash
+cp configs/paper-fed.example.json configs/paper-fed.json
+cp configs/verdict/fed.json configs/verdict/fed.pilot.json
+trading-core check --config configs/paper-fed.json
+trading-core run --config configs/paper-fed.json --headless   # writes data/paper-fed/
+```
+
+Supervise it like the weather run (a second launchd job or tmux pane). It
+needs no cron job. Expect few trades: a signal needs Polymarket at least
+2 c below Kalshi's mid with a tight, traded Kalshi quote, and most hours
+the venues sit within a cent. Positions are sold by the module when
+Polymarket's bid reaches Kalshi's mid (exit reason `converged`) or redeemed
+at resolution. Judge it with
+`trading-core-audit verdict --path data/paper-fed/audit.jsonl --rules configs/verdict/fed.pilot.json --strategy fed`.
+
 ## 3. Daily check (5 minutes)
 
 | Look at | Where | Healthy |

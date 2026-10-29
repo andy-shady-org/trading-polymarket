@@ -7,7 +7,7 @@ name = "trading-polymarket"
 authors = [
     {name="Andy Wilson", email="andy@shady.org"},
 ]
-version = "0.1.0"
+version = "0.2.0"
 description = "Polymarket trading module for trading-core: free market data, book-walking paper fills, weather and favourite strategies, research and GO/No-Go tooling (proprietary, private use only)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -32,7 +32,7 @@ classifiers = [
 # trading-core is private: install it first (noxfile.py, docs/dev/TESTING.md),
 # then this package resolves the requirement against the installed copy.
 dependencies = [
-  "trading-core>=0.1.0",
+  "trading-core>=0.2.0",
 ]
 
 [project.scripts]

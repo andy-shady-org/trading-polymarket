@@ -3,6 +3,8 @@
 # one-line stub bodies (E701/E704). W503 is off by default in flake8 7.
 max-line-length = 88
 extend-ignore = E203, E701, E704
+max-complexity = 7
+application-import-names = trading_polymarket
 exclude =
     .git,
     __pycache__,

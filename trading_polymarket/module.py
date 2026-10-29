@@ -41,19 +41,32 @@ from trading_polymarket.catalogue import BookCache, MarketCatalogue
 from trading_polymarket.clients.clob import BookUnavailable, ClobClient
 from trading_polymarket.clients.gamma import GammaClient
 from trading_polymarket.clients.http import JsonHttp
+from trading_polymarket.clients.kalshi import KalshiClient
 from trading_polymarket.clients.news import NewsClient
 from trading_polymarket.clients.weather import WeatherClient
 from trading_polymarket.config import (
+    LANE_CROSSVENUE,
     LANE_FAVOURITE,
+    LANE_FED,
     LANE_MOMENTUM,
     LANE_WEATHER,
     PolymarketSettings,
+    ReferenceLane,
 )
 from trading_polymarket.execution import (
     REASON_RESOLVED,
     LiveExecutor,
     PaperExecutor,
     walk_fee,
+)
+from trading_polymarket.strategies.crossvenue import (
+    ApprovedPairs,
+    FedPairs,
+    PairSource,
+    ReferenceAnalyst,
+    ReferenceBook,
+    ReferenceScout,
+    converged,
 )
 from trading_polymarket.strategies.favourite import FavouriteAnalyst, FavouriteScout
 from trading_polymarket.strategies.filters import BookFilter, MarketStateFilter
@@ -69,6 +82,8 @@ POLYMARKET_QUOTE = QuoteAsset(
     symbol="USDC", decimals=2, atomic_decimals=6, prefix="$", grouping=True
 )
 EXIT_BID_TARGET = "bid_target"
+EXIT_CONVERGED = "converged"
+REFERENCE_LANES = (LANE_FED, LANE_CROSSVENUE)
 
 
 class PolymarketModule(TradingModule):
@@ -100,6 +115,15 @@ class PolymarketModule(TradingModule):
         )
         self.clob = ClobClient(self.http, base_url=self.settings.clob_url)
         self.weather_client = WeatherClient(self.http)
+        self.kalshi = KalshiClient(self.http, base_url=self.settings.kalshi_url)
+        self.references = ReferenceBook(
+            self.kalshi,
+            ttl=min(
+                self.settings.fed.reference_ttl_seconds,
+                self.settings.crossvenue.reference_ttl_seconds,
+            ),
+            clock=clock,
+        )
         self.catalogue = MarketCatalogue(
             self.gamma, ttl=self.settings.market_ttl_seconds, clock=clock
         )
@@ -157,6 +181,38 @@ class PolymarketModule(TradingModule):
                 MomentumScout(self.gamma, self.catalogue, s.momentum, clock=self.clock),
                 MomentumAnalyst(self.books, s.momentum, news=news, clock=self.clock),
             )
+        sources: dict[str, PairSource] = {
+            LANE_FED: FedPairs(
+                self.gamma, self.catalogue, self.references, query=s.fed.search_query
+            ),
+            LANE_CROSSVENUE: ApprovedPairs(
+                s.crossvenue.pairs_path, self.catalogue, self.references
+            ),
+        }
+        for name in REFERENCE_LANES:
+            lane = s.lane(name)
+            if not lane.enabled:
+                continue
+            assert isinstance(lane, ReferenceLane)
+            lanes[name] = (
+                ReferenceScout(
+                    f"{name}-vs-kalshi",
+                    name,
+                    sources[name],
+                    self.references,
+                    lane,
+                    clock=self.clock,
+                ),
+                ReferenceAnalyst(
+                    f"{name}-kalshi-analyst",
+                    name,
+                    self.books,
+                    self.references,
+                    lane,
+                    bankroll=bankroll,
+                    clock=self.clock,
+                ),
+            )
         return lanes
 
     def pipeline(self) -> StrategyPipeline | None:
@@ -166,14 +222,39 @@ class PolymarketModule(TradingModule):
                 market_filter=MarketStateFilter(self.settings, clock=self.clock),
                 book_filter=BookFilter(self.settings, self.books),
                 max_candidates=self.settings.max_candidates,
+                complement_of=self.complement_of,
             )
             self._built = True
         return self._pipeline
+
+    def complement_of(self, token_id: str) -> str | None:
+        """The other token of a cached binary market (``None`` if unknown)."""
+        market = self.catalogue.cached(token_id)
+        if market is None or len(market.token_ids) != 2:
+            return None
+        return market.complement(token_id)
 
     # -- market data ----------------------------------------------------------
     def _payout_quote(self, token_id: str, payout: float) -> MarketQuote:
         return MarketQuote(
             token_id, bid=payout, ask=payout, last=payout, timestamp=self.clock()
+        )
+
+    async def _quote_without_book(
+        self, instrument_id: str, error: BookUnavailable
+    ) -> MarketQuote:
+        """The book is gone: the payout once resolved, else a stale last price."""
+        market = await self.catalogue.get(instrument_id, max_age=0.0)
+        if market is None:
+            raise error
+        payout = market.payout(instrument_id)
+        if payout is not None:
+            return self._payout_quote(instrument_id, payout)
+        return MarketQuote(
+            instrument_id,
+            last=market.price_of(instrument_id),
+            timestamp=self.clock(),
+            stale=True,
         )
 
     async def get_quote(self, instrument_id: str) -> MarketQuote:
@@ -183,28 +264,19 @@ class PolymarketModule(TradingModule):
             return self._payout_quote(instrument_id, settled)
         try:
             book = await self.books.get(instrument_id)
-        except BookUnavailable:
-            market = await self.catalogue.get(instrument_id, max_age=0.0)
-            if market is None:
-                raise
-            payout = market.payout(instrument_id)
-            if payout is not None:
-                return self._payout_quote(instrument_id, payout)
-            return MarketQuote(
-                instrument_id,
-                last=market.last_trade_price,
-                timestamp=self.clock(),
-                stale=True,
-            )
+        except BookUnavailable as exc:
+            return await self._quote_without_book(instrument_id, exc)
         if market is None:
-            await self.catalogue.get(instrument_id)
+            market = await self.catalogue.get(instrument_id)
         if self.host is not None:
             self.host.notify_market_data()
+        # ``last`` is this token's own price (never the book's market-wide
+        # last trade): with a one-sided book the mark falls back to it (TP-5).
         return MarketQuote(
             instrument_id,
             bid=book.best_bid,
             ask=book.best_ask,
-            last=book.last_trade_price,
+            last=None if market is None else market.price_of(instrument_id),
             timestamp=book.timestamp or self.clock(),
         )
 
@@ -230,19 +302,42 @@ class PolymarketModule(TradingModule):
                         f"{market.outcome_of(position.instrument_id)} paid {payout:g}"
                     ),
                 )
+        if position.strategy in REFERENCE_LANES and quote is not None:
+            lane = self.settings.lane(str(position.strategy))
+            assert isinstance(lane, ReferenceLane)
+            reference = self.references.latest(position.instrument_id)
+            if converged(reference, quote.bid, lane, now):
+                assert reference is not None and reference.mid is not None
+                return ExitDecision(
+                    EXIT_CONVERGED,
+                    detail=f"bid {quote.bid:.3f} ≥ Kalshi {reference.mid:.3f}",
+                )
         target = self.settings.exit_at_bid
         if target > 0 and quote is not None and quote.bid and quote.bid >= target:
             return ExitDecision(EXIT_BID_TARGET, detail=f"bid {quote.bid:.3f}")
         return None
 
     def exit_value(self, position: Position, quote: MarketQuote | None = None) -> float:
-        market = self.catalogue.cached(position.instrument_id)
+        """What the position is worth to the breaker, never more than a sale.
+
+        * resolved: units × payout (redemption is free);
+        * closed, awaiting resolution: units × the token's final Gamma price
+          (nothing can be sold; the outcome is all but known);
+        * open with bids: the bids walked for the whole size, minus the fee;
+        * open with no bids: **0** - nothing can be sold. Falling back to a
+          mark here valued one-sided books at ~1 and showed a $3,725 equity
+          peak on a $1,000 account (TP-5).
+        """
+        token = position.instrument_id
+        market = self.catalogue.cached(token)
         if market is not None:
-            payout = market.payout(position.instrument_id)
+            payout = market.payout(token)
             if payout is not None:
                 return float(position.size) * payout
-        book = self.books.cached(position.instrument_id)
-        if book is None or not book.bids:
+            if not market.tradable:
+                return float(position.size) * float(market.price_of(token) or 0.0)
+        book = self.books.cached(token)
+        if book is None:
             return super().exit_value(position, quote)
         walk = book.walk_sell(position.size)
         fee = walk_fee(walk, market.fee) if market is not None else 0.0
@@ -297,6 +392,17 @@ class PolymarketModule(TradingModule):
             )
         if s.momentum.enabled:
             rows.append(("momentum", f"move≥{s.momentum.min_move:.2f} (research)"))
+        for name in REFERENCE_LANES:
+            lane = s.lane(name)
+            if lane.enabled:
+                assert isinstance(lane, ReferenceLane)
+                rows.append(
+                    (
+                        name,
+                        f"vs Kalshi {lane.reference} edge≥{lane.min_edge:.2f} "
+                        f"≤{lane.max_edge:.2f} max ${lane.max_notional:g}",
+                    )
+                )
         return rows
 
     # -- operations -----------------------------------------------------------

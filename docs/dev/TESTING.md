@@ -8,7 +8,7 @@ nox -s lint mypy tests          # trading-core comes from ../trading-core by def
 
 | Session | Runs | Must |
 |---|---|---|
-| `lint` (3.14) | `ruff check .`, `black --check .`, `flake8 .` | pass |
+| `lint` (3.14) | `ruff check .`, `black --check .`, `flake8 .` (McCabe `max-complexity = 7`) | pass |
 | `mypy` (3.14, checks as 3.11) | `mypy` (package and tests, against trading-core's types) | no issues |
 | `tests-3.11` … `tests-3.14` | `pytest --cov=trading_polymarket --cov-fail-under=100` | pass with 100% **statement and branch** coverage on every version |
 | `tests-fast` | unit and property tests, no coverage | quick loop |

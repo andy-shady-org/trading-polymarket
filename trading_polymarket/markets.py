@@ -205,6 +205,16 @@ class Market:
             return None
         return self.outcome_prices[self.token_index(token_id)]
 
+    def price_of(self, token_id: str) -> float | None:
+        """Gamma's last price for this token (``outcomePrices``), if known.
+
+        Each token has its own price; ``lastTradePrice`` is the *first*
+        token's, so it must never stand in for the second one (TP-5).
+        """
+        if not self.outcome_prices:
+            return None
+        return self.outcome_prices[self.token_index(token_id)]
+
     @property
     def tradable(self) -> bool:
         return self.active and not self.closed and self.accepting_orders

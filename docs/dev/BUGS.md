@@ -5,7 +5,7 @@ Every bug fixed in trading-polymarket gets a row here and a test tagged
 `trading_polymarket/tests/unit/test_suite_layout.py` fails when a **RESOLVED**
 row has no tagged test, or a tag names no row.
 
-IDs are `TP-<n>` (next free: **TP-5**). Bugs in the engine belong in
+IDs are `TP-<n>` (next free: **TP-9**). Bugs in the engine belong in
 trading-core's own tracker (`TC-<n>`).
 
 When you fix a bug: add a row (status **RESOLVED**), a section below with
@@ -20,6 +20,10 @@ when the lesson is general.
 | **TP-2** | High | Strategy / Weather | **RESOLVED** | Temperature events settled by another source (Hong Kong Observatory, Wunderground) were priced against airport METARs |
 | **TP-3** | High | Catalogue / Execution | **RESOLVED** | `max_age=0` did not force a market refresh when the clock had not moved, so a sell could miss a resolution |
 | **TP-4** | High | Research / Weather history | **RESOLVED** | Weather events were stored with empty price series (and then never re-fetched), so the backtest silently skipped them |
+| **TP-5** | Critical | Module / Valuation | **RESOLVED** | One-sided books and another token's price valued positions at ~1: a $3,725 equity peak on $1,000 tripped the breaker |
+| **TP-6** | High | Strategy / Weather | **RESOLVED** | Price band, `max_edge` and the market blend used Gamma's stale quotes, not the live book |
+| **TP-7** | High | Strategy / Weather | **RESOLVED** | The daily-maximum station bias was added to the evening's remaining hours, fattening the upper tail |
+| **TP-8** | Medium | Strategy / Pipeline | **RESOLVED** | Both sides of one bucket were bought when the model moved |
 
 ## TP-1: implausible weather edges taken at face value
 
@@ -90,3 +94,71 @@ an event whose buckets all come back empty is reported and not stored.
 Events are also fetched ten at a time (about 8× faster).
 
 **Test:** `tests/unit/research/test_weather_backtest.py::test_events_without_prices_are_not_stored`.
+
+## TP-5: one-sided books and other tokens' prices valued positions at ~1
+
+**Found:** day 1 of the weather pilot (28–29 Oct 2026). The circuit breaker
+tripped on a "profit run retracement" from an equity peak of **$3,725** on a
+$1,000 account; open positions were marked at 0.999 on both the Yes and the
+No token of the same bucket (Wellington 19°C, Istanbul 16°C).
+
+**Root cause:** two fall-backs. (1) A quote for a closed market used Gamma's
+`lastTradePrice`, which is the *first* token's price, for either token. (2)
+`exit_value` fell back to the quote's mark when the book had no bids, and a
+book with only a 0.999 ask marks at 0.999. Equity, and so the breaker, saw
+money no sale could produce.
+
+**Fix:** `Market.price_of(token)` reads each token's own `outcomePrices`
+entry; quotes carry it as `last`. `exit_value`: resolved → payout; closed
+awaiting resolution → the token's final price; open → the bids walked net of
+the fee, and **0 with no bids**.
+
+**Test:** `tests/unit/test_module.py::test_quotes_and_values_use_each_tokens_own_price`.
+
+## TP-6: the guards judged Gamma's stale quotes, not the live book
+
+**Found:** day 1 of the pilot. Seoul 12°C Yes was bought at 0.7¢ with a
+fair value of 0.22: Gamma's ask was 0.12 (so the 0.02 price floor and the
+`max_edge` guard passed, and the blend used Gamma's mid), while the live book
+was at 0.2¢. Mexico City 24°C No: Gamma 0.51, book 0.22.
+
+**Root cause:** the scout's checks (price band, `max_edge`, market blend) used
+Gamma's quotes, which can be minutes old; the analyst re-priced the plan on
+the live book but kept the scout's fair value and skipped the checks.
+
+**Fix:** the analyst re-applies the band and the `max_edge` guard to the
+live best ask and blends with the live book's mid.
+
+**Test:** `tests/unit/strategies/test_weather.py::test_analyst_rechecks_band_and_guard_on_the_live_book`.
+
+## TP-7: the daily-maximum bias was added to the evening's hours
+
+**Found:** reviewing day 1's entries: buckets above the observed maximum
+priced at 2–7¢ were bought at fair values of 0.15–0.35 late in the local day
+(Chongqing 17°C at 21:00).
+
+**Root cause:** the station bias measures *observed daily max − forecast
+daily max*. On the event day the model forecasts only the remaining hours;
+once those no longer include the afternoon peak, adding the daily-max bias
+(+1 to +1.5 °C at many stations) lifted the evening forecast towards the
+observed maximum and fattened the upper tail.
+
+**Fix:** `applied_bias` adds the bias only while the remaining hours include
+the peak (`first_hour <= peak_hour + 1`); the intraday backtest uses the
+same rule.
+
+**Test:** `tests/unit/strategies/test_weather.py::test_daily_max_bias_is_not_added_after_the_peak`.
+
+## TP-8: both sides of one bucket were bought
+
+**Found:** day 1: Wellington 29 Oct 19°C — Yes at 04:07, No at 05:31.
+
+**Root cause:** the engine excludes held tokens from the pipeline, but not
+their complements; when the model moved, the other side became a candidate.
+Holding both sides pays two spreads for a position that cannot win more than
+it cost.
+
+**Fix:** `LanePipeline` also excludes the complement of every held token
+(`PolymarketModule.complement_of`).
+
+**Test:** `tests/unit/strategies/test_router.py::test_pipeline_never_offers_the_other_side_of_a_held_token`.

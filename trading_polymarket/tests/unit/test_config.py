@@ -8,7 +8,9 @@ import pytest
 from trading_polymarket.config import (
     LANE_FAVOURITE,
     LANE_WEATHER,
+    CrossVenueLane,
     FavouriteLane,
+    FedLane,
     MomentumLane,
     PaperSettings,
     PolymarketSettings,
@@ -80,6 +82,12 @@ def test_invalid_settings_are_rejected(data: dict) -> None:
         (FavouriteLane, {"min_samples": 0}),
         (MomentumLane, {"min_move": 0}),
         (MomentumLane, {"min_price": 0}),
+        (FedLane, {"reference": "last"}),
+        (FedLane, {"min_price": 0}),
+        (FedLane, {"max_edge": 0.01}),
+        (CrossVenueLane, {"max_reference_spread": 0}),
+        (CrossVenueLane, {"convergence_margin": -0.01}),
+        (CrossVenueLane, {"min_hours": -1}),
         (PaperSettings, {"max_slippage": -1}),
         (PaperSettings, {"share_decimals": -1}),
     ],
@@ -99,6 +107,8 @@ def test_every_setting_is_documented() -> None:
         WeatherLane,
         FavouriteLane,
         MomentumLane,
+        FedLane,
+        CrossVenueLane,
     ):
         for item in fields(kind):
             assert f"`{item.name}`" in doc, f"{kind.__name__}.{item.name} undocumented"

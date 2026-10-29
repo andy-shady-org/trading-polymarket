@@ -13,7 +13,11 @@ it on its own (docs/GO-NO-GO.md):
 * ``favourite`` - favourite-longshot bias near resolution, sized from a
   calibration table built from real resolved markets;
 * ``momentum``  - research lane: follows sharp moves on busy markets and
-  records attention metrics; off by default, no claimed edge.
+  records attention metrics; off by default, no claimed edge;
+* ``fed``        - Fed-decision buckets priced from Kalshi's quotes for the
+  same meeting (``KXFEDDECISION``);
+* ``crossvenue`` - any question listed on both Polymarket and Kalshi, from a
+  reviewed pairs file (``trading-polymarket pairs``).
 """
 
 from __future__ import annotations
@@ -24,6 +28,7 @@ from typing import Any, TypeVar
 
 from trading_polymarket.clients.clob import CLOB_URL
 from trading_polymarket.clients.gamma import GAMMA_URL
+from trading_polymarket.clients.kalshi import KALSHI_URL
 from trading_polymarket.clients.weather import DEFAULT_MODELS
 
 T = TypeVar("T")
@@ -31,7 +36,11 @@ T = TypeVar("T")
 LANE_WEATHER = "weather"
 LANE_FAVOURITE = "favourite"
 LANE_MOMENTUM = "momentum"
-LANES = (LANE_WEATHER, LANE_FAVOURITE, LANE_MOMENTUM)
+LANE_FED = "fed"
+LANE_CROSSVENUE = "crossvenue"
+LANES = (LANE_WEATHER, LANE_FAVOURITE, LANE_MOMENTUM, LANE_FED, LANE_CROSSVENUE)
+REFERENCE_MID = "mid"
+REFERENCE_BID = "bid"
 
 
 def _build(cls: type[T], data: Mapping[str, Any] | None, where: str) -> T:
@@ -174,6 +183,61 @@ class MomentumLane(LaneLimits):
 
 
 @dataclass(frozen=True)
+class ReferenceLane(LaneLimits):
+    """A lane priced from Kalshi's quote for the same question.
+
+    ``reference`` is ``"mid"`` (Kalshi's mid is the fair value) or ``"bid"``
+    (the conservative choice: buy on Polymarket only below what Kalshi's
+    buyers already pay). A Kalshi quote wider than ``max_reference_spread``
+    or thinner than ``min_reference_volume`` (24 h contracts) is no reference.
+    """
+
+    min_volume_24h: float = 1000.0
+    min_liquidity: float = 1000.0
+    max_spread: float = 0.04
+    min_ask_depth: float = 20.0
+    min_edge: float = 0.02
+    max_edge: float = 0.15  # a bigger gap suggests different rules, not money
+    min_price: float = 0.03
+    max_price: float = 0.97
+    reference: str = REFERENCE_MID
+    max_reference_spread: float = 0.04
+    min_reference_volume: float = 500.0
+    reference_ttl_seconds: float = 60.0
+    max_reference_age_seconds: float = 600.0
+    min_hours: float = 1.0
+    exit_on_convergence: bool = True
+    convergence_margin: float = 0.0
+
+    def __post_init__(self) -> None:
+        self._check()
+        if self.reference not in (REFERENCE_MID, REFERENCE_BID):
+            raise ValueError("reference must be 'mid' or 'bid'")
+        if not 0 < self.min_price < self.max_price < 1:
+            raise ValueError("reference lanes need 0 < min_price < max_price < 1")
+        if self.max_edge <= self.min_edge or self.max_reference_spread <= 0:
+            raise ValueError("need max_edge > min_edge and max_reference_spread > 0")
+        if self.convergence_margin < 0 or self.min_hours < 0:
+            raise ValueError("convergence_margin and min_hours must be >= 0")
+
+
+@dataclass(frozen=True)
+class FedLane(ReferenceLane):
+    """Fed decision buckets against Kalshi's KXFEDDECISION markets."""
+
+    min_volume_24h: float = 5000.0
+    min_liquidity: float = 5000.0
+    search_query: str = "Fed Decision in"  # Gamma public search for the events
+
+
+@dataclass(frozen=True)
+class CrossVenueLane(ReferenceLane):
+    """Any question listed on both venues, from a reviewed pairs file."""
+
+    pairs_path: str = "data/pairs.json"
+
+
+@dataclass(frozen=True)
 class PaperSettings:
     """How paper fills are simulated against the live book."""
 
@@ -208,6 +272,9 @@ class PolymarketSettings:
     weather: WeatherLane = field(default_factory=WeatherLane)
     favourite: FavouriteLane = field(default_factory=FavouriteLane)
     momentum: MomentumLane = field(default_factory=MomentumLane)
+    fed: FedLane = field(default_factory=FedLane)
+    crossvenue: CrossVenueLane = field(default_factory=CrossVenueLane)
+    kalshi_url: str = KALSHI_URL
 
     def __post_init__(self) -> None:
         if self.bankroll <= 0 or self.max_candidates < 1:
@@ -223,6 +290,8 @@ class PolymarketSettings:
             "weather": WeatherLane,
             "favourite": FavouriteLane,
             "momentum": MomentumLane,
+            "fed": FedLane,
+            "crossvenue": CrossVenueLane,
         }
         built: dict[str, Any] = {}
         for key, kind in nested.items():
@@ -253,6 +322,13 @@ def _shallow(settings: PolymarketSettings) -> dict[str, Any]:
 
 __all__ = [
     "LANES",
+    "LANE_CROSSVENUE",
+    "LANE_FED",
+    "REFERENCE_BID",
+    "REFERENCE_MID",
+    "CrossVenueLane",
+    "FedLane",
+    "ReferenceLane",
     "LANE_FAVOURITE",
     "LANE_MOMENTUM",
     "LANE_WEATHER",

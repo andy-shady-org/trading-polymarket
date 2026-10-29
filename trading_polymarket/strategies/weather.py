@@ -288,6 +288,18 @@ def lead_sigma(
     return max(lane.min_remaining_sigma, sigma)
 
 
+def applied_bias(bias: float, first_hour: int, peak_hour: int) -> float:
+    """The station bias to add to a forecast of the hours from ``first_hour``.
+
+    The bias corrects the *daily maximum*, which is set around the afternoon
+    peak. Once the remaining hours no longer include the peak they are the
+    cooling evening, and adding the daily-max correction to them made late
+    tails look likely (day 1 of the pilot bought 0.7¢ buckets at a 22% fair
+    value, TP-7).
+    """
+    return bias if first_hour <= peak_hour + 1 else 0.0
+
+
 def load_stations(path: str | Path | None = None) -> dict[str, dict[str, Any]]:
     """Station coordinates (``data/stations.json`` shipped with the package)."""
     if path is not None:
@@ -411,14 +423,16 @@ class WeatherModel:
         )
 
         if lead_days == 0:
+            first_hour = local_now.hour + 1
             values = [
                 v
                 for v in (
-                    forecast.remaining_max(model, day_text, local_now.hour + 1)
+                    forecast.remaining_max(model, day_text, first_hour)
                     for model in self.lane.models
                 )
                 if v is not None
             ]
+            bias = applied_bias(bias, first_hour, self.lane.peak_hour)
         else:
             values = list(forecast.model_maxima(day_text).values())
         if not values:
@@ -592,8 +606,16 @@ class WeatherAnalyst(Analyst):
         self, candidate: Candidate, screening_metrics: Mapping[str, Any]
     ) -> Signal | None:
         market: Market = candidate.data[KEY_MARKET]
-        fair = float(candidate.data[KEY_FAIR])
+        model_p = float(candidate.data["model_p"])
         book = await self.books.get(candidate.instrument_id)
+        # Re-check everything on the live book: Gamma's quotes can be minutes
+        # old, and the guards must judge the price actually paid (TP-6).
+        ask = book.best_ask
+        if ask is None or not self.lane.min_price <= ask <= self.lane.max_price:
+            return None
+        if net_edge(model_p, ask, market.fee) > self.lane.max_edge:
+            return None
+        fair = blend(model_p, book.mid, self.lane.market_weight)
         plan = plan_buy(
             book,
             fair,
@@ -618,7 +640,12 @@ class WeatherAnalyst(Analyst):
             confidence=min(1.0, max(0.0, plan.edge * 4)),
             edge=plan.edge,
             strategy=LANE_WEATHER,
-            metrics={**metrics, **plan.metrics(), KEY_FAIR: round(fair, 4)},
+            metrics={
+                **metrics,
+                **plan.metrics(),
+                KEY_FAIR: round(fair, 4),
+                "book_mid": None if book.mid is None else round(book.mid, 4),
+            },
         )
 
 
@@ -630,6 +657,7 @@ __all__ = [
     "WeatherEvent",
     "WeatherModel",
     "WeatherScout",
+    "applied_bias",
     "blend",
     "lead_sigma",
     "load_bias",

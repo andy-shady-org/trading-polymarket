@@ -48,6 +48,7 @@ trading-polymarket weather-history --start 2026-08-01 --end 2026-10-27
 trading-polymarket backtest weather                         # day-ahead
 trading-polymarket backtest weather --intraday --entry-hour 15
 trading-core-audit verdict --path data/backtest/weather.jsonl --rules configs/verdict/weather.json
+trading-polymarket fed-history && trading-polymarket backtest fed            # the fed lane (Kalshi reference)
 ```
 
 Details and the favourite-lane equivalent: [`RESEARCH.md`](RESEARCH.md).
