@@ -7,7 +7,7 @@ name = "trading-polymarket"
 authors = [
     {name="Andy Wilson", email="andy@shady.org"},
 ]
-version = "0.2.0"
+version = "0.2.1"
 description = "Polymarket trading module for trading-core: free market data, book-walking paper fills, weather and favourite strategies, research and GO/No-Go tooling (proprietary, private use only)"
 readme = "README.md"
 requires-python = ">=3.11"

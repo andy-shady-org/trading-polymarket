@@ -1,5 +1,5 @@
 {
-  "_comment": "Weather lane. Fixed before the pilot starts; never edited after (record its sha256 in docs/GO-NO-GO.md). Positions resolve rather than sell, so the exit haircut is 0; 150 positions is about three weeks at the default caps. See docs/GO-NO-GO.md.",
+  "_comment": "Weather lane. Fixed before the pilot starts; never edited after (record its sha256 in the release record). Positions resolve rather than sell, so the exit haircut is 0. At max_positions_per_day 3 (TP-12), 150 positions take about seven weeks. See docs/GO-NO-GO.md.",
   "min_positions": 150,
   "min_net": 0.0,
   "exit_haircut_bps": 0,

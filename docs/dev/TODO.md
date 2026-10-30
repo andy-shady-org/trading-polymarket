@@ -6,8 +6,8 @@ Open work only. Done items go to `CHANGELOG.md`.
 
 - [ ] Re-run `weather-history --start 2026-08-01` once to pick up the ~60
       events the first collection did not reach (it is resumable).
-- [ ] Start the weather lane's Stage 1 (late-day window) with
-      `configs/verdict/weather.json` pre-registered and `metars` in cron.
+- [ ] Start the 0.2.1 pilots (weather, fed) after the smoke run and the
+      restart drill ([`releases/0.2.1.md`](releases/0.2.1.md)); `metars` in cron.
 
 ## Weather lane
 
@@ -15,7 +15,11 @@ Open work only. Done items go to `CHANGELOG.md`.
       (`trading-polymarket record`) and add an intraday backtest from them.
 - [ ] Use the ensemble API's member spread as σ where available.
 - [ ] Per-station `peak_hour` from the hourly forecast instead of a constant.
-- [ ] Ship a weekly-rebuilt bias table with the release record (sha256).
+- [ ] Re-fit `today_error_weight` and `intraday_sigma` on the METAR archive
+      the pilot collects (out of sample for the 0.2.1 weights), and on the
+      same-day runs the live lane uses rather than day-ahead runs.
+- [ ] Size Kelly from equity, not the fixed `bankroll` setting (needs
+      trading-core to expose equity to the module).
 
 ## Favourite lane
 

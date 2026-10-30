@@ -47,9 +47,12 @@ audit trail continues. A pilot allows restarts but no gap over 6 hours
 ([`GO-NO-GO.md` §3.4](GO-NO-GO.md#34-stage-1--paper-pilot-exit-criteria)), so check the terminal daily. `SIGUSR1`
 pauses and resumes entries (exits and resolutions keep running).
 
-The weather lane reads its bias table once, at start: after a weekly
-`trading-polymarket bias` rebuild, restart the weather run (`Ctrl-C`, then the
-same command) and record the new hash in the release record.
+The weather lane reads its bias table once, at start, and uses it only
+before a day's first METAR (TP-11). A pilot that trades only from 15:00 local
+(`min_local_hour: 15`, as configured) never prices with it, so it needs no
+weekly rebuild. A configuration that trades earlier does: after each weekly
+`trading-polymarket bias` rebuild, restart the run (`Ctrl-C`, then the same
+command) and record the new hash in the release record.
 
 One cron job is needed, because the Aviation Weather Center keeps only
 ~15 days of METARs and the read-out needs the whole pilot:
@@ -94,13 +97,16 @@ at resolution. Judge it with
 | Resolutions | `trading-core-audit pnl --group-by reason` | `resolved` sells at 1.0 or 0.0 only |
 | Breaker | dashboard / alerts | not tripped; if tripped, read the event log before resuming |
 
-Weekly: rebuild the bias table (`trading-polymarket bias`), record its sha256
-and restart the run so the lane loads it.
+Weekly, only when the weather lane trades before 15:00 local (§2): rebuild
+the bias table (`trading-polymarket bias`), record its sha256 and restart the
+run so the lane loads it.
 
 ## 4. Things that are normal
 
 - **No trades for hours.** The weather lane needs a mispricing larger than
   `min_edge` after blending with the market; most of the time there is none.
+  Once it holds `max_positions_per_day` (3) positions closing on one date it
+  takes no more for that date: the event log shows `lane-day-cap` rejections.
 - **Positions marked stale near resolution.** The CLOB removes a market's book
   when it closes; until Gamma shows the result the quote is stale and the
   position is held. It is redeemed in the first cycle after resolution.
