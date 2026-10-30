@@ -31,6 +31,7 @@ Amounts are USDC. Probabilities and prices are 0–1.
 | `http_min_interval` | `0.05` | Minimum seconds between requests to one host |
 | `quote_ttl_seconds` | `5.0` | How long an order book is reused for quotes, filters and analysts (execution always re-reads) |
 | `market_ttl_seconds` | `120.0` | How long a Gamma market is reused (sells and resolution checks always re-read) |
+| `heartbeat_seconds` | `60.0` | Seconds between venue reads (the most traded open market and its CLOB book) that tell the engine market data is flowing, held position or not. Keep it well below the engine's `health_timeout_seconds`; three failures in a row report `polymarket data` degraded. `0` turns it off (not for runs: a flat run then goes stale and stops entering, TP-10) |
 | `unknown_fee_rate` | `0.07` | Fee rate assumed for a fee-enabled market with no `feeSchedule` (the highest known category rate) |
 | `bankroll` | `1000.0` | What lane Kelly sizing is a fraction of; keep equal to the paper balance |
 | `max_candidates` | `80` | Candidates the pipeline screens per cycle, all lanes together |

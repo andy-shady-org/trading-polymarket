@@ -251,7 +251,8 @@ async def test_approved_pairs_reload_and_skip_unreadable(
     assert source.pairs() is first  # unchanged file: not reloaded
     listings = await source.listings()
     assert [(p.pm_token, k.ticker) for p, _, k in listings] == [(YES, "GOOD")]
-    assert transport.count("/markets?") == 1  # one batched Gamma lookup
+    # One batched Gamma lookup, then the unknown token asked again as closed.
+    assert transport.count("/markets?") == 2 and transport.count("closed=true") == 1
 
 
 def analyst(

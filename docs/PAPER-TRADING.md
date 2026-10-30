@@ -33,24 +33,35 @@ the live canary can measure.
 
 ```bash
 trading-core run --config configs/paper.json              # dashboard
-trading-core run --config configs/paper.json --headless   # server / tmux
+trading-core run --config configs/paper.json --headless   # the log instead
 ```
 
-Run it under a supervisor (systemd, launchd or tmux + a restart loop; trading-core's `docs/OPERATIONS.md`) so it restarts
-after a crash or reboot; the status file restores positions and the audit
-trail continues. `SIGUSR1` pauses and resumes entries (exits and resolutions
-keep running).
+Run it **in the foreground**, in a terminal you look at: the dashboard shows
+failures as they happen and a stopped run is a stopped terminal, which a
+background service hides. Use tmux (or screen) so the run outlives the
+terminal window: `tmux new -s weather`, start the run, detach with
+`Ctrl-b d`, re-attach with `tmux attach -t weather`. There is no automatic
+restart on purpose: after a crash or reboot, read why it stopped, then start
+it again with the same config; the status file restores positions and the
+audit trail continues. A pilot allows restarts but no gap over 6 hours
+([`GO-NO-GO.md` §3.4](GO-NO-GO.md#34-stage-1--paper-pilot-exit-criteria)), so check the terminal daily. `SIGUSR1`
+pauses and resumes entries (exits and resolutions keep running).
 
-Alongside, from cron:
+The weather lane reads its bias table once, at start: after a weekly
+`trading-polymarket bias` rebuild, restart the weather run (`Ctrl-C`, then the
+same command) and record the new hash in the release record.
+
+One cron job is needed, because the Aviation Weather Center keeps only
+~15 days of METARs and the read-out needs the whole pilot:
 
 ```cron
 15 0 * * *  cd ~/projects/git/trading/trading-polymarket && .venv/bin/trading-polymarket metars    # required for the weather lane
-0 * * * *   cd ~/projects/git/trading/trading-polymarket && .venv/bin/trading-polymarket arb       # optional
 ```
 
 `metars` archives the observations the intraday backtest needs at the
 read-out (the weather lane's Stage 1 also requires it, [`GO-NO-GO.md` §3.3](GO-NO-GO.md#33-stage-0--backtest-exit-criteria)).
-`trading-polymarket record --cycles 288 --interval 300` (daily) is optional.
+`trading-polymarket record --cycles 288 --interval 300` and
+`trading-polymarket arb` are optional research runs.
 
 ### The fed lane: a second instance
 
@@ -61,11 +72,11 @@ exposure and audit trail never mix with the weather pilot's:
 cp configs/paper-fed.example.json configs/paper-fed.json
 cp configs/verdict/fed.json configs/verdict/fed.pilot.json
 trading-core check --config configs/paper-fed.json
-trading-core run --config configs/paper-fed.json --headless   # writes data/paper-fed/
+trading-core run --config configs/paper-fed.json   # writes data/paper-fed/
 ```
 
-Supervise it like the weather run (a second launchd job or tmux pane). It
-needs no cron job. Expect few trades: a signal needs Polymarket at least
+Run it like the weather run, in its own terminal or tmux window. It needs no
+cron job. Expect few trades: a signal needs Polymarket at least
 2 c below Kalshi's mid with a tight, traded Kalshi quote, and most hours
 the venues sit within a cent. Positions are sold by the module when
 Polymarket's bid reaches Kalshi's mid (exit reason `converged`) or redeemed

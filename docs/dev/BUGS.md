@@ -5,7 +5,7 @@ Every bug fixed in trading-polymarket gets a row here and a test tagged
 `trading_polymarket/tests/unit/test_suite_layout.py` fails when a **RESOLVED**
 row has no tagged test, or a tag names no row.
 
-IDs are `TP-<n>` (next free: **TP-9**). Bugs in the engine belong in
+IDs are `TP-<n>` (next free: **TP-11**). Bugs in the engine belong in
 trading-core's own tracker (`TC-<n>`).
 
 When you fix a bug: add a row (status **RESOLVED**), a section below with
@@ -24,6 +24,8 @@ when the lesson is general.
 | **TP-6** | High | Strategy / Weather | **RESOLVED** | Price band, `max_edge` and the market blend used Gamma's stale quotes, not the live book |
 | **TP-7** | High | Strategy / Weather | **RESOLVED** | The daily-maximum station bias was added to the evening's remaining hours, fattening the upper tail |
 | **TP-8** | Medium | Strategy / Pipeline | **RESOLVED** | Both sides of one bucket were bought when the model moved |
+| **TP-9** | High | Clients / Gamma | **RESOLVED** | Positions in markets that had closed were never seen to resolve: Gamma's token lookup returns open markets only |
+| **TP-10** | Critical | Module / Health | **RESOLVED** | A flat run went "market data stale" after `health_timeout_seconds` and never entered again |
 
 ## TP-1: implausible weather edges taken at face value
 
@@ -162,3 +164,44 @@ it cost.
 (`PolymarketModule.complement_of`).
 
 **Test:** `tests/unit/strategies/test_router.py::test_pipeline_never_offers_the_other_side_of_a_held_token`.
+
+## TP-9: closed markets were invisible to the token lookup
+
+**Found:** the 0.2.0 weather pilot. Five positions outlived their markets;
+the engine retried their exits every 300 s for days (1,205 `exit_refused`
+events) and never redeemed them.
+
+**Root cause:** `GammaClient.markets_by_tokens` asks
+`/markets?clob_token_ids=...`, and Gamma answers that query with **open
+markets only** unless `closed=true` is passed (and then with closed markets
+only; checked against the live API). Once a held market closed, its book went
+404 and the refetch found nothing, so the catalogue kept the copy cached
+while the market was open: never resolved, never redeemed.
+
+**Fix:** tokens the default query does not return are asked again with
+`closed=true`. Closed markets reaching a scout are rejected by
+`MarketStateFilter` as before.
+
+**Tests:** `tests/unit/clients/test_gamma.py::test_tokens_of_closed_markets_are_found_by_a_second_pass`,
+`tests/unit/test_module.py::test_a_held_token_whose_market_closed_resolves`.
+
+## TP-10: a flat run went stale and never entered again
+
+**Found:** the 0.2.0 Fed pilot. After its only trade it held nothing; the
+engine reported "market data stale" exactly 600 s after the last sell and no
+lane ran again.
+
+**Root cause:** the module told the engine about market data only in
+`get_quote`, which the engine calls for held positions. Flat, nothing was
+quoted, so health went stale after `health_timeout_seconds`; stale health
+blocks entries, which skips the pipeline, which was the only other thing
+reading the venue. Nothing could make the data fresh again.
+
+**Fix:** `PolymarketModule.start` runs a heartbeat: every
+`heartbeat_seconds` (default 60) it reads the most traded open market and its
+CLOB book and, on success, notifies the engine. Three failed reads in a row
+report `polymarket data` degraded; the next good read clears it. Health now
+tracks the venue, whether a position is held or not.
+
+**Tests:** `tests/unit/test_module.py::test_heartbeat_keeps_a_flat_module_fresh_and_reports_failures`,
+`tests/integration/test_paper_run.py::test_a_flat_run_stays_healthy_and_keeps_entering`.

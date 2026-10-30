@@ -13,8 +13,15 @@ from trading_core.positions import Position
 
 from trading_polymarket.calibration import CalibrationTable, Observation
 from trading_polymarket.clients.http import JsonHttp
+from trading_polymarket.execution import REASON_RESOLVED
 from trading_polymarket.markets import Market
-from trading_polymarket.module import EXIT_BID_TARGET, EXIT_CONVERGED, PolymarketModule
+from trading_polymarket.module import (
+    EXIT_BID_TARGET,
+    EXIT_CONVERGED,
+    HEARTBEAT_FAILURES_BEFORE_DEGRADED,
+    HEARTBEAT_SOURCE,
+    PolymarketModule,
+)
 from trading_polymarket.pairs import Reference
 from trading_polymarket.tests.support.factories import (
     CONDITION,
@@ -30,6 +37,7 @@ from trading_polymarket.tests.support.fakes import (
     Clock,
     FakeTransport,
     RecordingHost,
+    Ticker,
     fake_http,
 )
 
@@ -92,6 +100,26 @@ async def test_quote_when_the_book_is_gone() -> None:
     unknown = FakeTransport({"/markets?": []})
     with pytest.raises(Exception, match="no order book"):
         await build(unknown).get_quote(YES)
+
+
+@pytest.mark.regression("TP-9")
+async def test_a_held_token_whose_market_closed_resolves() -> None:
+    # The weather pilot's stuck positions: the market was cached while open,
+    # then closed and resolved. Its book is gone (404) and Gamma's default
+    # query no longer lists it; only the closed=true pass finds the payout.
+    transport = FakeTransport(
+        {
+            "closed=true": [gamma_market(prices=["0", "1"], closed=True)],
+            "/markets?": [],
+        }
+    )
+    module = build(transport)
+    module.catalogue.put([market()])  # seen while open
+    quote = await module.get_quote(YES)
+    assert quote.bid == quote.ask == 0.0 and not quote.stale
+    decision = module.should_exit(position(10), quote, NOW)
+    assert decision is not None and decision.reason == REASON_RESOLVED
+    assert (await module.get_quote(NO)).bid == 1.0
 
 
 @pytest.mark.regression("TP-5")
@@ -283,3 +311,91 @@ def test_reference_positions_exit_on_convergence() -> None:
     assert module.should_exit(held, MarketQuote(YES, bid=0.55), NOW) is None
     assert module.should_exit(held, None, NOW) is None
     assert module.should_exit(position(strategy="weather"), quote, NOW) is None
+
+
+# -- heartbeat (TP-10) ---------------------------------------------------------
+def venue(**routes: Any) -> FakeTransport:
+    base: dict[str, Any] = {
+        "/markets/keyset": {"markets": [gamma_market()]},
+        "/book": book_payload(),
+    }
+    base.update(routes)
+    return FakeTransport(base)
+
+
+async def test_heartbeat_reads_a_market_and_its_book() -> None:
+    transport = venue(
+        **{
+            "/markets/keyset": {
+                "markets": [gamma_market(acceptingOrders=False), gamma_market()]
+            }
+        }
+    )
+    module = build(transport)
+    host = RecordingHost()
+    module.bind(host)
+    await module.heartbeat()
+    assert host.market_data == 1
+    listing = transport.calls[0]
+    assert "limit=5" in listing and "closed=false" in listing
+    assert "order=volume24hr" in listing and transport.count("/book") == 1
+    module.host = None
+    await module.heartbeat()  # no host bound: still reads, nobody to tell
+    closed = build(venue(**{"/markets/keyset": {"markets": []}}))
+    with pytest.raises(RuntimeError, match="no open market"):
+        await closed.heartbeat()
+
+
+@pytest.mark.regression("TP-10")
+async def test_heartbeat_keeps_a_flat_module_fresh_and_reports_failures() -> None:
+    # The Fed pilot went flat, its last quote aged past the health timeout
+    # and the engine skipped every entry after: nothing ever read the venue
+    # again. The heartbeat reads it whether a position is held or not.
+    transport = venue()
+    ticker = Ticker()
+    module = build(transport, sleep=ticker, heartbeat_seconds=30)
+    host = RecordingHost()
+    module.bind(host)
+    await module.start()
+    await module.start()  # twice is harmless
+    await ticker.settle(1)
+    assert host.market_data == 1 and ticker.waits == [30]
+    transport.routes["/markets/keyset"] = RuntimeError("gamma down")
+    for beat in range(2, 2 + HEARTBEAT_FAILURES_BEFORE_DEGRADED):
+        ticker.tick()
+        await ticker.settle(beat)
+        degraded = beat - 1 == HEARTBEAT_FAILURES_BEFORE_DEGRADED
+        assert host.degraded.get(HEARTBEAT_SOURCE, False) is degraded
+    assert host.details[HEARTBEAT_SOURCE] == "gamma down"
+    ticker.tick()  # a fourth failure does not report again
+    await ticker.settle(2 + HEARTBEAT_FAILURES_BEFORE_DEGRADED)
+    transport.routes["/markets/keyset"] = {"markets": [gamma_market()]}
+    ticker.tick()
+    await ticker.settle(3 + HEARTBEAT_FAILURES_BEFORE_DEGRADED)
+    assert host.degraded[HEARTBEAT_SOURCE] is False and host.market_data == 2
+    await module.stop()
+    await module.stop()  # twice is harmless
+    assert module._heartbeat_task is None
+
+
+async def test_heartbeat_failures_without_a_host_or_a_message() -> None:
+    module = build(venue(**{"/markets/keyset": RuntimeError()}))
+    for _ in range(HEARTBEAT_FAILURES_BEFORE_DEGRADED + 1):
+        module._heartbeat_failed(RuntimeError())
+    module._heartbeat_ok()  # recovers silently with no host
+    host = RecordingHost()
+    module.bind(host)
+    for _ in range(HEARTBEAT_FAILURES_BEFORE_DEGRADED):
+        module._heartbeat_failed(RuntimeError())  # empty message: the type
+    assert host.degraded == {HEARTBEAT_SOURCE: True}
+    assert host.details[HEARTBEAT_SOURCE] == "RuntimeError"
+    module._heartbeat_ok()
+    module._heartbeat_ok()  # healthy already: nothing to clear
+    assert host.degraded == {HEARTBEAT_SOURCE: False}
+
+
+async def test_heartbeat_off() -> None:
+    module = build(heartbeat_seconds=0)
+    await module.start()
+    assert module._heartbeat_task is None
+    await module.stop()

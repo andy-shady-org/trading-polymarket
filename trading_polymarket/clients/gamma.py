@@ -5,7 +5,8 @@ Endpoints used (docs/DATA-SOURCES.md has the full notes):
 * ``GET /markets/keyset`` and ``GET /events/keyset`` - cursor-paged listings
   (``limit`` <= 100, ``after_cursor`` -> ``next_cursor``), filterable by
   ``closed``, ``tag_slug``, ``end_date_min`` / ``end_date_max``, ``order``;
-* ``GET /markets?clob_token_ids=...`` - markets by outcome token id;
+* ``GET /markets?clob_token_ids=...`` - markets by outcome token id (open
+  ones only, unless ``closed=true``, which returns the closed ones only);
 * ``GET /public-search?q=...`` - text search over events.
 
 Published limits are 300 requests / 10 s for ``/markets`` and 500 / 10 s for
@@ -101,24 +102,39 @@ class GammaClient:
             for event in raw
         ]
 
-    async def markets_by_tokens(self, token_ids: Iterable[str]) -> list[Market]:
-        """Markets owning ``token_ids`` (open or closed), looked up in batches."""
-        tokens = sorted({str(t) for t in token_ids if t})
+    async def _lookup(
+        self, tokens: Sequence[str], *, closed: bool | None
+    ) -> dict[str, Market]:
+        """One ``/markets?clob_token_ids=`` pass over ``tokens``, in batches."""
         found: dict[str, Market] = {}
         for start in range(0, len(tokens), TOKENS_PER_LOOKUP):
-            batch = tokens[start : start + TOKENS_PER_LOOKUP]
+            batch = list(tokens[start : start + TOKENS_PER_LOOKUP])
+            params = {"clob_token_ids": batch, "limit": len(batch) * 2}
             payload = await self.http.get_json(
-                self._url(
-                    "/markets",
-                    {"clob_token_ids": batch, "limit": len(batch) * 2},
-                )
+                self._url("/markets", {**params, "closed": closed})
             )
             items, _ = _items(payload, "markets")
             for raw in items:
-                if isinstance(raw, Mapping):
-                    market = self._market(raw)
-                    if market is not None:
-                        found[market.market_id] = market
+                market = self._market(raw) if isinstance(raw, Mapping) else None
+                if market is not None:
+                    found[market.market_id] = market
+        return found
+
+    async def markets_by_tokens(self, token_ids: Iterable[str]) -> list[Market]:
+        """Markets owning ``token_ids``, open or closed.
+
+        Gamma's token lookup leaves closed markets out unless asked with
+        ``closed=true`` (and then leaves the open ones out), so the tokens the
+        first pass did not find are asked for again as closed. Without this a
+        held token's market vanished at its close and its resolution was
+        never seen (TP-9).
+        """
+        tokens = sorted({str(t) for t in token_ids if t})
+        found = await self._lookup(tokens, closed=None)
+        seen = {token for market in found.values() for token in market.token_ids}
+        missing = [token for token in tokens if token not in seen]
+        if missing:
+            found.update(await self._lookup(missing, closed=True))
         return list(found.values())
 
     async def market_by_token(self, token_id: str) -> Market | None:

@@ -55,6 +55,7 @@ def test_nested_sections_are_built_and_normalised() -> None:
         {"max_candidates": 0},
         {"unknown_fee_rate": -1},
         {"exit_at_bid": 1.0},
+        {"heartbeat_seconds": -1},
     ],
 )
 def test_invalid_settings_are_rejected(data: dict) -> None:
