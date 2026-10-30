@@ -28,6 +28,7 @@
   "close_positions_on_shutdown": false,
   "module_settings": {
     "bankroll": 1000,
+    "heartbeat_seconds": 60,
     "weather": {
       "enabled": true,
       "lead_days": 0,
@@ -36,6 +37,9 @@
       "market_weight": 0.5,
       "max_edge": 0.25,
       "max_notional": 15,
+      "max_positions_per_day": 3,
+      "today_error_weight": 0.5,
+      "intraday_sigma": 0.8,
       "bias_path": "data/weather_bias.json"
     },
     "favourite": {

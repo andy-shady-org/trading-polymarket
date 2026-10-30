@@ -28,6 +28,7 @@
   "close_positions_on_shutdown": false,
   "module_settings": {
     "bankroll": 1000,
+    "heartbeat_seconds": 60,
     "weather": {
       "enabled": false
     },

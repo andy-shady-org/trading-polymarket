@@ -3,7 +3,23 @@
 All notable changes. Format: Keep a Changelog; versions: SemVer (see
 `docs/GO-NO-GO.md` §6).
 
-## Unreleased
+## 0.2.1: pilot fixes (2026-10-30)
+
+Requires trading-core 0.2.0 or later (the pilots run on 0.2.2). A
+money-path release: the 0.2.0 pilots stopped on day 2 (TP-9, TP-10) and the
+weather model and sizing changed (TP-11, TP-12), so both lanes start new
+Stage 1 pilots with new pre-registered files
+([`docs/dev/releases/0.2.1.md`](docs/dev/releases/0.2.1.md)).
+
+### Changed
+- Example configs set the new settings explicitly (`heartbeat_seconds`; the
+  weather lane's `max_positions_per_day`, `today_error_weight`,
+  `intraday_sigma`), so a pre-registered config does not depend on defaults.
+- `configs/verdict/weather.json`: the comment now says 150 positions take
+  about seven weeks at 3 a day (the rules and their `rules_sha256` are
+  unchanged).
+- Pilots run in the foreground, in a terminal or tmux, with no service
+  manager; cron only for `metars` (docs/PAPER-TRADING.md).
 
 ### Fixed
 - **TP-9**: positions in markets that had closed were never redeemed: Gamma's
