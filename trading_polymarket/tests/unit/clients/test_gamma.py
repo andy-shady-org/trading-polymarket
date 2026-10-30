@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from trading_polymarket.clients.gamma import GammaClient, _items, resolved_only
 from trading_polymarket.tests.support.factories import (
     NO,
@@ -64,10 +66,31 @@ async def test_markets_by_tokens_batches_and_dedupes() -> None:
     g = client(transport)
     found = await g.markets_by_tokens([YES, NO, ""] + [str(i) for i in range(25)])
     assert len(found) == 1
-    assert transport.count("/markets?") == 2  # 27 tokens -> batches of 20
+    # 27 tokens -> batches of 20; the 25 not found are asked again as closed.
+    assert transport.count("/markets?") == 4
+    assert transport.count("closed=true") == 2
     assert "clob_token_ids=" in transport.calls[0]
     assert (await g.market_by_token(YES)).market_id == "100"  # type: ignore[union-attr]
     assert await g.market_by_token("unknown") is None
+
+
+@pytest.mark.regression("TP-9")
+async def test_tokens_of_closed_markets_are_found_by_a_second_pass() -> None:
+    # Gamma's default /markets query returns open markets only: a held
+    # token whose market has closed is found only with closed=true.
+    transport = FakeTransport(
+        {
+            "closed=true": [gamma_market(closed=True, prices=["1", "0"])],
+            "/markets?": [],
+        }
+    )
+    found = await client(transport).markets_by_tokens([YES])
+    assert [m.closed for m in found] == [True]
+    assert transport.count("closed=true") == 1 and transport.count("/markets?") == 2
+    # Every token found by the first pass: no second request.
+    open_only = FakeTransport({"/markets?": [gamma_market()]})
+    assert len(await client(open_only).markets_by_tokens([YES, NO])) == 1
+    assert open_only.count("/markets?") == 1
 
 
 async def test_bad_market_payload_shape() -> None:

@@ -15,17 +15,18 @@ import pytest
 from trading_core.accounting.audit import load_audit_records
 from trading_core.accounting.pnl import summarize_pnl, trade_payloads
 from trading_core.config.settings import EngineSettings
-from trading_core.engine.engine import TradingEngine
+from trading_core.engine.engine import BLOCK_HEALTH, TradingEngine
 
 from trading_polymarket.module import PolymarketModule
 from trading_polymarket.tests.support.factories import (
     NOW,
     book_payload,
     forecast_payload,
+    gamma_market,
     metar_row,
     weather_event,
 )
-from trading_polymarket.tests.support.fakes import FakeTransport, fake_http
+from trading_polymarket.tests.support.fakes import FakeTransport, Ticker, fake_http
 
 
 class EngineClock:
@@ -45,7 +46,10 @@ class EngineClock:
 
 
 def engine_for(
-    tmp_path: Path, transport: FakeTransport, clock: EngineClock
+    tmp_path: Path,
+    transport: FakeTransport,
+    clock: EngineClock,
+    sleep: Any = None,
 ) -> TradingEngine:
     settings = EngineSettings.from_mapping(
         {
@@ -78,6 +82,7 @@ def engine_for(
         http=fake_http(transport, max_retries=0),
         clock=clock,
         stations={"KDAL": {"lat": 32.8, "lon": -96.8}},
+        sleep=sleep or Ticker(),
         **settings.module_settings,
     )
     return TradingEngine(module, settings, clock=clock, monotonic=clock.monotonic)
@@ -136,3 +141,44 @@ async def test_buy_then_redeem_at_resolution(tmp_path: Path) -> None:
     assert summary["net_pnl"] == pytest.approx(engine.totals.net_pnl)
     assert engine.balance == pytest.approx(1000 + sum(t["cash_flow"] for t in trades))
     assert all(t["mode"] == "paper" and t["module"] == "polymarket" for t in trades)
+
+
+@pytest.mark.regression("TP-10")
+async def test_a_flat_run_stays_healthy_and_keeps_entering(tmp_path: Path) -> None:
+    # The Fed pilot: no position held, so nothing quoted, so no market data
+    # reached the engine; after health_timeout_seconds it blocked entries and,
+    # with the pipeline skipped, nothing could ever make the data fresh again.
+    transport = FakeTransport(
+        {
+            "/events/keyset": {"events": []},
+            "/markets/keyset": {"markets": [gamma_market()]},
+            "/book": book_payload(),
+        }
+    )
+    clock, ticker = EngineClock(), Ticker()
+    engine = engine_for(tmp_path, transport, clock, sleep=ticker)
+    await engine.start()
+    await ticker.settle(1)  # the first heartbeat ran
+    await engine.run_cycle()
+    assert engine.entry_blockers() == [] and len(engine.book) == 0
+    for beat in range(2, 5):  # an hour flat, a heartbeat each 20 minutes
+        clock.advance(1_200)
+        ticker.tick()
+        await ticker.settle(beat)
+        await engine.run_cycle()
+        assert BLOCK_HEALTH not in engine.entry_blockers()
+    # Without it (the venue unreadable), the same hour goes stale - and
+    # comes back on the first good read.
+    transport.routes["/markets/keyset"] = RuntimeError("down")
+    clock.advance(1_200)
+    ticker.tick()
+    await ticker.settle(5)
+    await engine.run_cycle()
+    assert BLOCK_HEALTH in engine.entry_blockers()
+    transport.routes["/markets/keyset"] = {"markets": [gamma_market()]}
+    ticker.tick()
+    await ticker.settle(6)
+    await engine.run_cycle()
+    assert engine.entry_blockers() == []
+    await engine.shutdown()
+    assert ticker.waits[0] == 60.0  # the default heartbeat_seconds

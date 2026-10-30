@@ -49,7 +49,8 @@ trading_polymarket/
 | Method | Implementation |
 |---|---|
 | `quote` | `QuoteAsset("USDC", decimals=2, atomic_decimals=6, prefix="$", grouping=True)` |
-| `get_quote(token)` | Resolved market (cached): bid = ask = last = payout. Otherwise the CLOB book (`BookCache`, `quote_ttl_seconds`); first quote of a token also caches its market. Book gone (404): re-read the market; resolved → payout quote, otherwise a **stale** quote (the engine holds and fires no price exit). Notifies the host on every fresh book |
+| `start` / `stop` | Start / cancel the heartbeat: every `heartbeat_seconds` read the most traded open market and its book, notify the host on success, report `polymarket data` degraded after 3 failures in a row (TP-10). Health so tracks the venue whether a position is held or not |
+| `get_quote(token)` | Resolved market (cached): bid = ask = last = payout. Otherwise the CLOB book (`BookCache`, `quote_ttl_seconds`); first quote of a token also caches its market. Book gone (404): re-read the market (asking Gamma for closed markets too, TP-9); resolved → payout quote, otherwise a **stale** quote (the engine holds and fires no price exit). Notifies the host on every fresh book |
 | `get_balance()` | Refuses (paper balance is the engine's; live not implemented) |
 | `execute(order, paper)` | Paper → `PaperExecutor`; live → `LiveExecutor` (refuses) |
 | `pipeline()` | Built once: one scout + analyst per enabled lane, `MarketStateFilter` → `BookFilter` → `LaneRouter` |

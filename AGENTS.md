@@ -54,6 +54,8 @@ You must automatically append a new rule to the **"Local Norms"** or **"Learning
 - **[API] Kalshi Archives:** settled Kalshi events older than a few weeks list no nested markets and 404 on the series candlesticks; read `/historical/markets` and `/historical/markets/{t}/candlesticks` (their candle prices are `close`, not `close_dollars`). Older Fed events call the hold bucket "No change".
 - **[EVIDENCE] Know Where The PnL Comes From:** the fed replay made money selling into convergence and lost holding the same entries to resolution, and Kalshi's Brier score was no better than Polymarket's. The edge is temporary disagreement between venues, not a better forecast; size and exit accordingly.
 - **[EVIDENCE] A Few Longshots Are Not An Edge:** on a partial sample the wide favourite backtest made +$537 on 435 trades yet was NO-GO (without the 5 best positions it lost); on the full out-of-sample window it lost $147. Trust `drop_top`, the bootstrap and a held-out window, not the total — and do not assume the literature's bias holds on this venue.
+- **[API] Gamma Hides Closed Markets:** `/markets?clob_token_ids=` answers with open markets only unless `closed=true` (and then closed only). Held positions in closed markets were never redeemed (TP-9). Any lookup of a token that may have closed needs both queries.
+- **[HEALTH] Feed Health Must Not Depend On Holding:** the engine's market-data health is fed by the module; notifying only from `get_quote` meant a flat run went stale, stale health skipped the pipeline, and nothing read the venue again (TP-10). A module notifies from a read that happens whatever it holds (the heartbeat).
 
 ## Project Overview
 

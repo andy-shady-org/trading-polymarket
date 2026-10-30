@@ -262,6 +262,9 @@ class PolymarketSettings:
     http_min_interval: float = 0.05
     quote_ttl_seconds: float = 5.0
     market_ttl_seconds: float = 120.0
+    # Seconds between venue reads that keep the engine's market-data health
+    # fresh while no position is held (0: off). Below health_timeout_seconds.
+    heartbeat_seconds: float = 60.0
     # Rate charged when a fee-enabled market publishes no schedule: the
     # highest category rate, so paper is never cheaper than live.
     unknown_fee_rate: float = 0.07
@@ -281,6 +284,8 @@ class PolymarketSettings:
             raise ValueError("bankroll must be > 0 and max_candidates >= 1")
         if self.unknown_fee_rate < 0 or not 0 <= self.exit_at_bid < 1:
             raise ValueError("unknown_fee_rate >= 0 and 0 <= exit_at_bid < 1")
+        if self.heartbeat_seconds < 0:
+            raise ValueError("heartbeat_seconds must be >= 0 (0: off)")
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any] | None) -> PolymarketSettings:

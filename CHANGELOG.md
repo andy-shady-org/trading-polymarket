@@ -3,6 +3,18 @@
 All notable changes. Format: Keep a Changelog; versions: SemVer (see
 `docs/GO-NO-GO.md` §6).
 
+## Unreleased
+
+### Fixed
+- **TP-9**: positions in markets that had closed were never redeemed: Gamma's
+  token lookup returns open markets only, so tokens it misses are now asked
+  again with `closed=true`.
+- **TP-10**: a flat run went "market data stale" after
+  `health_timeout_seconds` and never entered again. The module now runs a
+  heartbeat (new setting `heartbeat_seconds`, default 60): it reads the most
+  traded open market and its book and tells the engine market data is
+  flowing; three failed reads in a row report `polymarket data` degraded.
+
 ## 0.2.0: Kalshi reference lanes; day-1 pilot fixes (2026-10-29)
 
 Requires trading-core 0.2.0. A money-path release: the weather lane restarts

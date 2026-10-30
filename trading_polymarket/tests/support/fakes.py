@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -86,6 +87,7 @@ class RecordingHost:
     events: list[str] = field(default_factory=list)
     market_data: int = 0
     degraded: dict[str, bool] = field(default_factory=dict)
+    details: dict[str, str] = field(default_factory=dict)
 
     def notify_market_data(self) -> None:
         self.market_data += 1
@@ -95,6 +97,31 @@ class RecordingHost:
 
     def set_degraded(self, name: str, degraded: bool, detail: str = "") -> None:
         self.degraded[name] = degraded
+        self.details[name] = detail
+
+
+class Ticker:
+    """An injectable ``sleep`` that returns only when :meth:`tick` is called."""
+
+    def __init__(self) -> None:
+        self.waits: list[float] = []
+        self._event = asyncio.Event()
+
+    async def __call__(self, seconds: float) -> None:
+        self.waits.append(seconds)
+        await self._event.wait()
+        self._event.clear()
+
+    def tick(self) -> None:
+        self._event.set()
+
+    async def settle(self, waits: int) -> None:
+        """Yield until ``waits`` sleeps have started (a loop pass is done)."""
+        for _ in range(1000):
+            if len(self.waits) >= waits:
+                return
+            await asyncio.sleep(0)
+        raise AssertionError(f"{len(self.waits)} sleeps, expected {waits}")
 
 
 class Clock:
@@ -115,6 +142,7 @@ __all__ = [
     "FakeTransport",
     "RecordingHost",
     "Sequenced",
+    "Ticker",
     "fake_http",
     "no_sleep",
 ]

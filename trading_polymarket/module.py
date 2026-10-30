@@ -14,13 +14,18 @@ in cents); a share pays 1 USDC if its outcome wins. The module:
 * exits a position the moment its market resolves, redeeming at 1 or 0;
 * values open positions at what selling into the bids would return, net of
   the fee (so equity and the circuit breaker see a real exit value);
-* refuses live orders until the live gate is passed (docs/GO-NO-GO.md).
+* refuses live orders until the live gate is passed (docs/GO-NO-GO.md);
+* reads the venue every ``heartbeat_seconds`` while running, so the engine's
+  market-data health tracks Polymarket itself, not whether a position happens
+  to be held (TP-10: a flat run went stale and never entered again).
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
 from trading_core.module.base import (
@@ -84,6 +89,11 @@ POLYMARKET_QUOTE = QuoteAsset(
 EXIT_BID_TARGET = "bid_target"
 EXIT_CONVERGED = "converged"
 REFERENCE_LANES = (LANE_FED, LANE_CROSSVENUE)
+# The heartbeat's degraded condition, and how many failed reads in a row set it.
+HEARTBEAT_SOURCE = "polymarket data"
+HEARTBEAT_FAILURES_BEFORE_DEGRADED = 3
+# Open markets the heartbeat lists to find one that takes orders.
+HEARTBEAT_MARKETS = 5
 
 
 class PolymarketModule(TradingModule):
@@ -98,11 +108,15 @@ class PolymarketModule(TradingModule):
         clock: Callable[[], float] = time.time,
         calibration: CalibrationTable | None = None,
         stations: Mapping[str, Mapping[str, Any]] | None = None,
+        sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep,
         **settings: Any,
     ) -> None:
         super().__init__()
         self.settings = PolymarketSettings.from_mapping(settings)
         self.clock = clock
+        self._sleep = sleep
+        self._heartbeat_task: asyncio.Task[None] | None = None
+        self._heartbeat_failures = 0
         self.http = http or JsonHttp(
             timeout=self.settings.http_timeout,
             max_retries=self.settings.http_retries,
@@ -141,6 +155,60 @@ class PolymarketModule(TradingModule):
         self._pipeline: StrategyPipeline | None = None
         self._built = False
         self.weather_model: WeatherModel | None = None
+
+    # -- lifecycle ------------------------------------------------------------
+    async def start(self) -> None:
+        if self._heartbeat_task is None and self.settings.heartbeat_seconds > 0:
+            self._heartbeat_task = asyncio.create_task(
+                self._heartbeat_loop(), name="polymarket_heartbeat"
+            )
+
+    async def stop(self) -> None:
+        task, self._heartbeat_task = self._heartbeat_task, None
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+    async def heartbeat(self) -> None:
+        """One cheap read of the venue: an open market and its CLOB book.
+
+        Raises when either read fails; on success the host hears market data.
+        """
+        markets = await self.gamma.markets(
+            limit=HEARTBEAT_MARKETS, closed=False, order="volume24hr", ascending=False
+        )
+        market = next((m for m in markets if m.tradable and m.token_ids), None)
+        if market is None:
+            raise RuntimeError("Gamma listed no open market taking orders")
+        await self.books.get(market.token_ids[0], max_age=0.0)
+        if self.host is not None:
+            self.host.notify_market_data()
+
+    async def _heartbeat_loop(self) -> None:
+        while True:
+            try:
+                await self.heartbeat()
+            except Exception as exc:  # any failure is a data failure
+                self._heartbeat_failed(exc)
+            else:
+                self._heartbeat_ok()
+            await self._sleep(self.settings.heartbeat_seconds)
+
+    def _heartbeat_failed(self, exc: Exception) -> None:
+        self._heartbeat_failures += 1
+        if (
+            self._heartbeat_failures == HEARTBEAT_FAILURES_BEFORE_DEGRADED
+            and self.host is not None
+        ):
+            detail = (str(exc) or type(exc).__name__)[:200]
+            self.host.set_degraded(HEARTBEAT_SOURCE, True, detail)
+
+    def _heartbeat_ok(self) -> None:
+        was_degraded = self._heartbeat_failures >= HEARTBEAT_FAILURES_BEFORE_DEGRADED
+        self._heartbeat_failures = 0
+        if was_degraded and self.host is not None:
+            self.host.set_degraded(HEARTBEAT_SOURCE, False)
 
     # -- strategy -------------------------------------------------------------
     def _lanes(self) -> dict[str, tuple[Scout, Analyst]]:
