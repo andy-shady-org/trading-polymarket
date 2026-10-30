@@ -138,6 +138,8 @@ async def test_previous_day_maxima() -> None:
     assert runs.mean("2026-10-27") == 15.0
     assert runs.remaining_maxima("2026-10-27", 10) == [14.0, 16.0]
     assert runs.remaining_maxima("2026-10-27", 20) == []
+    assert runs.maxima_before("2026-10-27", 14) == [10.0, 11.0]
+    assert runs.maxima_before("2026-10-27", 0) == []
     assert runs.mean("2026-10-28") == 12.0
     assert runs.mean("2026-10-30") is None
     empty = await client(FakeTransport({"/v1/forecast": {}})).previous_day_maxima(1, 2)

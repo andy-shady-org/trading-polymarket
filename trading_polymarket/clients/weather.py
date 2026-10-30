@@ -96,6 +96,15 @@ class Forecast:
         ]
         return max(values) if values else None
 
+    def max_before(self, model: str, date: str, before_hour: int) -> float | None:
+        """Highest hourly value on ``date`` before local hour ``before_hour``."""
+        values = [
+            temp
+            for stamp, temp in self.hourly.get(model, {}).items()
+            if stamp.startswith(date) and int(stamp[11:13]) < before_hour
+        ]
+        return max(values) if values else None
+
 
 @dataclass(frozen=True)
 class PreviousRuns:
@@ -121,6 +130,19 @@ class PreviousRuns:
             ]
             if rest:
                 found.append(max(rest))
+        return found
+
+    def maxima_before(self, date: str, before_hour: int) -> list[float]:
+        """Per model: the day-ahead forecast's highest value before ``before_hour``."""
+        found = []
+        for values in self.hourly.values():
+            past = [
+                temp
+                for stamp, temp in values.items()
+                if stamp.startswith(date) and int(stamp[11:13]) < before_hour
+            ]
+            if past:
+                found.append(max(past))
         return found
 
 

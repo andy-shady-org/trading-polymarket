@@ -56,6 +56,8 @@ You must automatically append a new rule to the **"Local Norms"** or **"Learning
 - **[EVIDENCE] A Few Longshots Are Not An Edge:** on a partial sample the wide favourite backtest made +$537 on 435 trades yet was NO-GO (without the 5 best positions it lost); on the full out-of-sample window it lost $147. Trust `drop_top`, the bootstrap and a held-out window, not the total — and do not assume the literature's bias holds on this venue.
 - **[API] Gamma Hides Closed Markets:** `/markets?clob_token_ids=` answers with open markets only unless `closed=true` (and then closed only). Held positions in closed markets were never redeemed (TP-9). Any lookup of a token that may have closed needs both queries.
 - **[HEALTH] Feed Health Must Not Depend On Holding:** the engine's market-data health is fed by the module; notifying only from `get_quote` meant a flat run went stale, stale health skipped the pipeline, and nothing read the venue again (TP-10). A module notifies from a read that happens whatever it holds (the heartbeat).
+- **[MODEL] The Day Knows More Than The Station:** late on the event day, how far the forecast has already missed *today* predicts the rest of the day; the station's average bias does not (TP-11). Measure a model on the exact question it trades (here: "does the max still rise?"), not only on all buckets: 0.2.0 looked fine on Brier and was off by 5x on that question.
+- **[SIZING] Kelly Assumes Independence:** bets settled on one day share its weather and thesis; size them as one bet, or cap them per day (TP-12).
 
 ## Project Overview
 

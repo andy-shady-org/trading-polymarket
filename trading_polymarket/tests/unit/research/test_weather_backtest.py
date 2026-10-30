@@ -316,6 +316,21 @@ def test_intraday_backtest_uses_the_observed_floor() -> None:
     buys = [r["payload"] for r in result.records if r["payload"]["action"] == "buy"]
     assert any(b["name"].endswith(">=78°F") for b in buys)
     assert all(b["entry_metrics"]["model_p"] > 0.5 for b in buys)
+    # Remaining hours peak at 21; the hours gone forecast 22 against 26.5
+    # observed: half of that 4.5 error carries (TP-11), sigma is intraday.
+    assert {b["entry_metrics"]["mu_c"] for b in buys} == {23.25}
+    assert {b["entry_metrics"]["sigma_c"] for b in buys} == {LANE.intraday_sigma}
+
+
+def test_intraday_backtest_before_the_days_first_metar() -> None:
+    # METARs cover the day but none is before 09:00: the forecast-only
+    # fallback, as the live lane prices it, with the bias up to the peak.
+    events = [EventHistory.from_dict(event_row(winner=3, price=0.5))]
+    obs = {"KDAL": [metar(17, 26.5)]}
+    result = backtest_weather(
+        events, intraday_runs(), LANE, entry_hour=9, observations=obs
+    )
+    assert result.markets == 1
 
 
 def test_intraday_backtest_skips_days_without_metars_or_hours() -> None:

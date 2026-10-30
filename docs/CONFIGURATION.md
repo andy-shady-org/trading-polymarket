@@ -63,6 +63,7 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `kelly_fraction` | Fraction of full Kelly used for sizing |
 | `min_notional`, `max_notional` | Signal size bounds (USDC) |
 | `max_candidates` | Candidates the lane's scout hands to the pipeline per cycle |
+| `max_positions_per_day` | Open positions the lane may hold in markets that close on one UTC date (0: no cap). Kelly sizes each bet as if independent; bets settled on one day share its weather, meeting or thesis, so the cap bounds the lane's bet on that day at `max_positions_per_day × max_notional` (TP-12). Default 0, weather 3 |
 
 ## `weather`
 
@@ -77,15 +78,18 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `kelly_fraction` | `0.25` | |
 | `min_notional`, `max_notional` | `2.0`, `15.0` | |
 | `max_candidates` | `40` | |
+| `max_positions_per_day` | `3` | At most $45 on one event day: day 1 of the 0.2.0 pilot put 10 bets on one late-day thesis and lost all 10 (TP-12) |
 | `min_price`, `max_price` | `0.02`, `0.97` | Ask band the lane trades |
 | `lead_days` | `1` | Trade events up to this many local days ahead (0: today only) |
 | `models` | `["ecmwf_ifs025", "gfs_seamless", "icon_seamless"]` | Open-Meteo models averaged |
-| `sigma_min` | `0.6` | °C uncertainty of the day's maximum at the peak hour |
+| `sigma_min` | `0.6` | °C uncertainty of the day's maximum at the peak hour, before the day's first METAR |
 | `sigma_per_day` | `1.0` | °C added per day before the peak. With ≥ 10 days in the bias table, the curve is rescaled so the station's measured day-ahead error is its value 30 h before the peak |
 | `market_weight` | `0.5` | Fair value = (1 − w) × model + w × market mid (TP-1) |
 | `max_edge` | `0.25` | A raw model-vs-ask gap above this is a model error, not traded (TP-1) |
 | `min_remaining_sigma` | `0.3` | Floor on σ, also used once the day's maximum is observed |
-| `peak_hour` | `15` | Local hour by which the daily maximum is usually set |
+| `today_error_weight` | `0.5` | On the event day after its first METAR: the remaining hours' forecast maximum moves by this share of today's error so far (observed maximum − forecast maximum of the hours gone). The station bias is not added then (TP-11; [STRATEGIES.md](STRATEGIES.md)) |
+| `intraday_sigma` | `0.8` | °C uncertainty of the remaining hours' maximum on the event day after its first METAR (TP-11) |
+| `peak_hour` | `15` | Local hour by which the daily maximum is usually set; the station bias is added only while the hours still to come include it, before the day's first METAR |
 | `min_local_hour` | `0` | With a value above 0, trade an event only on its own local day from this hour on (and after the day ends): the intraday window where observations decide most buckets |
 | `forecast_ttl_seconds` | `1800.0` | Forecast cache per station (Open-Meteo's free allowance is per IP) |
 | `metar_ttl_seconds` | `300.0` | METAR cache per station |

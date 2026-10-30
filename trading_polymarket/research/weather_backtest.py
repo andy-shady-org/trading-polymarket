@@ -15,11 +15,12 @@ half-spread by ``min_edge``, holding to resolution.
 
 ``--intraday`` adds the observations: METARs (the last ~15 days only) give
 the maximum observed before ``entry_hour`` as the distribution's floor, and
-the day-ahead forecast of the remaining hours gives its mean - the live
-lane's model, replayed without hindsight. Every replay also reports Brier
-scores of the model, the market and the blend over every bucket it priced:
-a model that does not beat the market's Brier score has no business trading
-against it.
+the day-ahead forecast of the remaining hours, moved by the share
+``today_error_weight`` of the error it already made that day, gives its mean
+with ``intraday_sigma`` - the live lane's model, replayed without hindsight.
+Every replay also reports Brier scores of the model, the market and the
+blend over every bucket it priced: a model that does not beat the market's
+Brier score has no business trading against it.
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ from trading_polymarket.strategies.weather import (
     WeatherEvent,
     applied_bias,
     blend,
+    intraday_mean,
     lead_sigma,
     station_zone,
     to_celsius,
@@ -333,6 +335,20 @@ def _observed_max(
     return covered, best
 
 
+def _forecast_only(
+    values: Sequence[float],
+    bias: float,
+    lane: WeatherLane,
+    entry_hour: int,
+    history: _StationErrors,
+) -> TempDistribution:
+    """Forecast plus bias, σ from the lead-time curve (no observation yet)."""
+    lead_hours = max(0.0, float(lane.peak_hour - entry_hour))
+    spread = statistics.pstdev(values) if len(values) > 1 else 0.0
+    sigma = lead_sigma(lane, lead_hours, spread=spread, measured_sd=history.sd())
+    return TempDistribution(mu=statistics.fmean(values) + bias, sigma=sigma)
+
+
 def _distribution(
     event: EventHistory,
     runs: PreviousRuns,
@@ -350,25 +366,26 @@ def _distribution(
     zone = station_zone(runs)
     start = datetime.combine(event.day, datetime.min.time(), zone)
     moment = (start + timedelta(hours=entry_hour)).timestamp()
-    floor: float | None = None
-    values = daily
-    if observations is not None:
-        covered, floor = _observed_max(
-            observations.get(event.icao, ()), event.day, zone, moment
-        )
-        remaining = runs.remaining_maxima(day_text, entry_hour)
-        if not covered or not remaining:
-            return None
-        values = remaining
-    lead_hours = max(0.0, float(lane.peak_hour - entry_hour))
-    spread = statistics.pstdev(values) if len(values) > 1 else 0.0
-    sigma = lead_sigma(lane, lead_hours, spread=spread, measured_sd=history.sd())
-    bias = history.bias()
-    if observations is not None:  # remaining hours only: see applied_bias
-        bias = applied_bias(bias, entry_hour, lane.peak_hour)
-    dist = TempDistribution(
-        mu=statistics.fmean(values) + bias, sigma=sigma, floor=floor
+    if observations is None:
+        dist = _forecast_only(daily, history.bias(), lane, entry_hour, history)
+        return dist, daily, moment
+    covered, floor = _observed_max(
+        observations.get(event.icao, ()), event.day, zone, moment
     )
+    remaining = runs.remaining_maxima(day_text, entry_hour)
+    if not covered or not remaining:
+        return None
+    if floor is None:  # before the day's first METAR: the live lane's fallback
+        bias = applied_bias(history.bias(), entry_hour, lane.peak_hour)
+        dist = _forecast_only(remaining, bias, lane, entry_hour, history)
+        return dist, daily, moment
+    mu, _ = intraday_mean(
+        remaining,
+        runs.maxima_before(day_text, entry_hour),
+        floor,
+        lane.today_error_weight,
+    )
+    dist = TempDistribution(mu=mu, sigma=lane.intraday_sigma, floor=floor)
     return dist, daily, moment
 
 

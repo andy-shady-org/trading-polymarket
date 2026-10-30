@@ -23,6 +23,7 @@ from trading_polymarket.module import (
     PolymarketModule,
 )
 from trading_polymarket.pairs import Reference
+from trading_polymarket.strategies.router import LanePipeline
 from trading_polymarket.tests.support.factories import (
     CONDITION,
     NO,
@@ -272,6 +273,17 @@ def test_pipeline_is_built_once_from_the_enabled_lanes() -> None:
     ]
     assert module.weather_model is not None
     assert build(weather={"enabled": False}).pipeline() is None
+    assert isinstance(pipeline, LanePipeline)
+    assert pipeline.day_caps == {"weather": 3}  # the other lanes: no cap
+
+
+def test_closing_day_of_a_cached_market() -> None:
+    module = build()
+    assert module.closing_day(YES) is None
+    module.catalogue.put([market()])
+    assert module.closing_day(YES) == "2026-10-29"  # NOW + 24 h, UTC
+    module.catalogue.put([market(endDate=None)])
+    assert module.closing_day(YES) is None
 
 
 def test_calibration_file_is_loaded(tmp_path) -> None:  # noqa: ANN001
