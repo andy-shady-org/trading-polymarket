@@ -69,7 +69,8 @@ trading_polymarket/
 2. **Exits**: `should_exit` — a market that resolved since the last cycle is
    sold; `PaperExecutor.sell` re-reads the market (`max_age=0`, TP-3) and
    redeems at the payout with no fee.
-3. **Entries**: `pipeline().run(exclude=held tokens)`:
+3. **Entries**: `pipeline().run(exclude=held tokens)` (`LanePipeline`: the
+   complements of held tokens are excluded too, TP-8):
    - scouts list candidates (weather events priced by the model; closing
      favourites; sharp moves) and put their markets in the catalogue;
    - `MarketStateFilter` (open, volume, liquidity — lane thresholds) and
@@ -77,7 +78,10 @@ trading_polymarket/
      record metrics;
    - `LaneRouter` sends each survivor to its lane's analyst, which re-prices
      on the live book and returns a `Signal` with notional, limit price, edge,
-     `strategy=<lane>` and metrics.
+     `strategy=<lane>` and metrics;
+   - `LanePipeline` drops signals that would take a lane past its
+     `max_positions_per_day` in markets closing on one UTC date, counting
+     what it already holds there (TP-12).
 4. **Risk + execution**: trading-core checks each signal against its risk
    limits, then calls `execute`; `PaperExecutor.buy` reads a **fresh** book
    and walks it within the limit.

@@ -135,6 +135,35 @@ structural gaps to `data/arb.jsonl`.
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
 
+### 2026-10-30 — the late-day weather model, measured (after the 0.2.0 pilot)
+
+**What happened.** Day 1 of the weather 0.2.0 pilot: 10 buys, all one thesis
+("the maximum still rises ≥ 1 °C after 15:00 local"), priced at 0.20–0.35 by
+the model and 0.05–0.08 by the market. All ten lost; the breaker tripped
+(review: `claude/polymarket-pilots-review-2026-10-30.md` in the project).
+
+**Study.** `data/history/weather-intraday.jsonl` (757 events, 12–27 Oct;
+519 with day-ahead hourly runs and METARs covering the day) at entry hours
+12–21 local; truth = the highest routine METAR from the entry hour on.
+Candidate means for the remaining hours' maximum, σ fitted on one half of
+the window and scored on the other, both ways round:
+
+| Entry 15–16 h, log-loss per bucket (held-out half) | first half | second half |
+|---|---|---|
+| market price | 0.087 | 0.083 |
+| 0.2.0 model (remaining + bias at the peak, lead-curve σ) | 0.107 | 0.098 |
+| remaining forecast, σ fitted | 0.083 | 0.076 |
+| remaining + bias, σ fitted | 0.085 | 0.082 |
+| remaining + ½ today's error, σ 0.8 | **0.071** | **0.065** |
+
+Today's error (`M` − forecast maximum of the hours gone) carries; the
+station bias does not once the day has been observed. With σ 0.8 the
+calibration error of "rises ≥ 1 °C" is 0.01–0.05 at 15–20 h; 0.2.0's was
+0.10–0.14 (predicted → happened: 0.14 → 0.05, 0.25 → 0.14, 0.34 → 0.07). Replayed through `backtest weather
+--intraday` at 15 / 16 / 17 h: model Brier 0.032 / 0.019 / 0.010 (0.2.0) →
+0.027 / 0.015 / 0.008 (now), market 0.031 / 0.020 / 0.009. The weights were
+chosen on this window, so the next pilot is the out-of-sample test.
+
 ### 2026-10-29 — Fed lane Stage 0; weather pilot day 1 (0.2.0)
 
 **Fed lane.** `fed-history --days 14` on 29 October 2026: 17 settled

@@ -26,6 +26,7 @@ import asyncio
 import contextlib
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from datetime import UTC, datetime
 from typing import Any
 
 from trading_core.module.base import (
@@ -291,6 +292,11 @@ class PolymarketModule(TradingModule):
                 book_filter=BookFilter(self.settings, self.books),
                 max_candidates=self.settings.max_candidates,
                 complement_of=self.complement_of,
+                day_of=self.closing_day,
+                day_caps={
+                    name: self.settings.lane(name).max_positions_per_day
+                    for name in self.settings.enabled_lanes()
+                },
             )
             self._built = True
         return self._pipeline
@@ -301,6 +307,13 @@ class PolymarketModule(TradingModule):
         if market is None or len(market.token_ids) != 2:
             return None
         return market.complement(token_id)
+
+    def closing_day(self, token_id: str) -> str | None:
+        """UTC date a cached market closes (``None`` if unknown)."""
+        market = self.catalogue.cached(token_id)
+        if market is None or market.end_time is None:
+            return None
+        return datetime.fromtimestamp(market.end_time, UTC).date().isoformat()
 
     # -- market data ----------------------------------------------------------
     def _payout_quote(self, token_id: str, payout: float) -> MarketQuote:

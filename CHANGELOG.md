@@ -14,6 +14,16 @@ All notable changes. Format: Keep a Changelog; versions: SemVer (see
   heartbeat (new setting `heartbeat_seconds`, default 60): it reads the most
   traded open market and its book and tells the engine market data is
   flowing; three failed reads in a row report `polymarket data` degraded.
+- **TP-11**: the weather lane's late-day model priced a further rise at
+  20–35 % where ~7 % happens (day 1 of the 0.2.0 pilot: ten of ten lost).
+  On the event day, after its first METAR, the remaining hours' forecast now
+  moves by half of today's error so far, without the station bias, with
+  σ 0.8 °C (new settings `today_error_weight`, `intraday_sigma`, measured on
+  the intraday replay; the backtest uses the same model). The bias cut-off
+  before the first METAR is `first_hour <= peak_hour` (was one hour late).
+- **TP-12**: one day's bets were each Kelly-sized as if independent. New lane
+  setting `max_positions_per_day` (weather 3, others off): a lane never holds
+  more than that many positions in markets closing on one UTC date.
 
 ## 0.2.0: Kalshi reference lanes; day-1 pilot fixes (2026-10-29)
 

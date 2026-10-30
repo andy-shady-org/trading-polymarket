@@ -65,21 +65,44 @@ P(final < x) = 0                    if x ≤ M
 P(bucket [lo, hi]) = P(final < hi + ½) − P(final < lo − ½)     (bounds converted to °C)
 ```
 
-- **μ**: the mean of the configured models' forecasts (default ECMWF IFS 0.25°,
-  GFS, ICON via Open-Meteo) — on the event day, the maximum of the *remaining*
-  hourly values; on later days, the daily maximum — plus the station's
-  measured **bias** (METAR max − day-ahead forecast, from `trading-polymarket bias`).
-- **σ**: the curve `sigma_min + sigma_per_day × hours-to-peak / 24`
-  (`peak_hour` 15:00 local), combined in quadrature with the models'
-  spread. With ≥ 10 days of bias history the curve is instead rescaled so
-  that 30 hours before the peak (a day-ahead forecast) it equals the
-  station's measured day-ahead error, which already contains the models'
-  disagreement. Never below `min_remaining_sigma`.
+- **Before the event day** (and on it until its first METAR):
+  - **μ**: the mean of the configured models' forecasts (default ECMWF IFS
+    0.25°, GFS, ICON via Open-Meteo) — the daily maximum, or on the day the
+    maximum of the *remaining* hourly values — plus the station's measured
+    **bias** (METAR max − day-ahead forecast, from `trading-polymarket bias`)
+    while those hours still include `peak_hour` (TP-7, TP-11);
+  - **σ**: the curve `sigma_min + sigma_per_day × hours-to-peak / 24`
+    (`peak_hour` 15:00 local), combined in quadrature with the models'
+    spread. With ≥ 10 days of bias history the curve is instead rescaled so
+    that 30 hours before the peak (a day-ahead forecast) it equals the
+    station's measured day-ahead error, which already contains the models'
+    disagreement. Never below `min_remaining_sigma`.
+- **On the event day, once METARs exist** (TP-11):
+  - **μ** = forecast maximum of the remaining hours + `today_error_weight`
+    (0.5) × today's error so far, where today's error is `M` − the forecast
+    maximum of the hours already past. How far the forecast has missed today
+    carries into the rest of the day; the station's *average* bias does not;
+  - **σ** = `intraday_sigma` (0.8 °C).
+
+  Both were measured on the intraday replay (519 events, 12–27 Oct 2026,
+  day-ahead runs, both halves of the window). At 15–16 h local the model
+  that 0.2.0 traded scored a log-loss of 0.098–0.107 per bucket against the
+  market's 0.083–0.087, and put a further rise of ≥ 1 °C at 0.34 where 0.07
+  happened. This model scores 0.065–0.071, below the market in both halves,
+  with a calibration error on that rise of 0.01–0.05 (0.2.0: 0.10–0.14). The 0.2.0
+  model had added up to +1.8 °C of daily-max bias at the peak hour and
+  ignored the day's own error.
 - **Late in the day** the remaining hours are cooler than what was already
   observed, so `R` falls below `M` and the distribution collapses on the
   observed maximum: buckets below `M` are impossible (their No is worth ~1),
   and the bucket containing `M` becomes near-certain once the peak is past.
-  This is where the lane's largest and safest edges are.
+  A further rise after the peak is rare (≥ 1 °C after 16:00 local on 7 % of
+  days in the replay); the market prices it well, and the 0.2.0 pilot lost
+  ten of ten bets that it would happen.
+- **One day, one bet**: every event of one day shares that day's weather
+  regimes and the same late-day question, so the lane holds at most
+  `max_positions_per_day` (3) positions in markets closing on one date
+  (TP-12).
 - **After the local day** the observed maximum decides; the market resolves
   at the next day's first METAR.
 

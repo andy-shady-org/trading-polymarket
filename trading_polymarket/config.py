@@ -67,6 +67,10 @@ class LaneLimits:
     min_notional: float = 2.0
     max_notional: float = 25.0
     max_candidates: int = 40
+    # Open positions the lane may hold in markets closing on one UTC date
+    # (0: no cap). Bets on one day share its weather, one meeting, one
+    # thesis: Kelly-sizing each as independent over-bets the thesis (TP-12).
+    max_positions_per_day: int = 0
 
     def _check(self) -> None:
         if self.max_spread <= 0 or self.depth_window < 0:
@@ -77,6 +81,8 @@ class LaneLimits:
             raise ValueError("need 0 < min_notional <= max_notional")
         if self.min_edge < 0 or self.max_candidates < 1:
             raise ValueError("min_edge must be >= 0 and max_candidates >= 1")
+        if self.max_positions_per_day < 0:
+            raise ValueError("max_positions_per_day must be >= 0 (0: no cap)")
 
 
 @dataclass(frozen=True)
@@ -86,6 +92,7 @@ class WeatherLane(LaneLimits):
     min_ask_depth: float = 2.0
     min_edge: float = 0.06
     max_notional: float = 15.0
+    max_positions_per_day: int = 3
     min_price: float = 0.02
     max_price: float = 0.97
     lead_days: int = 1  # trade today's and tomorrow's events (local dates)
@@ -100,6 +107,11 @@ class WeatherLane(LaneLimits):
     # A raw model-vs-ask gap above this is treated as a model error, not edge.
     max_edge: float = 0.25
     min_remaining_sigma: float = 0.3
+    # On the event day, after its first METAR (TP-11): the remaining hours'
+    # forecast moves by this share of today's error so far, and its maximum
+    # has this uncertainty (°C). Measured on the intraday replay.
+    today_error_weight: float = 0.5
+    intraday_sigma: float = 0.8
     peak_hour: int = 15  # local hour by which the daily max is usually set
     # Trade an event only on its own local day from this hour on (0: off).
     # Late in the day the observed maximum decides most buckets.
@@ -115,10 +127,7 @@ class WeatherLane(LaneLimits):
         object.__setattr__(self, "models", tuple(self.models))
         object.__setattr__(self, "cities", tuple(c.lower() for c in self.cities))
         self._check()
-        if not self.models:
-            raise ValueError("weather.models must not be empty")
-        if self.sigma_min <= 0 or self.sigma_per_day < 0:
-            raise ValueError("weather sigma settings must be positive")
+        self._check_model()
         if not 0 <= self.min_price < self.max_price <= 1:
             raise ValueError("weather needs 0 <= min_price < max_price <= 1")
         if not 0 <= self.market_weight < 1 or self.max_edge <= self.min_edge:
@@ -129,6 +138,16 @@ class WeatherLane(LaneLimits):
             raise ValueError("weather.min_local_hour must be within 0..23")
         if self.lead_days < 0 or self.concurrency < 1:
             raise ValueError("weather.lead_days >= 0 and concurrency >= 1")
+
+    def _check_model(self) -> None:
+        if not self.models:
+            raise ValueError("weather.models must not be empty")
+        if self.sigma_min <= 0 or self.sigma_per_day < 0:
+            raise ValueError("weather sigma settings must be positive")
+        if not 0 <= self.today_error_weight <= 1 or self.intraday_sigma <= 0:
+            raise ValueError(
+                "weather needs 0 <= today_error_weight <= 1, intraday_sigma > 0"
+            )
 
 
 @dataclass(frozen=True)

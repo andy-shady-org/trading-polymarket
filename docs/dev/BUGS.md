@@ -5,7 +5,7 @@ Every bug fixed in trading-polymarket gets a row here and a test tagged
 `trading_polymarket/tests/unit/test_suite_layout.py` fails when a **RESOLVED**
 row has no tagged test, or a tag names no row.
 
-IDs are `TP-<n>` (next free: **TP-11**). Bugs in the engine belong in
+IDs are `TP-<n>` (next free: **TP-13**). Bugs in the engine belong in
 trading-core's own tracker (`TC-<n>`).
 
 When you fix a bug: add a row (status **RESOLVED**), a section below with
@@ -26,6 +26,8 @@ when the lesson is general.
 | **TP-8** | Medium | Strategy / Pipeline | **RESOLVED** | Both sides of one bucket were bought when the model moved |
 | **TP-9** | High | Clients / Gamma | **RESOLVED** | Positions in markets that had closed were never seen to resolve: Gamma's token lookup returns open markets only |
 | **TP-10** | Critical | Module / Health | **RESOLVED** | A flat run went "market data stale" after `health_timeout_seconds` and never entered again |
+| **TP-11** | Critical | Strategy / Weather | **RESOLVED** | The late-day model priced a further rise at 20–35 % where ~7 % happens: daily-max bias at the peak hour, today's own error ignored |
+| **TP-12** | High | Strategy / Sizing | **RESOLVED** | Ten bets on one day's thesis, each Kelly-sized as if independent |
 
 ## TP-1: implausible weather edges taken at face value
 
@@ -205,3 +207,52 @@ tracks the venue, whether a position is held or not.
 
 **Tests:** `tests/unit/test_module.py::test_heartbeat_keeps_a_flat_module_fresh_and_reports_failures`,
 `tests/integration/test_paper_run.py::test_a_flat_run_stays_healthy_and_keeps_entering`.
+
+## TP-11: the late-day weather model over-priced further rises
+
+**Found:** the 0.2.0 weather pilot, day 1. Nine of ten entries at 15:00
+local, one at 19:00, all on one thesis: the day's maximum still rises ≥ 1 °C
+(Yes on the bucket above the observed maximum, or No on the bucket holding
+it). The model said 0.20–0.35, the market 0.05–0.08; all ten lost.
+
+**Root cause:** on the event day μ was the remaining hours' forecast plus
+the station's daily-max bias (up to +1.8 °C), and σ came from the lead-time
+curve. Two faults:
+- `applied_bias` kept the bias while `first_hour <= peak_hour + 1`: at
+  15:xx the hours to come start at 16:00, past the peak, and the bias was
+  still added (TP-7's cut-off, one hour late);
+- more important, the model ignored what the day had shown: how far the
+  forecast had already missed today predicts the rest of the day far better
+  than the station's average bias. Measured on the intraday replay, the
+  0.2.0 model at 15–16 h scored worse than the market (log-loss 0.098–0.107
+  vs 0.083–0.087) and put 0.34 on rises that happened 7 % of the time.
+
+**Fix:** after the day's first METAR, μ = the remaining hours' forecast
+maximum + `today_error_weight` (0.5) × (observed maximum − forecast maximum
+of the hours gone), with no station bias, and σ = `intraday_sigma` (0.8);
+both measured (docs/RESEARCH.md §6, 2026-10-30), log-loss 0.065–0.071 at
+15–16 h, below the market in both halves of the window. The bias cut-off is
+`first_hour <= peak_hour` for the fallback before the first METAR. The
+intraday backtest uses the same model.
+
+**Tests:** `tests/unit/strategies/test_weather.py::test_the_bias_stops_once_the_peak_hour_is_past`,
+`tests/unit/strategies/test_weather.py::test_late_day_rise_is_priced_from_the_day_itself`.
+
+## TP-12: one day's bets were sized as if independent
+
+**Found:** the same day: ten positions on one day and one thesis took the
+whole 10 % daily drawdown; the breaker tripped and liquidated into bids of
+0.001–0.003.
+
+**Root cause:** each signal is sized with fractional Kelly on its own edge,
+as if the bets were independent. Events settled on one day share its
+weather regimes and, late in the day, the same question, so ten quarter-Kelly
+bets on one thesis are about 2.5 × full Kelly on it.
+
+**Fix:** a lane setting `max_positions_per_day` (weather 3, others 0 = no
+cap): `LanePipeline` drops a signal when the lane already holds that many
+positions in markets closing on the same UTC date, counting the signals it
+keeps in the same cycle. Held tokens whose lane or closing day is unknown
+(after a restart) count against every lane or day.
+
+**Test:** `tests/unit/strategies/test_router.py::test_a_lane_holds_at_most_its_cap_on_one_day`.

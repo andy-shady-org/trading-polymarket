@@ -255,6 +255,17 @@ async def test_model_same_day_uses_remaining_hours_and_observed_floor() -> None:
     assert dist is not None
     assert dist.floor == pytest.approx(19.4)
     assert dist.metrics["lead_days"] == 0 and dist.metrics["models"] == 2
+    # 07:00 local: the remaining hours peak at 24 / 25; the hours gone at
+    # 20 / 21 against 19.4 observed, so half of today's -1.1 error carries.
+    assert dist.metrics["today_error_c"] == pytest.approx(-1.1)
+    assert dist.mu == pytest.approx(24.5 - 0.55)
+    assert dist.sigma == LANE.intraday_sigma and dist.metrics["bias_c"] == 0.0
+
+
+async def test_model_same_day_before_its_first_metar() -> None:
+    m = model(weather_routes(**{"/api/data/metar": []}))
+    dist = await m.distribution(parsed())
+    assert dist is not None and dist.floor is None
     assert dist.mu == pytest.approx(24.5)
     assert dist.metrics["lead_hours"] == pytest.approx(8.0)
     assert dist.sigma == pytest.approx((((0.6 + 8 / 24) ** 2) + 0.25) ** 0.5)
@@ -322,12 +333,18 @@ async def test_model_late_in_the_day_without_hours_left() -> None:
 
 
 async def test_model_applies_station_bias_and_measured_sd() -> None:
-    m = model(bias={"KDAL": {"bias": 1.0, "sd": 0.5, "n": 12}})
+    # Before the day's first METAR the forecast carries the station bias.
+    routes: dict[str, Any] = {"/api/data/metar": []}
+    m = model(
+        weather_routes(**routes), bias={"KDAL": {"bias": 1.0, "sd": 0.5, "n": 12}}
+    )
     dist = await m.distribution(parsed())
     assert dist is not None and dist.mu == pytest.approx(25.5)
     assert dist.metrics["bias_c"] == 1.0
     assert dist.sigma == LANE.min_remaining_sigma  # 0.5 x 0.93 / 1.85 < 0.3
-    thin = model(bias={"KDAL": {"bias": 1.0, "sd": 0.5, "n": 3}})
+    thin = model(
+        weather_routes(**routes), bias={"KDAL": {"bias": 1.0, "sd": 0.5, "n": 3}}
+    )
     thin_dist = await thin.distribution(parsed())
     assert thin_dist is not None and thin_dist.sigma > dist.sigma
 
@@ -450,8 +467,43 @@ async def test_analyst_rechecks_band_and_guard_on_the_live_book() -> None:
 @pytest.mark.regression("TP-7")
 def test_daily_max_bias_is_not_added_after_the_peak() -> None:
     assert applied_bias(1.5, first_hour=12, peak_hour=15) == 1.5
-    assert applied_bias(1.5, first_hour=16, peak_hour=15) == 1.5
+    assert applied_bias(1.5, first_hour=15, peak_hour=15) == 1.5
     assert applied_bias(1.5, first_hour=17, peak_hour=15) == 0.0
+
+
+@pytest.mark.regression("TP-11")
+def test_the_bias_stops_once_the_peak_hour_is_past() -> None:
+    # At 15:xx local the hours still to come start at 16:00: the peak (15)
+    # is behind them, yet 0.2.0 still added the daily-max bias.
+    assert applied_bias(1.5, first_hour=16, peak_hour=15) == 0.0
+
+
+@pytest.mark.regression("TP-11")
+async def test_late_day_rise_is_priced_from_the_day_itself() -> None:
+    # Day 1 of the 0.2.0 pilot: at 15:30 local the observed max is 10.0, the
+    # forecast had 10.0 for the hours gone and 9.6 for the hours to come.
+    # 0.2.0 priced "still rises to 11" at 0.25 (mu 10.1 with a +0.5 bias,
+    # sigma 0.6); the market said ~0.05 and was right. Today's error is 0,
+    # so the remaining hours stay at 9.6 and no bias is added.
+    hourly = [10.0 - 0.2 * abs(14 - h) for h in range(24)]
+    payload = forecast_payload(
+        hourly={"ecmwf_ifs025": hourly, "gfs_seamless": hourly},
+        maxima={"ecmwf_ifs025": 10.0, "gfs_seamless": 10.0},
+    )
+    seen = metar_row(NOW + 7 * 3600, raw="METAR KDAL 281900Z 10/05 RMK T01000050")
+    m = model(
+        weather_routes(**{"/v1/forecast": payload, "/api/data/metar": [seen]}),
+        clock=Clock(NOW + 8.5 * 3600),
+        bias={"KDAL": {"bias": 0.5, "n": 3}},
+    )
+    dist = await m.distribution(parsed())
+    assert dist is not None and dist.floor == 10.0
+    assert dist.mu == pytest.approx(9.6) and dist.metrics["bias_c"] == 0.0
+    rise = 1.0 - dist.cdf(10.5)
+    assert rise == pytest.approx(0.13, abs=0.01)
+    # Blended half and half with a 0.05 market, the edge over a 0.06 ask is
+    # below min_edge: the 0.2.0 entry is not taken.
+    assert 0.5 * rise + 0.5 * 0.05 - 0.06 < LANE.min_edge
 
 
 async def test_analyst_prices_on_the_live_book() -> None:

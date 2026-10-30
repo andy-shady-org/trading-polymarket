@@ -10,10 +10,14 @@ The model (docs/STRATEGIES.md has the derivation):
 
 * ``M`` - the highest routine METAR so far on the local date (none before the
   day starts); the final maximum can never be lower;
-* ``R`` - the maximum of the hours still to come, ``Normal(mu, sigma)``:
-  ``mu`` is the multi-model forecast (daily max, or the max of the remaining
-  hourly values on the day itself) plus the station's measured bias;
-  ``sigma`` grows with lead time and with disagreement between models;
+* ``R`` - the maximum of the hours still to come, ``Normal(mu, sigma)``.
+  Before the day: ``mu`` is the multi-model daily maximum plus the station's
+  measured bias, and ``sigma`` grows with lead time and with disagreement
+  between models. On the day itself, once METARs exist: ``mu`` is the
+  forecast maximum of the remaining hours moved by ``today_error_weight`` ×
+  today's error so far (``M`` minus the forecast maximum of the hours already
+  past), and ``sigma`` is ``intraday_sigma`` - both measured on the intraday
+  replay (TP-11; docs/STRATEGIES.md);
 * the final value is ``max(M, R)``, so
   ``P(final < x) = 1[x > M] * Phi((x - mu) / sigma)`` and a bucket
   ``[lo, hi]`` (after half-up rounding) has probability
@@ -288,6 +292,21 @@ def lead_sigma(
     return max(lane.min_remaining_sigma, sigma)
 
 
+def intraday_mean(
+    remaining: Sequence[float], past: Sequence[float], observed: float, weight: float
+) -> tuple[float, float]:
+    """``(mu, today's error)`` of the remaining hours' maximum on the day.
+
+    ``remaining`` and ``past`` are each model's forecast maximum of the hours
+    to come and of the hours gone; ``observed`` is the METAR maximum so far.
+    How far the forecast has missed today carries into the rest of the day:
+    the station's average bias does not, and adding it at the peak priced a
+    further rise at 20-35 % where 7 % happened (TP-11).
+    """
+    error = observed - statistics.fmean(past) if past else 0.0
+    return statistics.fmean(remaining) + weight * error, error
+
+
 def applied_bias(bias: float, first_hour: int, peak_hour: int) -> float:
     """The station bias to add to a forecast of the hours from ``first_hour``.
 
@@ -295,9 +314,12 @@ def applied_bias(bias: float, first_hour: int, peak_hour: int) -> float:
     peak. Once the remaining hours no longer include the peak they are the
     cooling evening, and adding the daily-max correction to them made late
     tails look likely (day 1 of the pilot bought 0.7¢ buckets at a 22% fair
-    value, TP-7).
+    value, TP-7). The hours from ``first_hour`` include the peak only while
+    ``first_hour <= peak_hour`` (it was ``peak_hour + 1``, TP-11). Used on the
+    day itself only before its first METAR; after that see
+    :func:`intraday_mean`.
     """
-    return bias if first_hour <= peak_hour + 1 else 0.0
+    return bias if first_hour <= peak_hour else 0.0
 
 
 def load_stations(path: str | Path | None = None) -> dict[str, dict[str, Any]]:
@@ -400,6 +422,78 @@ class WeatherModel:
         lead_days = (event.day - local_now.date()).days
         day_text = event.day.isoformat()
 
+        floor = await self._observed_max(event, zone)
+        if lead_days < 0:  # the local day is over: the observed max decides
+            if floor is None:
+                return None
+            return self._collapsed(floor, lead_days=-1, local_hour=local_now.hour)
+
+        # On the day: the hours from the next one on; before it: the whole day.
+        first_hour = local_now.hour + 1 if lead_days == 0 else None
+        values = self._forecast_values(forecast, day_text, first_hour)
+        if not values:
+            if floor is None:
+                return None
+            return self._collapsed(
+                floor, lead_days=lead_days, hours_left=0, local_hour=local_now.hour
+            )
+        spread = statistics.pstdev(values) if len(values) > 1 else 0.0
+        metrics: dict[str, Any] = {
+            "lead_days": lead_days,
+            "local_hour": local_now.hour,
+            "model_spread_c": round(spread, 2),
+            "observed_max": floor,
+            "models": len(values),
+        }
+        if first_hour is not None and floor is not None:
+            past = self._each_model(forecast.max_before, day_text, first_hour)
+            return self._intraday(values, past, floor, metrics)
+        return self._from_forecast(
+            event, values, spread, first_hour, floor, metrics, zone
+        )
+
+    def _forecast_values(
+        self, forecast: Forecast, day: str, first_hour: int | None
+    ) -> list[float]:
+        """Each model's maximum of the hours from ``first_hour`` (``None``:
+        the whole day)."""
+        if first_hour is None:
+            return list(forecast.model_maxima(day).values())
+        return self._each_model(forecast.remaining_max, day, first_hour)
+
+    def _from_forecast(
+        self,
+        event: WeatherEvent,
+        values: Sequence[float],
+        spread: float,
+        first_hour: int | None,
+        floor: float | None,
+        metrics: dict[str, Any],
+        zone: tzinfo,
+    ) -> TempDistribution:
+        """Forecast plus station bias, σ from the lead-time curve: before the
+        event day, or on it before its first METAR (``first_hour`` set)."""
+        peak = datetime.combine(event.day, datetime.min.time(), zone) + timedelta(
+            hours=self.lane.peak_hour
+        )
+        lead_hours = max(0.0, (peak.timestamp() - self.clock()) / 3600.0)
+        bias, measured_sd = self._station_bias(event.icao)
+        if first_hour is not None:
+            bias = applied_bias(bias, first_hour, self.lane.peak_hour)
+        sigma = lead_sigma(
+            self.lane, lead_hours, spread=spread, measured_sd=measured_sd
+        )
+        mu = statistics.fmean(values) + bias
+        metrics.update(
+            lead_hours=round(lead_hours, 2),
+            mu_c=round(mu, 2),
+            sigma_c=round(sigma, 2),
+            bias_c=round(bias, 2),
+        )
+        return TempDistribution(mu=mu, sigma=sigma, floor=floor, metrics=metrics)
+
+    async def _observed_max(self, event: WeatherEvent, zone: tzinfo) -> float | None:
+        """The highest routine METAR on the event's local date so far."""
         observed = [
             m.temperature
             for m in await self.metars(event.icao)
@@ -407,65 +501,41 @@ class WeatherModel:
             and m.temperature is not None
             and datetime.fromtimestamp(m.obs_time, zone).date() == event.day
         ]
-        floor = max(observed) if observed else None
+        return max(observed) if observed else None
 
-        if lead_days < 0:  # the local day is over: the observed max decides
-            if floor is None:
-                return None
-            return self._collapsed(floor, lead_days=-1, local_hour=local_now.hour)
-
-        bias_row = self.bias.get(event.icao, {})
-        bias = float(bias_row.get("bias", 0.0))
+    def _station_bias(self, icao: str) -> tuple[float, float | None]:
+        """``(bias, measured day-ahead sd)``; the sd needs MIN_BIAS_DAYS."""
+        row = self.bias.get(icao, {})
         measured_sd = (
-            float(bias_row["sd"])
-            if bias_row.get("n", 0) >= MIN_BIAS_DAYS and bias_row.get("sd")
+            float(row["sd"])
+            if row.get("n", 0) >= MIN_BIAS_DAYS and row.get("sd")
             else None
         )
+        return float(row.get("bias", 0.0)), measured_sd
 
-        if lead_days == 0:
-            first_hour = local_now.hour + 1
-            values = [
-                v
-                for v in (
-                    forecast.remaining_max(model, day_text, first_hour)
-                    for model in self.lane.models
-                )
-                if v is not None
-            ]
-            bias = applied_bias(bias, first_hour, self.lane.peak_hour)
-        else:
-            values = list(forecast.model_maxima(day_text).values())
-        if not values:
-            if floor is None:
-                return None
-            return self._collapsed(
-                floor, lead_days=lead_days, hours_left=0, local_hour=local_now.hour
-            )
-        peak = datetime.combine(event.day, datetime.min.time(), zone) + timedelta(
-            hours=self.lane.peak_hour
+    def _each_model(
+        self, read: Callable[[str, str, int], float | None], day: str, hour: int
+    ) -> list[float]:
+        found = (read(model, day, hour) for model in self.lane.models)
+        return [value for value in found if value is not None]
+
+    def _intraday(
+        self,
+        remaining: Sequence[float],
+        past: Sequence[float],
+        floor: float,
+        metrics: dict[str, Any],
+    ) -> TempDistribution:
+        """The day itself after its first METAR (see :func:`intraday_mean`)."""
+        mu, error = intraday_mean(remaining, past, floor, self.lane.today_error_weight)
+        sigma = self.lane.intraday_sigma
+        metrics.update(
+            mu_c=round(mu, 2),
+            sigma_c=round(sigma, 2),
+            today_error_c=round(error, 2),
+            bias_c=0.0,
         )
-        lead_hours = max(0.0, (peak.timestamp() - now) / 3600.0)
-        spread = statistics.pstdev(values) if len(values) > 1 else 0.0
-        sigma = lead_sigma(
-            self.lane, lead_hours, spread=spread, measured_sd=measured_sd
-        )
-        mu = statistics.fmean(values) + bias
-        return TempDistribution(
-            mu=mu,
-            sigma=sigma,
-            floor=floor,
-            metrics={
-                "lead_days": lead_days,
-                "local_hour": local_now.hour,
-                "lead_hours": round(lead_hours, 2),
-                "mu_c": round(mu, 2),
-                "sigma_c": round(sigma, 2),
-                "model_spread_c": round(spread, 2),
-                "bias_c": round(bias, 2),
-                "observed_max": floor,
-                "models": len(values),
-            },
-        )
+        return TempDistribution(mu=mu, sigma=sigma, floor=floor, metrics=metrics)
 
 
 class WeatherScout(Scout):
@@ -658,6 +728,7 @@ __all__ = [
     "WeatherModel",
     "WeatherScout",
     "applied_bias",
+    "intraday_mean",
     "blend",
     "lead_sigma",
     "load_bias",
