@@ -1,17 +1,12 @@
 # trading-polymarket
 
-The Polymarket module for [trading-core](https://github.com/andy-shady-org/trading-core):
-free market data, book-walking paper fills with real fees, settlement at
-resolution, independent strategy lanes, and the research tools that decide —
-with pre-registered GO/No-Go gates — whether a lane is allowed near money.
+The Polymarket module for trading-core: free market data (Kalshi's quotes
+included, read only), book-walking paper fills with real fees, settlement at
+resolution, independent lanes, and the research tools that decide — with
+pre-registered verdicts — whether a lane is allowed near money. Version
+0.2.1; needs trading-core 0.2.0 or later.
 
-```bash
-pip install -e ../trading-core && pip install -e ".[dev]"
-trading-polymarket weather --city London          # model vs market, bucket by bucket
-trading-polymarket scan                            # what the lanes would buy now
-cp configs/paper.example.json configs/paper.json
-trading-core run --config configs/paper.json       # paper trading on the live book
-```
+## What it does
 
 | Lane | What it trades | Default |
 |---|---|---|
@@ -22,9 +17,30 @@ trading-core run --config configs/paper.json       # paper trading on the live b
 | **crossvenue** | The same for any Polymarket/Kalshi pair a human reviewed (`pairs approve`) | off until pairs are approved |
 | arbitrage | Yes + No < 1 and neg-risk Σ Yes < 1, logged only | record only |
 
-- Every data source is free and keyless, Kalshi included (read only) ([docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)).
-- Live order placement is not implemented; it comes after a lane passes the
-  paper stage ([docs/GO-NO-GO.md](docs/GO-NO-GO.md), [docs/LIVE-TRADING.md](docs/LIVE-TRADING.md)).
-- Start with [docs/USER-GUIDE.md](docs/USER-GUIDE.md).
+Each lane's capital stage and the runs in progress:
+[`docs/dev/RELEASE-GATE.md` §1](docs/dev/RELEASE-GATE.md#1-current-status).
+Every data source is free and keyless ([`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md)).
+Live order placement is not built in 0.2.1 ([`docs/LIVE-TRADING.md`](docs/LIVE-TRADING.md)).
+
+## Install and run
+
+```bash
+pip install -e ../trading-core && pip install -e ".[dev]"
+trading-polymarket weather --city London          # model vs market, bucket by bucket
+trading-polymarket scan                            # what the lanes would buy now
+cp configs/paper.example.json configs/paper.json
+trading-core run --config configs/paper.json       # paper trading on the live book
+```
+
+## Documentation
+
+| Page | For |
+|---|---|
+| [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) | Start here: concepts, install, a first run, every other page |
+| [`docs/STRATEGY.md`](docs/STRATEGY.md) | The lanes, their rules, evidence and verdicts |
+| [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) · [`docs/CLI.md`](docs/CLI.md) · [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) | Settings, commands, environment variables |
+| [`docs/dev/RELEASE-GATE.md`](docs/dev/RELEASE-GATE.md) · [`docs/dev/RUNBOOK.md`](docs/dev/RUNBOOK.md) · [`docs/dev/RESULTS.md`](docs/dev/RESULTS.md) | Status and gates, operating a run, every result |
+| [`docs/dev/README.md`](docs/dev/README.md) | The developer pages |
+| [`CHANGELOG.md`](CHANGELOG.md) · [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`SECURITY.md`](SECURITY.md) | Releases, how to contribute, secrets |
 
 Proprietary; private use only (see `LICENSE`).

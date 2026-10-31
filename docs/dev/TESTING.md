@@ -1,6 +1,6 @@
 # Testing
 
-## The gate
+## 1. The gate
 
 ```bash
 nox -s lint mypy tests          # trading-core comes from ../trading-core by default
@@ -20,13 +20,25 @@ Every session first installs trading-core from `TRADING_CORE_SOURCE`: a
 checkout path (default `../trading-core`) or any pip requirement, e.g.
 `TRADING_CORE_SOURCE=git+ssh://git@github.com/andy-shady-org/trading-core.git@main nox -s tests`.
 
-The suite (300+ tests) runs in a few seconds and **never touches the
-network**: `tests/conftest.py` blocks DNS for the whole session and every
-HTTP call goes through `FakeTransport`. Python 3.11's coverage tracer can miss
-a `continue` right after an `await`; prefer code that does not need one (see
-`research/arb.py`) over pragmas.
+The suite (443 tests collected at v0.2.1, 2026-10-31:
+`pytest --collect-only -q`) runs in a few seconds. Python 3.11's coverage
+tracer can miss a `continue` right after an `await`; prefer code that does
+not need one (see `research/arb.py`) over pragmas.
 
-## CI
+## 2. Isolation
+
+`tests/conftest.py` does only this:
+
+- blocks DNS for the whole session (threads included), so no test can reach
+  the network; every HTTP call goes through `FakeTransport`;
+- before each test, removes the proxy variables and every `TRADING_CORE_*`
+  and `TRADING_PM_*` variable, so nothing in your shell changes a result;
+- runs each test in its own `tmp_path`, so default paths (`data/history/…`,
+  `data/calibration.json`) never touch the repository;
+- undoes trading-core module and public-identifier registrations after each
+  test.
+
+## 3. CI
 
 `.github/workflows/tests.yml` checks out this repository **and** the private
 `andy-shady-org/trading-core` side by side and runs nox with
@@ -41,7 +53,12 @@ secret:
 `TRADING_CORE_REF` (workflow env, default `main`) picks the trading-core
 branch or tag to test against; pin it to a tag for releases.
 
-## Layout
+The 3.14 job uploads `coverage.xml` to Codecov with the optional
+`CODECOV_TOKEN` secret; an upload failure does not fail CI
+(`fail_ci_if_error: false`). A second job runs `nox -s lint mypy audit
+package` on 3.14.
+
+## 4. Layout
 
 ```text
 trading_polymarket/tests/
@@ -69,7 +86,7 @@ in every test directory, no coverage-named files, regression tags that match
 `unit/test_config.py` fails when a settings key is missing from
 `docs/CONFIGURATION.md`.
 
-## Markers
+## 5. Markers
 
 | Marker | Applied |
 |---|---|
@@ -77,7 +94,7 @@ in every test directory, no coverage-named files, regression tags that match
 | `regression("TP-<n>")` | on the test that guards a fixed bug |
 | `slow` | tests that need real waiting (none today) |
 
-## Writing tests
+## 6. Writing tests
 
 - Build payloads with `factories.py`; route them with `FakeTransport({"/book": payload})`.
   A route value may be a payload, a `Response`, an exception (raised), a

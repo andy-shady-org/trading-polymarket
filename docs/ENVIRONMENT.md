@@ -24,7 +24,7 @@ These are read by the test and CI tooling, never by a run:
 
 CI also uses two repository secrets, which are not environment variables of
 a run: `TRADING_CORE_TOKEN` (read access to the private trading-core) and
-`CODECOV_TOKEN` (coverage upload) ([`dev/TESTING.md`](dev/TESTING.md#ci)).
+`CODECOV_TOKEN` (coverage upload) ([`dev/TESTING.md`](dev/TESTING.md#3-ci)).
 
 The test suite removes every `TRADING_CORE_*` and `TRADING_PM_*` variable
 (and the proxy variables) before each test, so nothing set in your shell can

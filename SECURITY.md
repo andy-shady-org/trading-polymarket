@@ -32,5 +32,5 @@ directly through GitHub.
   network or read a real credential.
 - **CI** needs two repository secrets: `TRADING_CORE_TOKEN` (a fine-grained
   token with read-only *Contents* access to the private trading-core) and
-  `CODECOV_TOKEN` (coverage upload) ([`docs/dev/TESTING.md`](docs/dev/TESTING.md#ci)).
+  `CODECOV_TOKEN` (coverage upload) ([`docs/dev/TESTING.md`](docs/dev/TESTING.md#3-ci)).
 - **Dependencies**: `nox -s audit` (pip-audit) is part of the release gate.

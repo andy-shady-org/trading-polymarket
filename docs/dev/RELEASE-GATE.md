@@ -240,7 +240,7 @@ flowchart TD
   exhausted (fed), and the dry run for pairs without history: §3.3.
 - **Features that stay off** until they have their own evidence: §3.6.
 - **Live execution** is built only after a Stage 1 GO and passes its own
-  checklist before the first live order ([`../LIVE-TRADING.md`](../LIVE-TRADING.md#before-the-first-live-order)).
+  checklist before the first live order ([`../LIVE-TRADING.md`](../LIVE-TRADING.md#3-before-the-first-live-order)).
 - **Reviewed pairs**: the `crossvenue` lane trades only pairs a human
   approved after reading both venues' rules ([`../STRATEGY.md` §5](../STRATEGY.md#5-fed-and-crossvenue-polymarket-against-kalshi)).
 
@@ -338,7 +338,7 @@ IDs it covers. Entries written before 2026-10-31 keep their headings
   (`__version__ = "0.2.1"` today).
 - `pyproject.toml` needs `trading-core>=0.2.0`; v0.2.1 passed its gate on
   trading-core `v0.2.2`. For a release, pin CI's `TRADING_CORE_REF` to that
-  tag ([`TESTING.md`](TESTING.md#ci)).
+  tag ([`TESTING.md`](TESTING.md#3-ci)).
 - Releases so far were branched as `release/v0.2.0` and `release/v0.2.1`.
 - The runtime is runtime-trading: `bin/install-release.sh <core tag> <module tag>`
   ([`RUNBOOK.md` §1](RUNBOOK.md#1-the-runtime-folder)).

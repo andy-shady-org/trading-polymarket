@@ -2,8 +2,11 @@
 
 Every source is **free and keyless**. Nothing here needs an account, an API
 key or a subscription; when a paid source becomes worth it, it is added as an
-optional extra with its own setting and its own GO/No-Go evidence
-([`GO-NO-GO.md` §3.6](GO-NO-GO.md#36-features-that-stay-off-until-proven)).
+optional extra with its own setting and its own evidence
+([`dev/RELEASE-GATE.md` §3.6](dev/RELEASE-GATE.md#36-features-that-stay-off-until-proven)).
+The project therefore pays for nothing ([`dev/COSTS.md`](dev/COSTS.md)).
+
+## 1. One HTTP client
 
 All requests go through one client ([`clients/http.py`](../trading_polymarket/clients/http.py)):
 a `User-Agent` header (Cloudflare answers 403 without one), pacing per host
@@ -11,7 +14,7 @@ a `User-Agent` header (Cloudflare answers 403 without one), pacing per host
 5xx / network errors (honouring `Retry-After`), and counters shown on the
 dashboard (`api requests`, `api failures`, `last api error`).
 
-## Polymarket
+## 2. Polymarket
 
 | Endpoint | Used for | Notes |
 |---|---|---|
@@ -48,7 +51,7 @@ the module quotes it at its payout and redeems positions at the next cycle.
 A closed market without final prices is waiting for UMA; positions stay open
 (stale quote) until it resolves.
 
-## Kalshi (reference prices, read only)
+## 3. Kalshi (reference prices, read only)
 
 Base `https://api.elections.kalshi.com/trade-api/v2` (`kalshi_url`); no
 account or key for market data ([`clients/kalshi.py`](../trading_polymarket/clients/kalshi.py)).
@@ -69,7 +72,7 @@ reads Kalshi as `bid = 1 − yes_ask`, `ask = 1 − yes_bid`. Older Fed events
 title the hold bucket `No change` instead of `Fed maintains rate`; both
 map to `H0`.
 
-## Weather
+## 4. Weather
 
 | Source | Used for | Notes |
 |---|---|---|
@@ -82,7 +85,7 @@ map to `H0`.
 A shared cloud IP can exhaust Open-Meteo's daily allowance ("Daily API request
 limit exceeded"); run research from your own machine.
 
-## Attention
+## 5. Attention
 
 | Source | Used for | Notes |
 |---|---|---|
@@ -90,9 +93,11 @@ limit exceeded"); run research from your own machine.
 | X / Twitter | — | Paid API; not used |
 | GDELT | — | Rate-limited (429) during evaluation; not used |
 
-## Runtime repositories (hints only)
+## 6. Runtime repositories (hints only)
 
-`runtime/polymarket/` holds third-party projects used for ideas, never code:
+`runtime/polymarket/` holds third-party projects used for ideas, never code.
+(It is not runtime-trading, the folder counted runs run from:
+[`dev/RUNBOOK.md` §1](dev/RUNBOOK.md#1-the-runtime-folder).)
 
 - **PolyWeather** (AGPL): bucket probability idea, city/station map; its
   `probability_training_snapshots.jsonl` has forecasts without outcomes, so it

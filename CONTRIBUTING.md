@@ -62,7 +62,7 @@ syntax fails even on 3.14.
 `nox -s tests-<version>` on 3.11, 3.12, 3.13 and 3.14, and
 `nox -s lint mypy audit package` on 3.14. It checks out the private
 trading-core with the `TRADING_CORE_TOKEN` secret
-([`docs/dev/TESTING.md`](docs/dev/TESTING.md#ci)).
+([`docs/dev/TESTING.md`](docs/dev/TESTING.md#3-ci)).
 
 ## 6. Releases
 
