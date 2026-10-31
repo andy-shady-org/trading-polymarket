@@ -34,3 +34,18 @@ directly through GitHub.
   token with read-only *Contents* access to the private trading-core) and
   `CODECOV_TOKEN` (coverage upload) ([`docs/dev/TESTING.md`](docs/dev/TESTING.md#3-ci)).
 - **Dependencies**: `nox -s audit` (pip-audit) is part of the release gate.
+
+## Signed releases
+
+Every release tag of this repository, from `v0.3.0` on, is signed with the
+operator's SSH key (`git tag -s`), made on the operator's Mac and never in
+the GitHub web UI. Each runtime's `bin/install-release.sh` refuses a tag
+whose signature does not verify against its `allowed_signers`, and
+trading-core (0.3.0 and later) refuses to start a live run on a module
+checkout that is not a clean, signed release tag. Setup, the release steps
+and what to do if the key is lost: trading-core's `SECURITY.md`, "Signed
+releases"; this repository's steps: [`CONTRIBUTING.md`](CONTRIBUTING.md#6-releases).
+
+Tags made before signing (`v0.1.0` to `v0.2.1`) are not signed; installing one again
+needs `ALLOW_UNSIGNED=1`, and a live run on it is refused.
+
