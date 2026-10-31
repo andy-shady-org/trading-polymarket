@@ -21,7 +21,7 @@ and the standard disagree, the standard wins and the page is fixed.
 | [`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md) | Features not built (FEAT IDs from trading-core's series) |
 | [`TESTING.md`](TESTING.md) | The `nox` gate, CI, the test layout, isolation, markers, conventions |
 | [`ARCHITECTURE-DECISIONS.md`](ARCHITECTURE-DECISIONS.md) | Decisions and why, as `ADR-NNN` |
-| [`COSTS.md`](COSTS.md) | What the project pays: nothing, and why |
+| [`COSTS.md`](COSTS.md) | What this module pays: nothing, and why (development costs are trading-core's) |
 | [`releases/`](releases/) | Release records too long for `CHANGELOG.md` (0.1.0, 0.2.0, 0.2.1), with the pre-registration of the runs before 2026-10-31 |
 | [`runs/`](runs/README.md) | One record per counted run from 2026-10-31 (`weather-1.md`, `fed-1.md`, …) |
 

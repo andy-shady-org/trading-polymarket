@@ -10,6 +10,7 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 ## [Unreleased]
 
 ### Docs
+- Costs: development costs are recorded in trading-core's `docs/dev/COSTS.md`; features that cross repositories carry **Needs** / **Needed by** links (2026-10-31).
 - The documentation follows trading-core's `docs/dev/DOCUMENTATION.md`.
   Moved, with a one-line pointer left behind: `docs/GO-NO-GO.md` →
   `docs/dev/RELEASE-GATE.md` (§1 is now the only place status lives; the

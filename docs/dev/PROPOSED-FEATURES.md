@@ -10,6 +10,11 @@ there and bump it in the same pull request. The ideas below were written
 before that series reached this repository and **have no ID yet**; give one
 an ID when work on it starts.
 
+A feature that needs another repository's work takes its own ID here and
+names the other part under **Needs** or **Needed by**, with that
+repository and the release that delivers it (trading-core's
+`docs/dev/DOCUMENTATION.md` §9).
+
 ## 1. Ideas not built (and why)
 
 Moved here on 2026-10-31 from `docs/STRATEGIES.md`, unchanged.

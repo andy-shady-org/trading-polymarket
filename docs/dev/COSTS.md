@@ -5,6 +5,10 @@ and no paid API, and a paper run costs nothing to run beyond the machine it
 runs on. Record every payment here, in the currency it was paid in, the day
 it is made.
 
+Development costs (the Claude subscription, the IDE) pay for every
+repository and are recorded in trading-core's `docs/dev/COSTS.md`, with the
+project's totals.
+
 Last checked: 2026-10-31.
 
 ## 1. Data and APIs
