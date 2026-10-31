@@ -1,6 +1,6 @@
 # Proposed features
 
-Features of trading-polymarket that are not built, and why not yet. What is
+Features of trading-polymarket that are not built, and why. What is
 built is in [`../FEATURES.md`](../FEATURES.md); open work on what exists is
 in [`TODO.md`](TODO.md).
 
