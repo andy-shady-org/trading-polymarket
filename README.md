@@ -8,16 +8,17 @@ pre-registered verdicts — whether a lane is allowed near money. Version
 
 ## What it does
 
-| Lane | What it trades | Default |
-|---|---|---|
-| **weather** | Daily highest-temperature buckets, priced from multi-model forecasts plus the live METAR maximum against the published settlement rule | on (paper config: late-day window) |
-| **favourite** | Near-resolution favourites where a calibration on resolved markets beats price + fee | off until calibrated |
-| **momentum** | Research: sharp moves, with attention metrics | off |
-| **fed** | Fed-decision buckets bought below Kalshi's quote for the same meeting, sold when the venues converge | off (paper config: `paper-fed.example.json`) |
-| **crossvenue** | The same for any Polymarket/Kalshi pair a human reviewed (`pairs approve`) | off until pairs are approved |
-| arbitrage | Yes + No < 1 and neg-risk Σ Yes < 1, logged only | record only |
+| Lane | What it trades | Default | Stage |
+|---|---|---|---|
+| **weather** | Daily highest-temperature buckets, priced from multi-model forecasts plus the live METAR maximum against the published settlement rule | on (paper config: late-day window) | 1, paper |
+| **favourite** | Near-resolution favourites where a calibration on resolved markets beats price + fee | off until calibrated | 0: NO-GO |
+| **momentum** | Research: sharp moves, with attention metrics | off | research, none |
+| **fed** | Fed-decision buckets bought below Kalshi's quote for the same meeting, sold when the venues converge | off (paper config: `paper-fed.example.json`) | 1, paper |
+| **crossvenue** | The same for any Polymarket/Kalshi pair a human reviewed (`pairs approve`) | off until pairs are approved | 0, not started |
+| arbitrage | Yes + No < 1 and neg-risk Σ Yes < 1, logged only | record only | none |
 
-Each lane's capital stage and the runs in progress:
+Stages are the capital gate's (0 Evidence, 1 Paper, 2 Live canary, 3
+Scale-up); the evidence and the runs in progress:
 [`docs/dev/RELEASE-GATE.md` §1](docs/dev/RELEASE-GATE.md#1-current-status).
 Every data source is free and keyless ([`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md)).
 Live order placement is not built in 0.2.1 ([`docs/LIVE-TRADING.md`](docs/LIVE-TRADING.md)).
