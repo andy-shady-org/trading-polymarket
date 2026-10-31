@@ -66,21 +66,42 @@ trading-core with the `TRADING_CORE_TOKEN` secret
 
 ## 6. Releases
 
-A release passes the release gate
-([`docs/dev/RELEASE-GATE.md` §2](docs/dev/RELEASE-GATE.md#2-release-gate-every-release))
-and follows its versioning policy
-([§6](docs/dev/RELEASE-GATE.md#6-versioning)):
+Versions follow
+[`docs/dev/RELEASE-GATE.md` §6](docs/dev/RELEASE-GATE.md#6-versioning), with
+no pre-releases (`rc`, `alpha`, `beta`). There is no release workflow: a
+release is made by hand, in five steps.
 
-1. On `release/vX.Y.Z`: bump the version in `pyproject.toml` and
-   `trading_polymarket/__init__.py`, write the `CHANGELOG.md` entry and its
-   release record; merge by pull request.
-2. Tag the merge commit on `main`, annotated, signed (SSH key, trading-core's `SECURITY.md`) and private, and push the tag:
+1. **Gate and branch.** Run the release gate
+   ([`docs/dev/RELEASE-GATE.md` §2](docs/dev/RELEASE-GATE.md#2-release-gate-every-release)). On a `release/vX.Y.Z` branch:
+   the version in `pyproject.toml` and `trading_polymarket/__init__.py` (`__version__`),
+   and the `CHANGELOG.md` entry with its release record. Open a pull request.
+2. **Merge** the pull request in the GitHub UI.
+3. **Sign and push the tag on the Mac.** Never create the tag in the GitHub
+   UI: a tag GitHub creates (a new name typed in "Draft a new release") is
+   unsigned, and every runtime refuses it.
 
    ```bash
-   git tag -s v0.2.2 -m "v0.2.2"
-   git push origin v0.2.2
+   git switch main && git pull
+   git tag -s v0.3.0 -m "v0.3.0"
+   git tag -v v0.3.0        # Good "git" signature for andy@shady.org ...
+   git push origin v0.3.0
    ```
 
-There are no pre-releases (`rc`, `alpha`, `beta`): a tagged version that
-needs a fix gets a new PATCH, never a re-tag. Nothing is published to PyPI
-or any other index, and no GitHub Release is created.
+4. **Publish the GitHub Release** (optional) in the UI: Releases → Draft a
+   new release → **Choose a tag** → pick the existing `v0.3.0` (do not type a
+   new name) → title `v0.3.0` → paste the notes from its `CHANGELOG.md` entry
+   → Publish release. GitHub shows the tag as Verified when the signing key
+   is on the account (trading-core's `SECURITY.md`, "Signed releases").
+5. **Install it** in the runtime with `bin/install-release.sh`, which checks
+   both tags' signatures before it builds anything.
+
+A tagged version that needs a fix gets a new PATCH, never a re-tag. Nothing
+is published to PyPI or any other package index: the code is proprietary
+([`LICENSE`](LICENSE)), and a signature does not stop anyone who has a copy
+from running it (trading-core's `SECURITY.md`, "Distribution").
+
+**Protect the release tags** (once per repository): GitHub → Settings →
+Rules → Rulesets → New ruleset → **New tag ruleset**; target tags matching
+`v*`; turn on **Restrict updates** and **Restrict deletions**, with no bypass.
+A signed tag can then never be moved or removed, from the UI or a push.
+Rulesets on a private repository need a paid GitHub plan (Pro or Team).

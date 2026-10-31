@@ -314,8 +314,12 @@ lane runs on.
   with the operator's SSH signing key (trading-core's `SECURITY.md`, "Signed
   releases"), on the merge commit on `main` that passed the release gate;
   `git tag -v vX.Y.Z`, then `git push origin vX.Y.Z`. Runtimes install and
-  trust only signed tags. Nothing is published to a package index and no
-  GitHub Release is created.
+  trust only signed tags, so **the tag is never created in the GitHub web
+  UI** (a tag GitHub creates is unsigned). Tag rulesets on `v*` restrict
+  updates and deletions.
+- **The GitHub Release** is optional, made in the UI after the signed tag is
+  pushed: "Draft a new release", choose the existing tag, the notes from the
+  `CHANGELOG.md` entry. Nothing is published to a package index.
 - **The version** lives in two places, changed in the release commit only:
   `pyproject.toml` (`version = "X.Y.Z"`) and the package's `__version__`.
 - **The branch** is `release/vX.Y.Z`, holding the version bump, the

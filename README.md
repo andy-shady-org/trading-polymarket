@@ -1,5 +1,18 @@
 # trading-polymarket
 
+<!-- Static badges: the repository is private, so shields.io cannot read live
+counts. If it is ever made public, replace a badge's image with
+https://img.shields.io/github/{stars,issues,forks,issues-pr,contributors}/andy-shady-org/trading-polymarket
+for live numbers. -->
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Releases: signed and verified](https://img.shields.io/badge/releases-signed%20%26%20verified-2ea44f?logo=git&logoColor=white)](SECURITY.md#signed-releases)
+[![Stars](https://img.shields.io/badge/stars-view-blue?logo=github)](https://github.com/andy-shady-org/trading-polymarket/stargazers)
+[![Issues](https://img.shields.io/badge/issues-view-blue?logo=github)](https://github.com/andy-shady-org/trading-polymarket/issues)
+[![Forks](https://img.shields.io/badge/forks-view-blue?logo=github)](https://github.com/andy-shady-org/trading-polymarket/forks)
+[![Pull requests](https://img.shields.io/badge/pull%20requests-view-blue?logo=github)](https://github.com/andy-shady-org/trading-polymarket/pulls)
+[![Contributors](https://img.shields.io/badge/contributors-view-blue?logo=github)](https://github.com/andy-shady-org/trading-polymarket/graphs/contributors)
+[![License: proprietary](https://img.shields.io/badge/license-proprietary-red)](LICENSE)
+
 The Polymarket module for trading-core: free market data (Kalshi's quotes
 included, read only), book-walking paper fills with real fees, settlement at
 resolution, independent lanes, and the research tools that decide — with
