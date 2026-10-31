@@ -20,6 +20,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 2. Next
 
+- [ ] **Trusted loading (trading-core 0.3.0, FEAT-89 / FEAT-90; this repository is under its Needed by):** the next release (`v0.3.0`) declares `trading-core>=0.3.0,<0.4` in `pyproject.toml` and is tagged with `git tag -s`; `runtime-trading` has a `modules.toml` (written 2026-10-31) and needs `allowed_signers` with the signing key (trading-core's `SECURITY.md`, "Signed releases"). Its `bin/install-release.sh` already refuses an unsigned tag (`ALLOW_UNSIGNED=1` for the old ones).
 - [ ] **Evidence:** re-run `weather-history --start 2026-08-01` once to pick
       up the ~60 events the first collection did not reach (it is
       resumable).

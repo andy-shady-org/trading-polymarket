@@ -310,9 +310,11 @@ lane runs on.
 - **No pre-releases.** No `rc`, `alpha` or `beta` tags or versions. A version
   that needs a fix after it is tagged gets a new PATCH, never a re-tag.
   (trading-polymarket has never had one.)
-- **The tag** is annotated and private: `git tag -a vX.Y.Z -m "vX.Y.Z"` on
-  the merge commit on `main` that passed the release gate, then
-  `git push origin vX.Y.Z`. Nothing is published to a package index and no
+- **The tag** is annotated, signed and private: `git tag -s vX.Y.Z -m "vX.Y.Z"`
+  with the operator's SSH signing key (trading-core's `SECURITY.md`, "Signed
+  releases"), on the merge commit on `main` that passed the release gate;
+  `git tag -v vX.Y.Z`, then `git push origin vX.Y.Z`. Runtimes install and
+  trust only signed tags. Nothing is published to a package index and no
   GitHub Release is created.
 - **The version** lives in two places, changed in the release commit only:
   `pyproject.toml` (`version = "X.Y.Z"`) and the package's `__version__`.

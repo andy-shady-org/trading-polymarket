@@ -74,10 +74,10 @@ and follows its versioning policy
 1. On `release/vX.Y.Z`: bump the version in `pyproject.toml` and
    `trading_polymarket/__init__.py`, write the `CHANGELOG.md` entry and its
    release record; merge by pull request.
-2. Tag the merge commit on `main`, annotated and private, and push the tag:
+2. Tag the merge commit on `main`, annotated, signed (SSH key, trading-core's `SECURITY.md`) and private, and push the tag:
 
    ```bash
-   git tag -a v0.2.2 -m "v0.2.2"
+   git tag -s v0.2.2 -m "v0.2.2"
    git push origin v0.2.2
    ```
 
