@@ -20,7 +20,7 @@ this module are in `configs/paper.example.json`:
 
 Amounts are USDC. Probabilities and prices are 0–1.
 
-## Top level
+## 1. Top level
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -35,12 +35,12 @@ Amounts are USDC. Probabilities and prices are 0–1.
 | `unknown_fee_rate` | `0.07` | Fee rate assumed for a fee-enabled market with no `feeSchedule` (the highest known category rate) |
 | `bankroll` | `1000.0` | What lane Kelly sizing is a fraction of; keep equal to the paper balance |
 | `max_candidates` | `80` | Candidates the pipeline screens per cycle, all lanes together |
-| `exit_at_bid` | `0.0` | Sell a position once its bid reaches this (0: hold to resolution). Off until proven ([`GO-NO-GO.md` §3.6](GO-NO-GO.md#36-features-that-stay-off-until-proven)) |
+| `exit_at_bid` | `0.0` | Sell a position once its bid reaches this (0: hold to resolution). Off until proven ([`dev/RELEASE-GATE.md` §3.6](dev/RELEASE-GATE.md#36-features-that-stay-off-until-proven)) |
 | `kalshi_url` | `https://api.elections.kalshi.com/trade-api/v2` | Kalshi public API base (read only, no key) for the reference lanes |
 | `paper` | object | Paper fill model (below) |
 | `weather`, `favourite`, `momentum`, `fed`, `crossvenue` | objects | Lanes (below) |
 
-## `paper`
+## 2. `paper`
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -51,7 +51,7 @@ Amounts are USDC. Probabilities and prices are 0–1.
 
 The market's own `orderMinSize` (usually 5 shares) is enforced too.
 
-## Lane keys shared by every lane
+## 3. Lane keys shared by every lane
 
 | Key | Meaning |
 |---|---|
@@ -65,7 +65,7 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `max_candidates` | Candidates the lane's scout hands to the pipeline per cycle |
 | `max_positions_per_day` | Open positions the lane may hold in markets that close on one UTC date (0: no cap). Kelly sizes each bet as if independent; bets settled on one day share its weather, meeting or thesis, so the cap bounds the lane's bet on that day at `max_positions_per_day × max_notional` (TP-12). Default 0, weather 3 |
 
-## `weather`
+## 4. `weather`
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -78,7 +78,7 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `kelly_fraction` | `0.25` | |
 | `min_notional`, `max_notional` | `2.0`, `15.0` | |
 | `max_candidates` | `40` | |
-| `max_positions_per_day` | `3` | At most $45 on one event day: day 1 of the 0.2.0 pilot put 10 bets on one late-day thesis and lost all 10 (TP-12) |
+| `max_positions_per_day` | `3` | At most $45 on one event day: day 1 of the `weather-0.2.0` run put 10 bets on one late-day thesis and lost all 10 (TP-12) |
 | `min_price`, `max_price` | `0.02`, `0.97` | Ask band the lane trades |
 | `lead_days` | `1` | Trade events up to this many local days ahead (0: today only) |
 | `models` | `["ecmwf_ifs025", "gfs_seamless", "icon_seamless"]` | Open-Meteo models averaged |
@@ -87,7 +87,7 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `market_weight` | `0.5` | Fair value = (1 − w) × model + w × market mid (TP-1) |
 | `max_edge` | `0.25` | A raw model-vs-ask gap above this is a model error, not traded (TP-1) |
 | `min_remaining_sigma` | `0.3` | Floor on σ, also used once the day's maximum is observed |
-| `today_error_weight` | `0.5` | On the event day after its first METAR: the remaining hours' forecast maximum moves by this share of today's error so far (observed maximum − forecast maximum of the hours gone). The station bias is not added then (TP-11; [STRATEGIES.md](STRATEGIES.md)) |
+| `today_error_weight` | `0.5` | On the event day after its first METAR: the remaining hours' forecast maximum moves by this share of today's error so far (observed maximum − forecast maximum of the hours gone). The station bias is not added then (TP-11; [`STRATEGY.md` §2](STRATEGY.md#2-weather-lane)) |
 | `intraday_sigma` | `0.8` | °C uncertainty of the remaining hours' maximum on the event day after its first METAR (TP-11) |
 | `peak_hour` | `15` | Local hour by which the daily maximum is usually set; the station bias is added only while the hours still to come include it, before the day's first METAR |
 | `min_local_hour` | `0` | With a value above 0, trade an event only on its own local day from this hour on (and after the day ends): the intraday window where observations decide most buckets |
@@ -98,7 +98,7 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `max_events` | `200` | Open events read per cycle (100 per Gamma page) |
 | `concurrency` | `8` | Stations priced in parallel |
 
-## `favourite`
+## 5. `favourite`
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -118,7 +118,7 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `max_pages` | `3` | Gamma pages (100 markets each) scanned per cycle |
 | `exclude_tags` | `[]` | Event tag slugs never traded (e.g. `["sports"]` for fee-heavy categories) |
 
-## `momentum`
+## 6. `momentum`
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -137,15 +137,15 @@ The market's own `orderMinSize` (usually 5 shares) is enforced too.
 | `news` | `false` | Record Google News headlines in the last 6 h as a metric |
 | `max_pages` | `2` | |
 
-## `fed` and `crossvenue` (reference lanes)
+## 7. `fed` and `crossvenue` (reference lanes)
 
 Both price a Polymarket token from Kalshi's quote for the same question
-([`STRATEGIES.md`](STRATEGIES.md#fed-and-crossvenue-polymarket-against-kalshi)).
+([`STRATEGY.md` §5](STRATEGY.md#5-fed-and-crossvenue-polymarket-against-kalshi)).
 They share these keys; `fed` defaults are listed where they differ.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `enabled` | `false` | Off until the lane passes its Stage 0 gate |
+| `enabled` | `false` | Off by default; `configs/paper-fed.example.json` turns `fed` on in its own instance ([`dev/RUNBOOK.md` §3.3](dev/RUNBOOK.md#33-the-fed-lane-a-second-instance)) |
 | `min_volume_24h`, `min_liquidity` | `1000`, `1000` (`fed`: `5000`, `5000`) | |
 | `max_spread` | `0.04` | |
 | `min_ask_depth` | `20.0` | |
@@ -167,7 +167,7 @@ They share these keys; `fed` defaults are listed where they differ.
 | `search_query` | `"Fed Decision in"` | `fed` only: Gamma public search that finds the meeting events |
 | `pairs_path` | `"data/pairs.json"` | `crossvenue` only: the reviewed pairs file (`trading-polymarket pairs approve`) |
 
-## Files the module reads
+## 8. Files the module reads
 
 | Path (setting) | Written by | Used by |
 |---|---|---|
@@ -176,4 +176,5 @@ They share these keys; `fed` defaults are listed where they differ.
 | `crossvenue.pairs_path` | `trading-polymarket pairs approve` | crossvenue lane |
 | `trading_polymarket/data/stations.json` (package) | shipped | weather lane (station coordinates) |
 
-There are no environment variables and no secrets: every source is keyless.
+There are no environment variables and no secrets: every source is keyless
+([`ENVIRONMENT.md`](ENVIRONMENT.md)).

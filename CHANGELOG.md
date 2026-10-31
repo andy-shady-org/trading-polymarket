@@ -1,7 +1,33 @@
 # Changelog
 
-All notable changes. Format: Keep a Changelog; versions: SemVer (see
-`docs/GO-NO-GO.md` §6).
+Every release of trading-polymarket, newest first, with its release record.
+The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/);
+versions follow semantic versioning as set out in
+[`docs/dev/RELEASE-GATE.md` §6](docs/dev/RELEASE-GATE.md#6-versioning), with
+no pre-releases. Entries written before 2026-10-31 keep their original
+headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
+
+## [Unreleased]
+
+### Docs
+- Costs: development costs are recorded in trading-core's `docs/dev/COSTS.md`; features that cross repositories carry **Needs** / **Needed by** links (2026-10-31).
+- The documentation follows trading-core's `docs/dev/DOCUMENTATION.md`.
+  Moved, with a one-line pointer left behind: `docs/GO-NO-GO.md` →
+  `docs/dev/RELEASE-GATE.md` (§1 is now the only place status lives; the
+  standard's stage names, release-record template and versioning policy),
+  `docs/PAPER-TRADING.md` → `docs/dev/RUNBOOK.md` (with the runtime-trading
+  folder, smoke run, run records and drills), `docs/RESEARCH.md` §6 →
+  `docs/dev/RESULTS.md` (unchanged, newest first, with an index),
+  `docs/STRATEGIES.md` → `docs/STRATEGY.md`, and its ideas →
+  `docs/dev/PROPOSED-FEATURES.md`. New: `docs/ENVIRONMENT.md`,
+  `docs/FEATURES.md`, `docs/dev/README.md`, `docs/dev/DONE.md`,
+  `docs/dev/ARCHITECTURE-DECISIONS.md` (ADR-001 to ADR-014),
+  `docs/dev/COSTS.md`, `docs/dev/runs/README.md`, `CONTRIBUTING.md`,
+  `SECURITY.md`. Stale statements fixed against the code (CLI flags and
+  exit codes, the package map, the test count, lanes in the user guide,
+  live trading "not built in 0.2.1"). Counted runs from now on are named
+  `weather-1`, `fed-1`, …; `weather-0.2.1` and `fed-0.2.1` keep their names.
+  No code or config changed.
 
 ## 0.2.1: pilot fixes (2026-10-30)
 

@@ -2,7 +2,7 @@
 
 ## Claude 5.5 Opus Self-Correction & Continuous Learning
 
-As **Claude 5.5 Opus**, you are required to treat this repository as the Polymarket module of a live trading system and this `AGENTS.md` file as your persistent memory. The module plugs into **trading-core** (the venue-neutral engine in `../trading-core`), and its purpose is to make money on Polymarket, proven step by step through the gates in `docs/GO-NO-GO.md`. You must automatically update your own rules, adapt to edge cases, and self-correct based on runtime or user feedback.
+As **Claude 5.5 Opus**, you are required to treat this repository as the Polymarket module of a live trading system and this `AGENTS.md` file as your persistent memory. The module plugs into **trading-core** (the venue-neutral engine in `../trading-core`), and its purpose is to make money on Polymarket, proven step by step through the gates in `docs/dev/RELEASE-GATE.md`. You must automatically update your own rules, adapt to edge cases, and self-correct based on runtime or user feedback.
 
 ### 1. Triggers for Updates
 You must automatically append a new rule to the **"Local Norms"** or **"Learnings Log"** sections of this file if:
@@ -22,7 +22,7 @@ You must automatically append a new rule to the **"Local Norms"** or **"Learning
 
 ## Local Norms
 - **A Module, Not An Engine:** Risk, the breaker, positions, accounting, the audit trail and the dashboard belong to trading-core. This package only implements `TradingModule` and its lanes; if the contract cannot express something, change trading-core (with a default and docs), never work around it here.
-- **Free Data Only:** Every source is keyless and free (`docs/DATA-SOURCES.md`). A paid or keyed source is an optional extra with its own setting and its own GO/No-Go evidence; secrets come only from environment variables.
+- **Free Data Only:** Every source is keyless and free (`docs/DATA-SOURCES.md`). A paid or keyed source is an optional extra with its own setting and its own pre-registered evidence; secrets come only from environment variables.
 - **No Read, No Fill:** Paper fills walk a book read with `max_age=0`; a missing book refuses. A paper fill must never succeed where a live one would not (min size, tick, closed market, limit).
 - **Paper Is Never Cheaper Than Live:** Fees come from each market's `feeSchedule`; a fee-enabled market without one is priced at `unknown_fee_rate`. Never default a fee to zero.
 - **Hold To Resolution:** Positions redeem at 1 or 0 with no fee. Generic stops, loss caps and shutdown liquidation stay off in configs unless a lane's evidence says otherwise.
@@ -31,9 +31,10 @@ You must automatically append a new rule to the **"Local Norms"** or **"Learning
 - **Evidence Before Money:** A lane moves up a stage only on a pre-registered `trading-core-audit verdict` GO (`configs/verdict/<lane>.json`, sha256 recorded). Backtests calibrate on data before a split and test after it.
 - **Mirrored Test Layout, 100% Coverage:** Every source module has `tests/unit/<pkg>/test_<m>.py`; integration and property tests in their folders; builders in `tests/support/`. Statement and branch coverage stay at 100% on Python 3.11–3.14. No network in tests: route HTTP through `FakeTransport`.
 - **Small Functions:** flake8 runs with `max-complexity = 7` (McCabe). Split a function into named steps rather than raising the limit or adding `noqa`.
-- **Docs Track Code:** A change to settings, a lane, a CLI command or a gate updates the matching `docs/` page in the same change; `test_config.py` fails on an undocumented setting.
+- **Docs Track Code:** A change to settings, an environment variable, a lane, a CLI command, a feature or a gate updates the matching page in the same change (`CONFIGURATION.md`, `ENVIRONMENT.md`, `STRATEGY.md`, `CLI.md`, `FEATURES.md`, `dev/RELEASE-GATE.md`); `test_config.py` fails on an undocumented setting.
 - **Resolving A Bug Means Tagging A Test:** `docs/dev/BUGS.md` row (`TP-<n>`) plus `@pytest.mark.regression("TP-<n>")`.
-- **Never Touch Other Repos From Here:** Work here never edits `pumpfun-trading`; trading-core changes are made in trading-core (its own tests, docs and changelog).
+- **Never Touch Other Repos From Here:** Work here never edits trading-pump, trading-scout or any other module repository; trading-core changes are made in trading-core (its own tests, docs and changelog).
+- **Docs Follow trading-core's `docs/dev/DOCUMENTATION.md`:** one layout, style, vocabulary (lane, run, counted run, verdict GO / NO-GO / INCONCLUSIVE), versioning, capital stages (0 evidence, 1 paper, 2 live canary, 3 scale-up), run names (`weather-1`, `fed-1`) and records for every repository. Status lives only in `docs/dev/RELEASE-GATE.md` §1, `docs/dev/TODO.md` and `docs/dev/RESULTS.md`; `CHANGELOG.md`, `BUGS.md`, `DONE.md`, `RESULTS.md` and run pre-registrations are appended to, never edited back; a moved page leaves a one-line pointer. New features take the next `FEAT-<n>` from trading-core's `docs/dev/PROPOSED-FEATURES.md`.
 
 ## Learnings Log & Avoided Mistakes
 - **[MODEL] A Grid Is Not A Thermometer:** the first scan's 35–55-point "edges" came from an uncorrected grid forecast (TP-1). Measure per-station bias against the settlement source and shrink towards the market.
@@ -63,7 +64,7 @@ You must automatically append a new rule to the **"Local Norms"** or **"Learning
 
 `trading-polymarket` is the Polymarket trading module for trading-core. It reads Gamma (markets), CLOB (books, price history), Kalshi (reference quotes, read only), Open-Meteo (forecasts), Aviation Weather Center (METARs) and Google News RSS — all free and keyless — prices markets in independent lanes, simulates fills against the live book, redeems at resolution, and ships the research tools (history collection, calibration, backtests, bias tables, arbitrage logging) whose output trading-core's audit tools judge.
 
-Lanes: **weather** (daily-temperature markets: multi-model forecast + live METAR max-so-far against a known settlement rule; on by default), **favourite** (favourite–longshot bias from a calibration on resolved markets; off until calibrated and backtested), **momentum** (research; off), **fed** and **crossvenue** (Polymarket priced against Kalshi's free quote for the same question, convergence exits; off by default). Kalshi is read only. Live order placement is not implemented; it comes after a lane passes the paper stage.
+Lanes: **weather** (daily-temperature markets: multi-model forecast + live METAR max-so-far against a known settlement rule; on by default), **favourite** (favourite–longshot bias from a calibration on resolved markets; off until calibrated and backtested), **momentum** (research; off), **fed** and **crossvenue** (Polymarket priced against Kalshi's free quote for the same question, convergence exits; off by default). Kalshi is read only. Live execution is not built (every live order and the balance read are refused); it is built after a lane passes Stage 1 (paper). Counted runs run from tagged release copies in `runtime-trading` (`docs/dev/RUNBOOK.md`).
 
 ---
 
@@ -82,8 +83,8 @@ trading-polymarket/
 │   ├── execution.py     # PaperExecutor (fills, fees, redemption), LiveExecutor (refuses)
 │   ├── calibration.py   # CalibrationTable (price × hours bins, shrunk win rates)
 │   ├── clients/         # http (paced, retrying), gamma, clob, kalshi, weather, news
-│   ├── strategies/      # common, filters, weather, favourite, momentum, crossvenue, router
-│   ├── research/        # records, history, backtest, weather_backtest, fed, pairs_suggest, bias, arb, recorder
+│   ├── strategies/      # common, filters, router; weather, favourite, momentum, crossvenue (the fed and crossvenue lanes)
+│   ├── research/        # records, history, backtest, weather_backtest, metar_archive, fed, pairs_suggest, bias, arb, recorder
 │   ├── data/            # stations.json
 │   ├── cli.py           # trading-polymarket
 │   └── tests/           # unit (mirrored), integration, property, support, fixtures
@@ -95,23 +96,65 @@ trading-polymarket/
 
 ## Documentation Architecture
 
+Every page follows trading-core's `docs/dev/DOCUMENTATION.md`; old paths
+(`docs/GO-NO-GO.md`, `docs/PAPER-TRADING.md`, `docs/STRATEGIES.md`) are
+one-line pointers.
+
 ### 1. User & Operator Manuals (`docs/`)
-* [**`docs/USER-GUIDE.md`**](docs/USER-GUIDE.md): Start here.
-* [**`docs/STRATEGIES.md`**](docs/STRATEGIES.md): The lanes, the weather model, the guards, ideas not built.
-* [**`docs/GO-NO-GO.md`**](docs/GO-NO-GO.md): Release gate, capital stages per lane, stop triggers, release record.
-* [**`docs/PAPER-TRADING.md`**](docs/PAPER-TRADING.md): Running and reading out the paper pilot.
-* [**`docs/RESEARCH.md`**](docs/RESEARCH.md): Data collection, calibration, backtests, results log.
-* [**`docs/CONFIGURATION.md`**](docs/CONFIGURATION.md): Every `module_settings` key.
-* [**`docs/CLI.md`**](docs/CLI.md): Every command.
-* [**`docs/DATA-SOURCES.md`**](docs/DATA-SOURCES.md): The free APIs, limits, quirks, fees.
+* [**`docs/USER-GUIDE.md`**](docs/USER-GUIDE.md): Start here: concepts, install, a first run, every other page.
+* [**`docs/STRATEGY.md`**](docs/STRATEGY.md): The lanes, the weather model, the guards, how each lane is judged.
+* [**`docs/FEATURES.md`**](docs/FEATURES.md): What is built, by name.
+* [**`docs/CONFIGURATION.md`**](docs/CONFIGURATION.md): Every `module_settings` key (checked by a test).
+* [**`docs/ENVIRONMENT.md`**](docs/ENVIRONMENT.md): Environment variables: none read; the planned `TRADING_PM_*`.
+* [**`docs/CLI.md`**](docs/CLI.md): Every command and flag, exit codes.
 * [**`docs/ARCHITECTURE.md`**](docs/ARCHITECTURE.md): How the contract is implemented; one cycle; the fill model.
-* [**`docs/LIVE-TRADING.md`**](docs/LIVE-TRADING.md): What live trading needs (not built).
+* [**`docs/RESEARCH.md`**](docs/RESEARCH.md): Collecting data, calibration, backtests.
+* [**`docs/DATA-SOURCES.md`**](docs/DATA-SOURCES.md): The free APIs, limits, quirks, fees.
+* [**`docs/LIVE-TRADING.md`**](docs/LIVE-TRADING.md): What live trading needs.
 
 ### 2. Developer Artifacts (`docs/dev/`)
-* [**`docs/dev/TESTING.md`**](docs/dev/TESTING.md): The gate, CI secret, layout, fakes.
+* [**`docs/dev/README.md`**](docs/dev/README.md): Index and workflow.
+* [**`docs/dev/RELEASE-GATE.md`**](docs/dev/RELEASE-GATE.md): §1 current status, release gate, capital stages, release record, versioning.
+* [**`docs/dev/RUNBOOK.md`**](docs/dev/RUNBOOK.md): The runtime-trading folder, smoke run, counted runs, daily check, read-out, drills.
+* [**`docs/dev/RESULTS.md`**](docs/dev/RESULTS.md): Every study, backtest and run, with its verdict (newest first).
+* [**`docs/dev/TODO.md`**](docs/dev/TODO.md): Open work only (Now / Next / Later).
+* [**`docs/dev/DONE.md`**](docs/dev/DONE.md): Finished work from 2026-10-31.
 * [**`docs/dev/BUGS.md`**](docs/dev/BUGS.md): TP-n bug tracker.
-* [**`docs/dev/TODO.md`**](docs/dev/TODO.md): Open work only.
-* [**`CHANGELOG.md`**](CHANGELOG.md): Release notes and release records.
+* [**`docs/dev/PROPOSED-FEATURES.md`**](docs/dev/PROPOSED-FEATURES.md): Features not built.
+* [**`docs/dev/TESTING.md`**](docs/dev/TESTING.md): The gate, CI secret, layout, isolation, fakes.
+* [**`docs/dev/ARCHITECTURE-DECISIONS.md`**](docs/dev/ARCHITECTURE-DECISIONS.md): ADR-001 to ADR-014.
+* [**`docs/dev/COSTS.md`**](docs/dev/COSTS.md): What the project pays (nothing).
+* [**`docs/dev/releases/`**](docs/dev/releases/): Release records and the pre-registration of runs before 2026-10-31.
+* [**`docs/dev/runs/`**](docs/dev/runs/README.md): One record per counted run from 2026-10-31.
+* [**`CHANGELOG.md`**](CHANGELOG.md), [**`CONTRIBUTING.md`**](CONTRIBUTING.md), [**`SECURITY.md`**](SECURITY.md): Releases, contributing and tagging, secrets.
+
+---
+
+## Working Rules & Architecture Principles
+
+1. **Boundaries:**
+   - One Python package (`trading_polymarket`), no `src/` layout.
+   - `module.py` answers trading-core through `PolymarketModule`; venue I/O lives in `clients/` (every request through `clients/http.py`); lane decisions in `strategies/`; research and backtests in `research/`; `cli.py` delegates to library functions.
+   - The module renders nothing and owns no risk: limits, the breaker, exits and accounting are trading-core's.
+2. **Safety:**
+   - Paper is the default; live needs `"mode": "live"` **and** `--live`, and `LiveExecutor` refuses every order until live execution is built after a Stage 1 GO.
+   - No keys and no environment variables today; live credentials will come from `TRADING_PM_*` variables only, never settings (`docs/ENVIRONMENT.md`).
+   - Paper fills walk a book read with `max_age=0`; fees from each market's `feeSchedule`; positions held to resolution.
+3. **Evidence:**
+   - Every lane is judged alone (`strategy` tag, `configs/verdict/<lane>.json`), on a pre-registered verdict, one capital stage at a time (`docs/dev/RELEASE-GATE.md` §3).
+   - Counted runs run from tagged release copies in runtime-trading, each with its own config and data folder (`docs/dev/RUNBOOK.md`).
+
+---
+
+## Runtime and Command Surface
+
+* `trading-core run --config F` (`"module": "polymarket"`): run the module (`--headless`, `--max-cycles N`; with `--live` and `"mode": "live"` the module refuses every order and the balance read); `SIGUSR1` toggles the operator pause. Counted runs start with runtime-trading's `bin/run.sh <config> <venv>`.
+* `trading-core check --config F`: validate settings and build the module.
+* `trading-core-audit pnl / cuts / verdict`, `trading-core-events`: read a run or a backtest.
+* `trading-polymarket scan | weather | record | arb`: look at what the lanes see (read only).
+* `trading-polymarket metars | bias | history | weather-history | fed-history`: collect data.
+* `trading-polymarket calibrate | backtest favourite|weather|fed`: Stage 0 evidence, written as trading-core audit records.
+* `trading-polymarket pairs suggest | approve | remove | list`: the crossvenue lane's reviewed pairs.
 
 ---
 
