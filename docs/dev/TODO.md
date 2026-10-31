@@ -55,9 +55,9 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ### 3.4 Docs
 
-- [ ] Decide whether [`BUGS.md`](BUGS.md) takes the standard's format
-      (status columns ID, Area, Severity, Status, Summary; sections
-      `## TP-<n>: … [RESOLVED]`). It is append-only history, so it was left
+- [ ] Decide whether [`BUGS.md`](BUGS.md) takes the standard's section
+      headings (`## TP-<n>: … [RESOLVED]`); its status columns already match
+      (ID, Severity, Area, Status, Summary). It is append-only history, so it was left
       as it is on 2026-10-31; `test_suite_layout.py` parses its table.
 - [ ] Module docstrings and the example configs' `_comment` still name
       `docs/GO-NO-GO.md`, `docs/PAPER-TRADING.md` and `docs/STRATEGIES.md`
