@@ -32,6 +32,8 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
       METARs during a run (`trading-polymarket record`) and add an intraday
       backtest from them.
 
+- [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the tick recorder, 24–48 h, then the maker study), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
+
 ## 3. Later
 
 ### 3.1 Weather lane
@@ -52,7 +54,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 - [ ] Live execution (`LiveExecutor`) with `py-clob-client-v2` as an optional
       extra, after a Stage 1 GO ([`LIVE-TRADING.md`](../LIVE-TRADING.md)).
 - [ ] CLOB market WebSocket for book updates (fewer REST reads, faster marks).
-- [ ] Arbitrage executor if `data/arb.jsonl` shows gaps worth it after fees.
+- [ ] Arbitrage executor if `data/arb.jsonl` shows gaps worth it after fees (FEAT-102's decision rule).
 
 ### 3.4 Docs
 
