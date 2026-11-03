@@ -88,6 +88,7 @@ in [`dev/RUNBOOK.md`](dev/RUNBOOK.md).
 | Page | For |
 |---|---|
 | [`STRATEGY.md`](STRATEGY.md) | What each lane does, the weather model, the guards, how a lane is judged |
+| [`STRATEGY-LEDGER.md`](STRATEGY-LEDGER.md), [`LESSONS.md`](LESSONS.md) | Shared with every repository: every strategy tried and why it failed, how to test on a new venue, what not to test again; every lesson learned |
 | [`FEATURES.md`](FEATURES.md) | Everything that is built |
 | [`CONFIGURATION.md`](CONFIGURATION.md) | Every `module_settings` key |
 | [`ENVIRONMENT.md`](ENVIRONMENT.md) | Environment variables (none are read) |
