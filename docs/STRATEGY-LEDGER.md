@@ -31,7 +31,8 @@ Contents: [1. The short version](#1-the-short-version) ·
 [5. Testing a strategy on a new chain or venue](#5-testing-a-strategy-on-a-new-chain-or-venue) ·
 [6. Do not test again without new evidence](#6-do-not-test-again-without-new-evidence) ·
 [7. Leads not yet judged](#7-leads-not-yet-judged) ·
-[8. History of this page](#8-history-of-this-page)
+[8. The strategy library](#8-the-strategy-library) ·
+[9. History of this page](#9-history-of-this-page)
 
 ## 1. The short version
 
@@ -343,38 +344,43 @@ not a result):
 
 ## 6. Do not test again without new evidence
 
-Each of these has been tested or reasoned out, and a new test would only
-repeat it. The "new evidence" column says what would change that.
+Each of these has been tested or reasoned out, and a new test **on the same
+venue** would only repeat it. **Scope** says where it failed: **Everywhere**
+means the reason holds on any venue (do not test it anywhere); a venue
+name means it failed there and may be tested on another venue through the
+strategy library (§8), with the playbook (§5) and the design gate (§2).
+**Library** names the trading-core feature that makes it testable on any
+venue, or says why it is not brought back.
 
-| Idea | Why not | New evidence that would reopen it |
-|---|---|---|
-| Buying launches at the create event | ~25,000 paper trades lost at every exit | A venue where most launches get follow-on demand |
-| Tuning exits on a losing entry | 61 exit rules per lane, every launch exit grid, all lost | A passing entry first |
-| Faster reads or better stops against one-slot dumps | 160 of 171 instant stops on 2 s reads filled at −33% | A tripwire (slot-level reads of mapped holders) that fills stops no worse than −20%: at that bound the instant rules were positive on rc.9, rc.11 and rc.11-tp20 (TP +50%: +27.1%, +4.9%, +12.8%) and momentum TP +20% passed narrowly |
-| Copying wallets | Copies lose at our delay; the copier is exit liquidity | Our own copy net positive on a second capture of wallets' own trades |
-| Coordinated buying ("swarm") | It manufactures demand to sell into: market manipulation | Never |
-| Cross-DEX arbitrage on Solana | Taken by co-located searchers; our feed is seconds behind | Never at this infrastructure |
-| Creator reputation tracking | A fresh wallet per coin | Creators that repeat |
-| Exit times per coin name | No better than one global time out of sample | — |
-| Price-path filters on instant entries | Crashes look like the rest in the first minute | A new pre-entry feature that separates crashes on every capture and changes the result per trade |
-| A larger order size | The fee is a share of the order | Measured price impact in live fills |
-| Time-of-day or weekday filters | Sign changes between captures | The same sign on three captures |
-| Buyer-count, wash-trade, buy-timing filters on a losing entry | Wash and timing inputs did not beat a random cut; buyer counts and diversity did, and the lane still lost | A passing entry to filter |
-| Trend rules on liquid Solana tokens | Walk-forward −37.8%, below random | A different, pre-registered rule |
-| Trending and volume lists | Show what already moved | — |
-| Returns from price lists without a sale check | Honeypots and taxes look like wins | — |
-| Day-ahead weather, favourite–longshot on Polymarket | The market is better calibrated | Category or event-level calibration on a new window |
-| Major-sports cross-venue gaps | Half a cent; fee is larger | — |
-| Crypto Up/Down latency trades | An artefact of minute data | — |
-| Raydium migration sniping | Pump.fun graduates migrate to PumpSwap | — |
-| Relaxing a holder or creator screen to get more trades | Rejected movers lost ~10% a trade against 6% for watched coins: insider pumps | — |
-| A trade-feed stop trigger, or Yellowstone gRPC for a 60 s signal | The feed crossed the stop 0.07 s before the curve read, at the same price; migration events already arrive within ~1 s | A lane whose edge is lost to latency, shown in live fills |
-| Order splitting at our size | Each split pays the network fee again | — |
-| "Smart money" lists (Axiom, Fomo) | They rank wallets the way the copy study did, and copying lost | — |
-| Exchange IDOs | Manual KYC, allocations, days-long holds, no bot API | — |
-| Long-tail PumpSwap pools (graduated over 24 h ago) | Thin and bleeding; fixed costs a large share at 0.02 SOL | — |
-| Moonshot | 18 pools in 38 h: no verdict is reachable | Its share of launches grows |
-| Another record-only week of PumpSwap graduates | rc.11, rc.11-tp20, pools-1 and the supply map already hold it | A new lane design that passes the design gate on that data |
+| Idea | Scope | Why not | New evidence that would reopen it | Library |
+|---|---|---|---|---|
+| Buying launches at the create event | Pump.fun / PumpSwap | ~25,000 paper trades lost at every exit | A venue where most launches get follow-on demand | FEAT-121 |
+| Tuning exits on a losing entry | **Everywhere** | 61 exit rules per lane, every launch exit grid, all lost | A passing entry first | — |
+| Faster reads or better stops against one-slot dumps | Pump.fun / PumpSwap | 160 of 171 instant stops on 2 s reads filled at −33% | A tripwire (slot-level reads of mapped holders) that fills stops no worse than −20%: at that bound the instant rules were positive on rc.9, rc.11 and rc.11-tp20 (TP +50%: +27.1%, +4.9%, +12.8%) and momentum TP +20% passed narrowly | — |
+| Copying wallets | Pump.fun / PumpSwap (1.5 s delay) | Copies lose at our delay; the copier is exit liquidity | Our own copy net positive on a second capture of wallets' own trades, on a slower venue | FEAT-136 |
+| Coordinated buying ("swarm") | **Everywhere** | It manufactures demand to sell into: market manipulation | Never | Not brought back |
+| Cross-DEX arbitrage | **Everywhere** | Taken by co-located searchers; the legs cannot be bought atomically through one engine | Never at this infrastructure | Not brought back |
+| Creator reputation tracking | Pump.fun / PumpSwap | A fresh wallet per coin | Creators that repeat (EVM deployers may) | FEAT-127 |
+| Exit times per coin name | Pump.fun / PumpSwap | No better than one global time out of sample | — | — |
+| Price-path filters on instant entries | Pump.fun / PumpSwap | Crashes look like the rest in the first minute | A new pre-entry feature that separates crashes on every capture and changes the result per trade | FEAT-120 (bands), FEAT-134 |
+| A larger order size | **Everywhere** | The fee is a share of the order | Measured price impact in live fills | — |
+| Time-of-day or weekday filters | Pump.fun / PumpSwap | Sign changes between captures | The same sign on three captures | FEAT-94 (built) |
+| Buyer-count, wash-trade, buy-timing filters on a losing entry | Pump.fun / PumpSwap | Wash and timing inputs did not beat a random cut; buyer counts and diversity did, and the lane still lost | A passing entry to filter | FEAT-124, FEAT-125 |
+| Trend rules on liquid tokens | Liquid Solana tokens | Walk-forward −37.8%, below random | A different, pre-registered rule or another market | FEAT-131 |
+| Trending and volume lists as an entry | **Everywhere** | Show what already moved | — | Not brought back |
+| Returns from price lists without a sale check | **Everywhere** | Honeypots and taxes look like wins | — | Not brought back |
+| Day-ahead weather, favourite–longshot on Polymarket | Polymarket | The market is better calibrated | Category or event-level calibration on a new window | — (Polymarket lanes) |
+| Major-sports cross-venue gaps | Polymarket / Kalshi | Half a cent; fee is larger | — | — |
+| Crypto Up/Down latency trades | **Everywhere** | An artefact of minute data | — | Not brought back |
+| Raydium migration sniping | Pump.fun / PumpSwap | Pump.fun graduates migrate to PumpSwap | — | Not brought back (the venue is gone) |
+| Relaxing a holder or creator screen to get more trades | **Everywhere** | Rejected movers lost ~10% a trade against 6% for watched coins: insider pumps | — | — |
+| A trade-feed stop trigger, or Yellowstone gRPC for a 60 s signal | Pump.fun / PumpSwap | The feed crossed the stop 0.07 s before the curve read, at the same price; migration events already arrive within ~1 s | A lane whose edge is lost to latency, shown in live fills | — |
+| Order splitting at our size | Solana, 0.02 SOL | Each split pays the network fee again | — | — |
+| "Smart money" lists (Axiom, Fomo) | Pump.fun / PumpSwap | They rank wallets the way the copy study did, and copying lost | — | FEAT-136 covers it |
+| Exchange IDOs | **Everywhere** | Manual KYC, allocations, days-long holds, no bot API | — | Not brought back |
+| Long-tail PumpSwap pools (graduated over 24 h ago) | Pump.fun / PumpSwap | Thin and bleeding; fixed costs a large share at 0.02 SOL | — | — |
+| Moonshot | Moonshot | 18 pools in 38 h: no verdict is reachable | Its share of launches grows | — |
+| Another record-only week of PumpSwap graduates | Pump.fun / PumpSwap | rc.11, rc.11-tp20, pools-1 and the supply map already hold it | A new lane design that passes the design gate on that data | — |
 
 ## 7. Leads not yet judged
 
@@ -390,7 +396,48 @@ stands now.
 | Polymarket intraday weather and Fed | trading-polymarket paper runs | Stage 0 INCONCLUSIVE (data- and sample-limited) | Each lane's own Stage 1 verdict |
 | Learning under a frozen rule (FEAT-105 selector, FEAT-106 crash model) | trading-pump, for any reopened lane | Adaptive rules cut losses | Walk-forward beats the best fixed rule on every capture |
 
-## 8. History of this page
+## 8. The strategy library
+
+So that a venue can be tested against every strategy without rewriting one,
+the venue-neutral strategies move into trading-core as a library
+(trading-core ADR-011, `docs/dev/PROPOSED-FEATURES.md` §6; proposed
+2026-11-03). A module translates its data into four records (listings,
+price readings, trade prints, holder snapshots); each strategy is a rule
+class registered by name; a lane is composed in the settings file from one
+entry rule, any gates, its exits and its limits; and a sweep replays a
+venue's captures against every rule its data can feed and shortlists what
+passes the design gate. A module can contribute its own rules the same way,
+and a rule that needs only the four records can be promoted to the core.
+
+| Strategy tried here | Library feature | Needs |
+|---|---|---|
+| PumpSwap momentum and instant lanes (FEAT-76, FEAT-78) | FEAT-120 `listing_momentum` | readings |
+| Launch sniping, buying at the migration, new pools at the first reading | FEAT-121 `buy_at_listing` | readings |
+| Fill-drift guard, lane slippage caps | FEAT-128 | readings |
+| Pullback (FEAT-59) | FEAT-122 `pullback` | readings |
+| Pre-graduation (FEAT-53) | FEAT-123 `curve_progress` | progress |
+| Confirmed momentum (FEAT-51, FEAT-52) | FEAT-124 `demand_confirmation` | trades |
+| Order-flow filters (FEAT-56, FEAT-57, FEAT-60) | FEAT-125 | trades |
+| Holder and bundle screens, the supply map (FEAT-61, FEAT-96) | FEAT-126 | holders |
+| Creator book, funders, reused names (FEAT-55, FEAT-63, FEAT-98) | FEAT-127 | creator |
+| Adaptive take-profit (FEAT-97) | FEAT-129 | readings |
+| Trend rule (FEAT-65) | FEAT-131 `bar_trend` | readings |
+| Adaptive gate and exit selector (FEAT-105) | FEAT-130 | readings |
+| Stop arming and demand-hold variants | FEAT-132 | readings, trades |
+| Crash model (FEAT-106) | FEAT-134 | holders, creator |
+| Capital rotation (FEAT-24) | FEAT-135 | readings |
+| Copy trading (FEAT-54) | FEAT-136 `wallet_follow` | trades |
+| Take-profit tiers, stall exit, trading hours, a lane's own exits, break-even reporting | FEAT-92 to FEAT-95, FEAT-116 (built) | — |
+
+> [!WARNING]
+> Testing a venue against every rule and variant will always find something
+> that looks good by chance: about 240 variants on rc.9 chose the instant
+> lane, which then lost on rc.11. The sweep only **shortlists** (positive on
+> every capture at the base cost, not negative at the stress cost, above a
+> random cut, with the number of combinations tried shown); only a
+> pre-registered counted run on fresh data decides.
+
+## 9. History of this page
 
 - 2026-11-03: written from the results logs and run records of
   trading-pump (pumpfun-trading's included), trading-scout, trading-evm,
@@ -399,3 +446,6 @@ stands now.
 - 2026-11-03: every number checked against its source by a separate
   reader before the first copy; 22 corrections and 5 missing items made
   then.
+- 2026-11-03: §6 gains a scope column (everywhere, or the venue where it
+  failed) and a library column; §8 maps every strategy tried to the
+  strategy library proposed in trading-core (ADR-011).
