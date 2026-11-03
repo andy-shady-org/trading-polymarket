@@ -87,8 +87,11 @@ P(bucket [lo, hi]) = P(final < hi + ½) − P(final < lo − ½)     (bounds con
     carries into the rest of the day; the station's *average* bias does not;
   - **σ** = `intraday_sigma` (0.8 °C).
 
-  Both were measured on the intraday replay (519 events, 12–27 Oct 2026,
-  day-ahead runs, both halves of the window). At 15–16 h local the model
+  Both were measured in the late-day study of the intraday data (519
+  events, 12–27 Oct 2026, with day-ahead hourly runs and METARs covering
+  the day, both halves of the window; the Stage 0 replay that judged the
+  model keeps 542 of the same events, since it needs only a forecast and
+  one METAR on the day: `docs/dev/RESULTS.md`, 2026-10-30). At 15–16 h local the model
   that 0.2.0 traded scored a log-loss of 0.098–0.107 per bucket against the
   market's 0.083–0.087, and put a further rise of ≥ 1 °C at 0.34 where 0.07
   happened. This model scores 0.065–0.071, below the market in both halves,

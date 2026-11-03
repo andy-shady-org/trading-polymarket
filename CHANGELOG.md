@@ -9,7 +9,11 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+### Changed
+- `trading-core>=0.3.0,<0.6` (was `>=0.2.0`, with no upper bound): a fresh install could pull a trading-core this module was never tested on, and trusted loading (trading-core 0.3.0) checks the declared range. Tested on trading-core 0.4.0 and 0.5.0. The running `v0.2.1` installs are unaffected.
+
 ### Docs
+- The intraday weather data's two event counts explained: 519 in the late-day study, 542 in the Stage 0 replay; they use different coverage tests (`RESULTS.md` 2026-10-30, `STRATEGY.md`) (2026-11-03).
 - Shared pages `docs/STRATEGY-LEDGER.md` and `docs/LESSONS.md`, copied unchanged from trading-core (its `docs/dev/DOCUMENTATION.md` §2.4), and an `AGENTS.md` section that sends every agent to them before a lane, run or venue is proposed (2026-11-03).
 - Release steps (2026-10-31): merge in the GitHub UI, sign and push the tag on the Mac (never in the UI: a tag GitHub creates is unsigned), then optionally publish the GitHub Release on the existing tag; a tag ruleset on `v*` blocks moving or deleting a release tag (`CONTRIBUTING.md`). README badges: code style, signed releases, stars, issues, forks, pull requests, contributors, licence (static: the repository is private). `SECURITY.md` gains "Signed releases".
 - Costs: development costs are recorded in trading-core's `docs/dev/COSTS.md`; features that cross repositories carry **Needs** / **Needed by** links (2026-10-31).
