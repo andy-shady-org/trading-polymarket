@@ -52,6 +52,7 @@ trading-core run --config configs/paper.json       # paper trading on the live b
 |---|---|
 | [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md) | Start here: concepts, install, a first run, every other page |
 | [`docs/STRATEGY.md`](docs/STRATEGY.md) | The lanes, their rules, evidence and verdicts |
+| [`docs/STRATEGY-LEDGER.md`](docs/STRATEGY-LEDGER.md) · [`docs/LESSONS.md`](docs/LESSONS.md) | Shared with every repository: every strategy tried on every venue and why it failed; every lesson learned |
 | [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) · [`docs/CLI.md`](docs/CLI.md) · [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) | Settings, commands, environment variables |
 | [`docs/dev/RELEASE-GATE.md`](docs/dev/RELEASE-GATE.md) · [`docs/dev/RUNBOOK.md`](docs/dev/RUNBOOK.md) · [`docs/dev/RESULTS.md`](docs/dev/RESULTS.md) | Status and gates, operating a run, every result |
 | [`docs/dev/README.md`](docs/dev/README.md) | The developer pages |
