@@ -56,7 +56,7 @@ in each (the master copies are trading-core's; its
 6. **Record the population, not the selection,** on chain, at the speed the lane would trade, with the fill's own read, and the deployer, funder and holders at the signal.
 7. **Model the latency you pay and check replay parity** before trusting a sweep.
 8. **A crash predictor is not a trade filter.** Judge a filter on the lane's result per trade on every capture.
-9. **Check the ledger's "Do not test again" table** (§6) before proposing an idea; reopen one only with the new evidence it names.
+9. **Check the ledger's "Do not test again" table** (§6) before proposing an idea. One whose scope is **Everywhere** is not tested anywhere; one that failed on a single venue is tested on another only through the strategy library (ledger §8, trading-core ADR-011), with the playbook (§5) and the design gate.
 
 **Keeping them current.** When a run or study here ends, its result goes in this repository's `docs/dev/RESULTS.md` first, then into trading-core's master ledger; when a learning in the log below applies beyond this repository, it goes into trading-core's master `docs/LESSONS.md` too. Both pages are then copied from trading-core, unchanged, to every repository (in a session that has them all, or by the operator). Never edit the copies here.
 
