@@ -400,8 +400,11 @@ stands now.
 
 So that a venue can be tested against every strategy without rewriting one,
 the venue-neutral strategies move into trading-core as a library
-(trading-core ADR-011, `docs/dev/PROPOSED-FEATURES.md` §6; proposed
-2026-11-03). A module translates its data into four records (listings,
+(trading-core ADR-011, `docs/STRATEGY-LIBRARY.md`; built 2026-11-03 for
+trading-core's next release, calibration on trading-pump's captures still
+open). Every library rule is generic: a result on Pump.fun or PumpSwap
+describes those venues' traders, not the rule, so a NO-GO there does not
+retire it on another venue. A module translates its data into four records (listings,
 price readings, trade prints, holder snapshots); each strategy is a rule
 class registered by name; a lane is composed in the settings file from one
 entry rule, any gates, its exits and its limits; and a sweep replays a
@@ -419,7 +422,7 @@ and a rule that needs only the four records can be promoted to the core.
 | Confirmed momentum (FEAT-51, FEAT-52) | FEAT-124 `demand_confirmation` | trades |
 | Order-flow filters (FEAT-56, FEAT-57, FEAT-60) | FEAT-125 | trades |
 | Holder and bundle screens, the supply map (FEAT-61, FEAT-96) | FEAT-126 | holders |
-| Creator book, funders, reused names (FEAT-55, FEAT-63, FEAT-98) | FEAT-127 | creator |
+| Creator book, funders, reused names (FEAT-55, FEAT-63, FEAT-98) | FEAT-127 | creator, funder, name |
 | Adaptive take-profit (FEAT-97) | FEAT-129 | readings |
 | Trend rule (FEAT-65) | FEAT-131 `bar_trend` | readings |
 | Adaptive gate and exit selector (FEAT-105) | FEAT-130 | readings |
@@ -428,6 +431,12 @@ and a rule that needs only the four records can be promoted to the core.
 | Capital rotation (FEAT-24) | FEAT-135 | readings |
 | Copy trading (FEAT-54) | FEAT-136 `wallet_follow` | trades |
 | Take-profit tiers, stall exit, trading hours, a lane's own exits, break-even reporting | FEAT-92 to FEAT-95, FEAT-116 (built) | — |
+| Polymarket's Fed and crossvenue lanes (a price against a reference) | FEAT-137 `reference_gap` (proposed) | readings, reference |
+| Polymarket's favourite–longshot and weather lanes (a probability band) | FEAT-138 `probability_band` (proposed) | readings, outcome |
+
+`trading-core-lanes list` prints the library; `trading-core-lanes sweep`
+runs a venue's captures (converted to the records by its module:
+`trading-pump lane-rows`, trading-evm's `lane-rows`) against it.
 
 > [!WARNING]
 > Testing a venue against every rule and variant will always find something
@@ -449,3 +458,6 @@ and a rule that needs only the four records can be promoted to the core.
 - 2026-11-03: §6 gains a scope column (everywhere, or the venue where it
   failed) and a library column; §8 maps every strategy tried to the
   strategy library proposed in trading-core (ADR-011).
+- 2026-11-03: §8: the library is built in trading-core (unreleased); the
+  creator family's needs split (creator, funder, name); polymarket's lanes
+  mapped to the proposed outcome-market rules (FEAT-137, FEAT-138).
