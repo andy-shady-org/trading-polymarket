@@ -48,6 +48,15 @@ the model and 0.05–0.08 by the market. All ten lost; the breaker tripped
 **Study.** `data/history/weather-intraday.jsonl` (757 events, 12–27 Oct;
 519 with day-ahead hourly runs and METARs covering the day) at entry hours
 12–21 local; truth = the highest routine METAR from the entry hour on.
+*Note (2026-11-03): the 0.2.1 release record's Stage 0 replay of the same
+file counts 542 events. Both are right; they count different things. The
+replay (`backtest weather --intraday`, `_distribution` in
+`research/weather_backtest.py`) keeps an event that has a day-ahead forecast
+and at least one METAR on its local day, at the entry hour; this study also
+needed hourly runs and METARs for the rest of the day, because its truth is
+the highest METAR from the entry hour on. The replay also re-fetches
+forecasts and recent METARs each time it runs, so its count can change with
+the day it is run.*
 Candidate means for the remaining hours' maximum, σ fitted on one half of
 the window and scored on the other, both ways round:
 
