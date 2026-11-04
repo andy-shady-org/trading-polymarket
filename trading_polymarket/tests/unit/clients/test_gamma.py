@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from trading_polymarket.clients.gamma import GammaClient, _items, resolved_only
+from trading_polymarket.clients.gamma import (
+    SLUGS_PER_LOOKUP,
+    GammaClient,
+    _items,
+    resolved_only,
+)
 from trading_polymarket.tests.support.factories import (
     NO,
     YES,
@@ -118,3 +123,15 @@ async def test_search_and_closed_markets() -> None:
 
 def test_resolved_only() -> None:
     assert resolved_only([market(), resolved()]) == [resolved()]
+
+
+async def test_markets_by_slugs_in_batches_and_closed() -> None:
+    transport = FakeTransport({"/markets?": [{"slug": "a"}, "not a market"]})
+    slugs = [f"s{n}" for n in range(SLUGS_PER_LOOKUP + 1)]
+    found = await client(transport).raw_markets_by_slugs(slugs)
+    assert found == [{"slug": "a"}, {"slug": "a"}] and len(transport.calls) == 2
+    assert (
+        "slug=s0&slug=s1" in transport.calls[0] and "closed=true" in transport.calls[0]
+    )
+    assert f"limit={SLUGS_PER_LOOKUP}" in transport.calls[0]
+    assert "limit=1" in transport.calls[1]

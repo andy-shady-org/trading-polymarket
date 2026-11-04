@@ -9,6 +9,9 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+### Added
+- `trading-polymarket updown-history` (FEAT-146, first part): collects crypto Up/Down markets of one asset and window, a day at a time, with every trade to the second (Polymarket's data API, `/v2/trades`), each market's outcome and Chainlink start and end prices (Gamma), and one-second spot (Binance's market-data mirror). Days are written whole and the command is resumable. New clients `clients/data_api.py` and `clients/spot.py`; `GammaClient.raw_markets_by_slugs`.
+
 ## 0.3.0: trading-core 0.7.0 and trusted loading (2026-11-04)
 
 Tested on trading-core `v0.7.0`; no lane, setting or fill changes. Release

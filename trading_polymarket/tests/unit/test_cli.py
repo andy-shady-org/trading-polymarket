@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from trading_polymarket import cli
+from trading_polymarket.clients.http import Response
 from trading_polymarket.module import PolymarketModule
 from trading_polymarket.research.records import append_jsonl
 from trading_polymarket.tests.support.factories import (
@@ -421,3 +422,14 @@ def test_pairs_commands(transport: FakeTransport, tmp_path: Path) -> None:
     assert lines[-1] == f"1 removed; 1 pairs in {pairs}"
     settings = config(tmp_path, {"crossvenue": {"pairs_path": pairs}})
     assert run("pairs", "list", "--config", settings)[1][-1] == f"1 pairs in {pairs}"
+
+
+def test_updown_history(transport: FakeTransport, tmp_path: Path) -> None:
+    transport.add("/markets?", []).add("/api/v3/klines", [])
+    args = ("--start", "2026-10-01", "--end", "2026-10-03", "--out", str(tmp_path))
+    code, lines = run("updown-history", *args)
+    assert code == 0
+    assert lines[-1] == f"2 days written (0 markets, 0 trades), 0 already in {tmp_path}"
+    transport.add("/markets?", Response(404, b"{}"))
+    code, lines = run("updown-history", "--window", "15m", *args)
+    assert code == 1 and lines[-1].endswith("not written: 2026-10-01, 2026-10-02")
