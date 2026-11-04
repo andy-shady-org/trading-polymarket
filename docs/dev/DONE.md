@@ -19,3 +19,8 @@ they shipped in. This file is appended to, never edited back.
 - [x] Docs follow trading-core's `docs/dev/DOCUMENTATION.md`: the standard
       layout, pages and records (2026-10-31, Unreleased; `CHANGELOG.md`
       Docs).
+
+## Next: trading-core 0.7.0 (2026-11-04, 0.3.0)
+
+- [x] **`v0.3.0` on trading-core `v0.7.0`, with trusted loading (trading-core 0.3.0, FEAT-89 / FEAT-90; this repository is under its Needed by):** `v0.3.0` declares `trading-core>=0.3.0,<0.8` (`<0.6` on `main` since 2026-11-03) and is tagged with `git tag -s`; `runtime-trading` has a `modules.toml` (written 2026-10-31) and needs `allowed_signers` with the signing key (trading-core's `SECURITY.md`, "Signed releases"). Its `bin/install-release.sh` already refuses an unsigned tag (`ALLOW_UNSIGNED=1` for the old ones). *(the code part, on `release/v0.3.0`; tested on trading-core `v0.7.0`; the tag and `allowed_signers` are the release's, in `TODO.md`)*
+

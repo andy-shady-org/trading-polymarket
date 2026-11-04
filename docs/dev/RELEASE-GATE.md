@@ -32,6 +32,7 @@ starts or stops; link the record.
 
 | Item | Status | Evidence |
 |---|---|---|
+| Next release | **`v0.3.0`** (2026-11-04, to be tagged, on `release/v0.3.0`): trading-core `>=0.3.0,<0.8` (tested on `v0.7.0`) and trusted loading; nothing a lane does changes. Still to do: pip-audit and the package build, CI on the tag, a smoke run, the signed tag | [`releases/0.3.0.md`](releases/0.3.0.md) |
 | Latest release | **`v0.2.1`** (2026-10-30), the merge commit `541f15d` on `main`. Needs trading-core 0.2.0 or later; its runs use trading-core `v0.2.2` | [`CHANGELOG.md`](../../CHANGELOG.md), [`releases/0.2.1.md`](releases/0.2.1.md) |
 | Release gate, `v0.2.1` | PASS locally (2026-10-30): Ruff, Black, flake8, mypy clean; 443 tests, 100% statement and branch coverage on Python 3.11, 3.12, 3.13 and 3.14 against trading-core 0.2.2. Not recorded yet: CI on the tag, the live smoke run and the kill-and-restart drill (the release record still says "pending") | [`releases/0.2.1.md`](releases/0.2.1.md) |
 | Earlier releases | `v0.2.0` (2026-10-29, 425 tests) and `v0.1.0` (2026-10-28, 320 tests) passed locally; CI on those tags was not recorded | [`releases/0.2.0.md`](releases/0.2.0.md), `CHANGELOG.md` 0.1.0 |

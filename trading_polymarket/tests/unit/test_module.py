@@ -411,3 +411,14 @@ async def test_heartbeat_off() -> None:
     await module.start()
     assert module._heartbeat_task is None
     await module.stop()
+
+
+def test_the_version_is_the_package_s() -> None:
+    """``__version__`` (the module's ``version``) is ``pyproject.toml``'s."""
+    import tomllib
+    from pathlib import Path
+
+    from trading_polymarket import __version__
+
+    project = Path(__file__).parents[3] / "pyproject.toml"
+    assert tomllib.loads(project.read_text())["project"]["version"] == __version__
