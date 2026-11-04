@@ -36,6 +36,8 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 3. Later
 
+- [ ] **FEAT-149** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-149-library-rows-from-polymarkets-data-lane-rows)): `lane-rows`, so trading-core's sweep covers Polymarket's history; with the price-dependent fee in trading-core's sweep.
+
 ### 3.1 Weather lane
 
 - [ ] Use the ensemble API's member spread as σ where available.
