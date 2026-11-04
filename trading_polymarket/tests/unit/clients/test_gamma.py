@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from trading_polymarket.clients.gamma import (
+    CONDITIONS_PER_LOOKUP,
     SLUGS_PER_LOOKUP,
     GammaClient,
     _items,
@@ -135,3 +136,12 @@ async def test_markets_by_slugs_in_batches_and_closed() -> None:
     )
     assert f"limit={SLUGS_PER_LOOKUP}" in transport.calls[0]
     assert "limit=1" in transport.calls[1]
+
+
+async def test_markets_by_condition_ids_in_batches() -> None:
+    transport = FakeTransport({"/markets?": [{"conditionId": "0xa"}, "not a market"]})
+    ids = [f"0x{n}" for n in range(CONDITIONS_PER_LOOKUP + 1)]
+    found = await client(transport).raw_markets_by_condition_ids(ids)
+    assert found == [{"conditionId": "0xa"}] * 2 and len(transport.calls) == 2
+    assert "condition_ids=0x0&condition_ids=0x1" in transport.calls[0]
+    assert "closed" not in transport.calls[0] and "limit=1" in transport.calls[1]

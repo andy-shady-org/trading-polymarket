@@ -47,6 +47,7 @@ orders.
 | FEAT-146 | Up/Down trade backfill and late-longshot backtest | Research | A profitable wallet's pattern, testable on every trade of past markets without waiting for a recorder. Built (0.4.0); the backtest is **NO-GO** (2026-11-04, [`RESULTS.md`](RESULTS.md)) |
 | FEAT-147 | Up/Down stale quotes after a spot move | Research, then a lane | Second-level prints show a 2–5 s edge after a Binance move, the edge the bot `@vega7` appears to trade; takeable only if we are fast enough |
 | FEAT-149 | Library rows from Polymarket's data (`lane-rows`) | Research tooling | Sweep trading-core's outcome-market rules (`reference_gap`, `probability_band`) over the history already collected. Not built |
+| FEAT-153 | Liquidity-rewards scan (`rewards-scan`) | Research tooling | Which markets pay makers to quote, on what terms and against how much competition: the subsidised maker seat. Built (Unreleased) |
 
 ### FEAT-101: Up/Down tick recorder and maker study
 * **Class / Priority:** Income (research) · P2
@@ -127,4 +128,12 @@ orders.
 * **Needs in trading-core:** a taker fee that depends on the price in the sweep (Polymarket charges `rate × p(1 − p)` a share, by category), where the sweep now takes flat basis points. That small core change is part of this feature.
 * **Caution:** the sweep only shortlists; the favourite–longshot and day-ahead weather results it would revisit are NO-GO already (`STRATEGY-LEDGER.md` §3.5), and a shortlist is judged only by a pre-registered run on fresh data.
 * **Dependencies:** trading-core's library (built, `v0.6.0`); the price-dependent fee. **Impact:** Polymarket joins "test a venue against every strategy".
+
+### FEAT-153: Liquidity-rewards scan (`rewards-scan`)
+* **Class / Priority:** Research tooling · P2 · added 2026-11-04 (the November roadmap, item 3.3). **Built (Unreleased).**
+* **Goal:** find the markets where a small maker could earn Polymarket's liquidity rewards: what each pays, on what terms, and how much resting liquidity already competes for it.
+* **Built:** `trading-polymarket rewards-scan` (`research/rewards.py`, `docs/CLI.md`, `docs/RESEARCH.md` §4c): every rewarded market from CLOB `/rewards/markets/current`, the best paid ones' details (Gamma, by condition id) and books, the shares inside each reward spread, and a two-sided quote's estimated share of the pool under Polymarket's scoring (one snapshot; see the module docstring for what it ignores). Markets past their end date and books wider than twice the reward spread rank last.
+* **First scan (2026-11-04):** 14,554 rewarded markets paying about $234,000 a day (median $5, p90 $32; 223 pay $100 or more). Of the 300 best paid, 107 had ended (awaiting results) and 51 had wide books. The 182 clean books held a median of about 10,000–12,500 shares inside the spread on each side; the snapshot estimates (median 4.5% a day of the quote's capital) are far too high to trust as earnings, because a thin book at one moment is not a day.
+* **Then:** pick a handful of clean, quiet markets and record their books for a day with `ticks`-style sampling (FEAT-101's maker study measures what a quote loses to adverse selection there); only a phase or market that earns after that becomes trading-core FEAT-148's first family.
+* **Dependencies:** none. **Impact:** points the maker study at the seat Polymarket subsidises.
 

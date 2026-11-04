@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from trading_polymarket.clients.clob import (
+    REWARDS_END_CURSOR,
     BookUnavailable,
     ClobClient,
     PricePoint,
@@ -60,3 +61,46 @@ async def test_prices_history_windows_and_trims() -> None:
     assert "interval" not in transport.calls[-1]
     await c.prices_history(YES, start=100)
     assert "startTs=100&endTs=604900" in transport.calls[-1]
+
+
+async def test_rewards_markets_pages_until_the_end_cursor() -> None:
+    def page(url: str) -> object:
+        if "next_cursor=NTAw" in url:
+            return {
+                "data": [{"condition_id": "0xb"}],
+                "next_cursor": REWARDS_END_CURSOR,
+            }
+        return {"data": [{"condition_id": "0xa"}, "not a row"], "next_cursor": "NTAw"}
+
+    transport = FakeTransport({"/rewards/markets/current": page})
+    found = await client(transport).rewards_markets()
+    assert [r["condition_id"] for r in found] == ["0xa", "0xb"]
+    assert len(transport.calls) == 2
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        ["not a mapping"],
+        {"data": [], "next_cursor": "NTAw"},
+        {"data": "x", "next_cursor": "NTAw"},
+        {"data": [{"condition_id": "0xa"}]},
+    ],
+)
+async def test_rewards_markets_stop_on_odd_pages(payload: object) -> None:
+    transport = FakeTransport({"/rewards/markets/current": payload})
+    await client(transport).rewards_markets()
+    assert len(transport.calls) == 1
+
+
+async def test_rewards_markets_page_limit() -> None:
+    transport = FakeTransport(
+        {
+            "/rewards/markets/current": {
+                "data": [{"condition_id": "0x"}],
+                "next_cursor": "X",
+            }
+        }
+    )
+    found = await client(transport).rewards_markets(max_pages=3)
+    assert len(found) == 3 and len(transport.calls) == 3

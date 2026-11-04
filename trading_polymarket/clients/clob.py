@@ -8,6 +8,11 @@
   markets included. Both ends of the window must be given (``endTs`` alone
   is a 400), and ``interval=max`` returns an *empty* series at hourly
   fidelity for long-lived markets, so research always asks for a window.
+* ``GET /rewards/markets/current?next_cursor=`` - every market paying
+  liquidity rewards today, 500 a page, until the cursor ``LTE=``: its
+  ``condition_id``, ``rewards_max_spread`` (cents from the midpoint),
+  ``rewards_min_size`` (shares), ``total_daily_rate`` and ``rewards_config``
+  (``rate_per_day`` per reward asset). About 14,600 markets on 2026-11-04.
 
 Published limits: ``/book`` 1500 / 10 s, ``/prices-history`` 1000 / 10 s.
 """
@@ -22,6 +27,8 @@ from trading_polymarket.book import OrderBook
 from trading_polymarket.clients.http import HttpError, JsonHttp, build_url
 
 CLOB_URL = "https://clob.polymarket.com"
+REWARDS_END_CURSOR = "LTE="  # base64 "-1": the last page
+MAX_REWARD_PAGES = 100
 
 
 class BookUnavailable(RuntimeError):
@@ -86,6 +93,27 @@ class ClobClient:
             )
         return book
 
+    async def rewards_markets(
+        self, *, max_pages: int = MAX_REWARD_PAGES
+    ) -> list[dict[str, Any]]:
+        """Every market paying liquidity rewards today (raw rows)."""
+        found: list[dict[str, Any]] = []
+        cursor = ""
+        for _ in range(max_pages):
+            params = {"next_cursor": cursor} if cursor else None
+            payload = await self.http.get_json(
+                build_url(self.base_url, "/rewards/markets/current", params)
+            )
+            if not isinstance(payload, Mapping):
+                break
+            rows = payload.get("data")
+            rows = rows if isinstance(rows, list) else []
+            found.extend(r for r in rows if isinstance(r, dict))
+            cursor = str(payload.get("next_cursor") or "")
+            if not rows or not cursor or cursor == REWARDS_END_CURSOR:
+                break
+        return found
+
     async def prices_history(
         self,
         token_id: str,
@@ -119,6 +147,8 @@ class ClobClient:
 __all__ = [
     "BookUnavailable",
     "CLOB_URL",
+    "MAX_REWARD_PAGES",
+    "REWARDS_END_CURSOR",
     "ClobClient",
     "PricePoint",
     "parse_history",

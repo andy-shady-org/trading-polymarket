@@ -28,6 +28,7 @@ GAMMA_URL = "https://gamma-api.polymarket.com"
 PAGE_LIMIT = 100
 TOKENS_PER_LOOKUP = 20
 SLUGS_PER_LOOKUP = 100
+CONDITIONS_PER_LOOKUP = 50  # 66-character ids: keeps the URL near 4 KB
 
 
 def _items(payload: Any, key: str) -> tuple[list[Any], str | None]:
@@ -163,6 +164,23 @@ class GammaClient:
             found.extend(i for i in items if isinstance(i, dict))
         return found
 
+    async def raw_markets_by_condition_ids(
+        self, condition_ids: Sequence[str], *, closed: bool | None = None
+    ) -> list[dict[str, Any]]:
+        """The raw markets with these condition ids, asked for in batches."""
+        found: list[dict[str, Any]] = []
+        for start in range(0, len(condition_ids), CONDITIONS_PER_LOOKUP):
+            batch = list(condition_ids[start : start + CONDITIONS_PER_LOOKUP])
+            payload = await self.http.get_json(
+                self._url(
+                    "/markets",
+                    {"condition_ids": batch, "limit": len(batch), "closed": closed},
+                )
+            )
+            items, _ = _items(payload, "markets")
+            found.extend(i for i in items if isinstance(i, dict))
+        return found
+
     async def search_events(
         self, query: str, *, status: str = "active", limit: int = 20
     ) -> list[dict[str, Any]]:
@@ -198,6 +216,7 @@ def resolved_only(markets: Sequence[Market]) -> list[Market]:
 
 
 __all__ = [
+    "CONDITIONS_PER_LOOKUP",
     "GAMMA_URL",
     "PAGE_LIMIT",
     "SLUGS_PER_LOOKUP",

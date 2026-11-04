@@ -37,6 +37,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 ## 3. Later
 
 - [ ] **FEAT-149** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-149-library-rows-from-polymarkets-data-lane-rows)): `lane-rows`, so trading-core's sweep covers Polymarket's history; with the price-dependent fee in trading-core's sweep.
+- [ ] **FEAT-153** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-153-liquidity-rewards-scan-rewards-scan)): run `rewards-scan` daily for a few days, pick clean, quiet rewarded markets and fold them into the maker study (FEAT-101): record their books for a day and measure adverse selection before believing any estimate.
 
 ### 3.1 Weather lane
 

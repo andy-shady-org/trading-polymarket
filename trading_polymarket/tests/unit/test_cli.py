@@ -593,3 +593,31 @@ def test_ticks_report(transport: FakeTransport, tmp_path: Path) -> None:
     transport.add("/v2/trades", {"data": [], "pagination": {}})
     code, lines = run("ticks-report", "--input", str(tmp_path))
     assert lines[3].endswith(": none") and lines[4].startswith("signals")
+
+
+def test_rewards_scan(transport: FakeTransport, tmp_path: Path) -> None:
+    terms = {
+        "condition_id": "0xr",
+        "rewards_max_spread": 4.5,
+        "rewards_min_size": 20,
+        "total_daily_rate": 50,
+    }
+    market = {
+        "conditionId": "0xr",
+        "question": "Rewarded?",
+        "clobTokenIds": '["tok-yes", "tok-no"]',
+        "endDate": "2026-12-01T00:00:00Z",
+    }
+    transport.add(
+        "/rewards/markets/current", {"data": [terms], "next_cursor": "LTE="}
+    ).add("/markets?condition_ids", [market])
+    out = tmp_path / "rewards.jsonl"
+    code, lines = run("rewards-scan", "--limit", "5", "--out", str(out))
+    assert code == 0
+    assert lines[0] == "1 markets pay rewards; scanning the 1 best paid"
+    assert lines[1].split()[:2] == ["$/day/$", "$/day"]
+    assert lines[2].endswith("Rewarded?") and lines[-1].startswith("1 of 1 rewarded")
+    assert json.loads(out.read_text())["question"] == "Rewarded?"
+    transport.add("/markets?condition_ids", [])
+    code, lines = run("rewards-scan", "--out", str(out), "--quote-shares", "5")
+    assert lines[2].endswith("0xr (no book)")

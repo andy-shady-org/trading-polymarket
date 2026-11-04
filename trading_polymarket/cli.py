@@ -15,6 +15,7 @@ these commands collect evidence and look at what the lanes see:
 ``updown-backtest`` replay FEAT-146's or FEAT-147's rule on them
 ``ticks``          record Up/Down books, fills and spot to the millisecond
 ``ticks-report``   latency, stale asks and timestamp offset from a recording
+``rewards-scan``   markets paying liquidity rewards, their terms, the competition
 ``weather-history``collect resolved temperature events + price histories
 ``fed-history``    collect settled Fed meetings on Polymarket and Kalshi
 ``calibrate``      build the favourite lane's calibration table
@@ -51,6 +52,7 @@ from trading_polymarket.research import fed as fed_mod
 from trading_polymarket.research import history as hist
 from trading_polymarket.research import metar_archive, recorder, updown
 from trading_polymarket.research import pairs_suggest as suggest_mod
+from trading_polymarket.research import rewards as rewards_mod
 from trading_polymarket.research import ticks as ticks_mod
 from trading_polymarket.research import ticks_report as treport
 from trading_polymarket.research import updown_backtest as ubt
@@ -403,6 +405,46 @@ async def cmd_ticks_report(args: argparse.Namespace, out: Printer) -> int:
     return 0
 
 
+def _rewards_line(row: rewards_mod.Scan) -> str:
+    mid = "-" if row.mid is None else f"{row.mid:.3f}"
+    note = f" ({row.note})" if row.note else ""
+    return (
+        f"{row.reward_per_dollar:>8.4f} {row.reward_two_sided:>8.2f} "
+        f"{row.daily_rate:>7.0f} {row.min_size:>5.0f} {row.max_spread_cents:>4.1f} "
+        f"{mid:>6} {row.shares_bid:>8.0f} {row.shares_ask:>8.0f} "
+        f"{(row.question or row.condition_id)[:60]}{note}"
+    )
+
+
+async def cmd_rewards_scan(args: argparse.Namespace, out: Printer) -> int:
+    module = build_module(args)
+    quote = rewards_mod.Quote(shares=args.quote_shares, cents=args.quote_cents)
+    total, rows = await rewards_mod.scan(
+        module.clob,
+        module.gamma,
+        limit=args.limit,
+        min_daily_rate=args.min_daily_rate,
+        quote=quote,
+        now=module.clock(),
+        progress=out,
+    )
+    path = rewards_mod.write_rows(
+        rows, args.out or rewards_mod.default_out(module.clock())
+    )
+    out(
+        f"{'$/day/$':>8} {'$/day':>8} {'pool':>7} {'min':>5} {'max':>4} "
+        f"{'mid':>6} {'bid sh':>8} {'ask sh':>8} market"
+    )
+    for row in rows[: args.show]:
+        out(_rewards_line(row))
+    out(
+        f"{len(rows)} of {total} rewarded markets written to {path}. One "
+        "snapshot of each book, not a sampled day, and no adverse selection: "
+        "it ranks where to look, not what a quote earns"
+    )
+    return 0
+
+
 async def cmd_weather_history(args: argparse.Namespace, out: Printer) -> int:
     module = build_module(args)
     written = await wbt.collect_weather(
@@ -686,6 +728,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="markets to fetch from the data API for the timestamp offset (0: skip)",
     )
 
+    p = command("rewards-scan", "markets paying liquidity rewards (FEAT-153)")
+    p.add_argument(
+        "--limit", type=int, default=rewards_mod.DEFAULT_LIMIT, help="best paid"
+    )
+    p.add_argument("--min-daily-rate", type=float, default=0.0, help="USD a day")
+    p.add_argument(
+        "--quote-shares",
+        type=float,
+        help="each side of the estimated quote (default: the market's minimum)",
+    )
+    p.add_argument("--quote-cents", type=float, default=1.0, help="from the midpoint")
+    p.add_argument("--show", type=int, default=30, help="rows printed")
+    p.add_argument("--out", help="default data/rewards/rewards-<UTC time>.jsonl")
+
     p = command("weather-history", "collect resolved temperature events")
     p.add_argument("--start", required=True)
     p.add_argument("--end", required=True)
@@ -750,6 +806,7 @@ COMMANDS = {
     "updown-backtest": cmd_updown_backtest,
     "ticks": cmd_ticks,
     "ticks-report": cmd_ticks_report,
+    "rewards-scan": cmd_rewards_scan,
     "weather-history": cmd_weather_history,
     "calibrate": cmd_calibrate,
     "fed-history": cmd_fed_history,
