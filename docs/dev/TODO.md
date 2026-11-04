@@ -26,7 +26,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 2. Next
 
-- [ ] **Release `v0.4.0`** (built on `release/v0.4.0`, [`releases/0.4.0.md`](releases/0.4.0.md); `v0.3.0` was tagged on 2026-11-04 and never installed in the runtime): CI on the tag (the `TRADING_CORE_TOKEN` secret), pip-audit and the package build, merge, signed tag; then `bin/install-release.sh v0.7.0 v0.4.0` in `runtimes/polymarket` (which has `allowed_signers`) and an `updown-backtest` from the release copy ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy))
+- [ ] **Release `v0.4.0`** (built on `release/v0.4.0`, [`releases/0.4.0.md`](releases/0.4.0.md); `v0.3.0` was tagged on 2026-11-04 and never installed in the runtime): CI on the tag (the `TRADING_CORE_TOKEN` secret), pip-audit and the package build, merge, signed tag; then `bin/install-release.sh v0.7.0 v0.4.0` in `runtimes/polymarket` (which has `allowed_signers`), so later Up/Down collections run from a tagged copy ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)); FEAT-146's backtest is not run again
 - [ ] **Evidence:** re-run `weather-history --start 2026-08-01` once to pick
       up the ~60 events the first collection did not reach (it is
       resumable).
