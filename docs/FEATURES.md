@@ -90,7 +90,9 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 |---|---|---|
 | Resolved-market collector (`history`) | 0.1.0 | Resolved binary markets with hourly prices for the last 96 hours, resumable |
 | Up/Down collector (`updown-history`) | 0.4.0 | Crypto Up/Down markets of one asset and window, a gzipped file a day: outcomes, start and end prices, every trade to the second, one-second spot (FEAT-146) |
-| Up/Down backtest (`updown-backtest`) | 0.4.0 | FEAT-146's pre-registered late-longshot rule on the collected trades: a grid of caps and start times, each half, without the best 1%, a binomial test of the win rate, and the primary rule's trades as audit records |
+| Up/Down backtest (`updown-backtest`) | 0.4.0 | FEAT-146's late-longshot rule (`--rule longshot`) and FEAT-147's stale-quote rule (`--rule stale`), each with its pre-registered grid and verdict, on the collected trades; the primary rule's trades as audit records |
+| Book and spot recorder (`ticks`) | 0.4.0 | The current and next Up/Down markets' best bid and ask, every fill (with its transaction hash) and the asset's Binance trades, to the millisecond, with round trips to the CLOB (FEAT-147, FEAT-101's recorder) |
+| Recording report (`ticks-report`) | 0.4.0 | Our receive delay and round trip, the data API's timestamp offset, how long stale asks live after a spot move, and FEAT-147's part-1 decision |
 | Calibration (`calibrate`) | 0.1.0 | The favourite lane's table (price × hours bins, shrunk win rates) with a train/test split and its sha256 |
 | Favourite backtest (`backtest favourite`) | 0.1.0 | Calibrates before a split date, replays after it |
 | Weather collector (`weather-history`) | 0.1.0 | Resolved temperature events with every bucket's outcome and prices, resumable |
@@ -105,10 +107,10 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 
 ## 7. Command line
 
-`trading-polymarket` (since 0.1.0) has fourteen commands: `scan`, `weather`,
+`trading-polymarket` (since 0.1.0) has sixteen commands: `scan`, `weather`,
 `record`, `arb`, `bias`, `metars`, `history`, `weather-history`,
-`updown-history`, `updown-backtest`, `fed-history`, `calibrate`, `backtest`
-and `pairs`. An API failure is
+`updown-history`, `updown-backtest`, `ticks`, `ticks-report`, `fed-history`,
+`calibrate`, `backtest` and `pairs`. An API failure is
 reported as `error: HTTP …` with exit code 2 (0.2.0). Every flag:
 [`CLI.md`](CLI.md).
 
@@ -118,5 +120,6 @@ Since 0.1.0 one paced, retrying HTTP client serves every source, with
 counters on the dashboard: Gamma, CLOB, Open-Meteo, Aviation Weather Center,
 Google News RSS; Kalshi (read only) since 0.2.0; Polymarket's data API
 (trades) and Binance's market-data mirror (spot) for `updown-history`
-since 0.4.0. None needs a key
+since 0.4.0; Polymarket's market WebSocket and Binance's trade stream for
+`ticks`, on trading-core's WebSocket loop (0.4.0). None needs a key
 ([`DATA-SOURCES.md`](DATA-SOURCES.md)).

@@ -25,6 +25,7 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 | Date | Data | Lane | Config | Positions | Net | Verdict |
 |---|---|---|---|---|---|---|
+| 2026-11-04 | a 6-minute `ticks` recording (2 markets, 1,302 fills); FEAT-146's 30 days | FEAT-147's timing, corrected (study) | pre-registered rule, `--timestamp-offset 2.2`, in-sample | 959 | −4.3% on stake | none: a study; the "2 s" edge was in the data API's time, 2.2 s after the fill |
 | 2026-11-04 | `data/updown` (FEAT-146's 30 days) and one-second Binance spot | crypto Up/Down: who wins, and cheap buys after a spot move (studies) | – | – | takers −$3.88M in total | none: studies; the spot-move lead is pre-registered as FEAT-147 |
 | 2026-11-04 | `data/updown`, every taker trade of 8,615 BTC 5-minute Up/Down markets, 5 Oct – 3 Nov | crypto Up/Down late longshot (FEAT-146; research, no lane) | pre-registered: ≤ 5 c from 240 s, $5, next buy print, held to settlement | 4,500 | −$3,802.34 | NO-GO (all three checks fail; the 9 descriptive variants all lose) |
 | 2026-10-30 | `weather-intraday.jsonl`, 757 events 12–27 Oct | weather (late-day model study) | candidate means, σ fitted per half | – | – | none: a study; the TP-11 model it chose is replayed in [`releases/0.2.1.md`](releases/0.2.1.md) |
@@ -39,6 +40,35 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
+
+### 2026-11-04 — FEAT-147's timing, corrected
+
+**What changed.** The first live recording of the new `ticks` command (6
+minutes, 2 BTC 5-minute markets, from the build host) matched 1,302 fills
+on the market WebSocket to the data API's rows by transaction hash. The
+data API's `timestamp` runs a median **2.2 s after** the fill (p10 1.5 s,
+p90 2.8 s): it is not the fill's time.
+
+**What it means for the study below.** Its lags were measured from the data
+API's time. "Spot read 2 s before the print" is spot at about the fill's own
+moment; "5 s before" is about 2.8 s before the fill. So the cheap asks that
+paid were lifted at the moment of the spot move, not seconds after it.
+With the offset applied (`updown-backtest --rule stale --timestamp-offset
+2.2`), the pre-registered rule loses even on the 30 days it was found on:
+
+| Rule (in-sample, fill time) | Entries | Won | Price | Return | Halves | Without best 1% |
+|---|---|---|---|---|---|---|
+| primary: cap 5 c from 240 s, spot −1.5 bp, 2 s late | 959 | 2.92% | 2.95 c | −4.3% | −10.4% / +1.2% | −65.6% |
+| 1 s late | 997 | 2.91% | 3.08 c | −7.2% | −2.6% / −11.2% | −65.0% |
+| spot at the line or past (+0 bp), 2 s late | 457 | 2.63% | 2.84 c | −39.4% | −37.5% / −41.1% | −76.7% |
+
+Every variant returns +1.7% or less. Without the offset the same code gave
++37.4% for the primary rule (+140% at +0 bp), which is the study's
+mis-timing, not an edge. The edge, if any, is under a second: what remains
+of FEAT-147 is whether stale asks live longer than our delay, which three
+days of `ticks` measure. The pre-registration is unchanged. The offset
+is from a few minutes on one day; `ticks-report` measures it on the full
+recording.
 
 ### 2026-11-04 — crypto Up/Down: who wins, and a speed edge (studies)
 

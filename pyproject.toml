@@ -32,7 +32,7 @@ classifiers = [
 # trading-core is private: install it first (noxfile.py, docs/dev/TESTING.md),
 # then this package resolves the requirement against the installed copy.
 dependencies = [
-  "trading-core>=0.3.0,<0.8",
+  "trading-core>=0.5.0,<0.8",
 ]
 
 [project.scripts]

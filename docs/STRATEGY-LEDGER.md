@@ -73,8 +73,8 @@ offline on recorded data, with every fee priced in.
    NO-GO; the market forecasts better than our models. Intraday weather and
    the Fed lane (Polymarket against Kalshi) are in paper on limited
    evidence. Sports across venues has no edge. On crypto Up/Down, taking
-   at market prices loses to the fee (FEAT-146), but second-level prints
-   show a 2–5 s edge after a spot move, a speed race now being measured
+   at market prices loses to the fee (FEAT-146); cheap asks left stale by a
+   spot move are lifted within a second, a speed race now being measured
    (FEAT-147, §7).
 
 What carries forward is not a strategy but a **method** (§2), a set of
@@ -216,7 +216,7 @@ pre-registered test; without it the idea stays closed.
 | Full-set scanner (FEAT-102) | `ask(Yes)+ask(No)+fees < 1` | Never run | — | Not started | Legs cannot be bought atomically | ≥ 10 gaps a day of ≥ $5 lasting ≥ 10 s for a week |
 | Expiry fade (FEAT-103) | Buy the cheap side in the last minutes | Not run | — | Not started; prior lower after FEAT-146 | FEAT-146 lost on the cheapest side (≤ 10 c); FEAT-103's band (up to 35 c, spot flat) is not tested | Positive after fees on FEAT-146's trade backfill, confirmed on ticks |
 | Crypto Up/Down late longshot (FEAT-146) | Buy the side at ≤ 5 c from 240 s into a BTC 5-minute window, filled at the next real buy print, held to settlement; the pattern of the wallet `@vega7` (+$33.7K on $81.8K) | Every taker trade of 8,615 BTC 5-minute markets, 2026-10-05 to 11-03; pre-registered | Primary: −$3,802 on 4,500 entries (−16.9% on stake; halves −26.9% / −7.8%; −84.5% without the best 1%); won 2.07% at an average 2.23 c. All 9 other caps (2–10 c) and start times (from 0 to 270 s) lose 17–44% | NO-GO | Cheap sides win slightly less often than priced and the fee is ~7% of the stake; the wallet's profit is selection or luck in a few fat-tailed wins (without its 50 best markets it lost) | A pre-registered condition known at entry (spot against the start price, say) that is positive in both halves of a new window |
-| Crypto Up/Down stale quotes after a spot move (FEAT-147) | Buy a side priced ≤ 5 c within seconds of Binance moving to or past the start price in its favour, before makers reprice; what the bot `@vega7` appears to do | Study of 2026-11-04 on FEAT-146's backfill (in-sample, descriptive): every cheap buy print in the last 3 minutes of 8,615 markets against one-second Binance spot | Last minute, spot at or past the line toward the cheap side: +163% on stake with spot read 2 s before the print, −30% at 5 s, −33% at 10 s; every cell loses with spot 5 s old. `@vega7` won 22 of 540 cheap buys where 5-second-old spot predicts 11 | Lead; pre-registered, not judged | An edge that lasts 2–5 s goes to whoever lifts the stale ask first; prints show someone filled, not that we would | — |
+| Crypto Up/Down stale quotes after a spot move (FEAT-147) | Buy a side priced ≤ 5 c right after Binance moves to or past the start price in its favour, before makers reprice; what the bot `@vega7` appears to do | Study of 2026-11-04 on FEAT-146's backfill (in-sample): every cheap buy print in the last 3 minutes of 8,615 markets against one-second Binance spot; then a 6-minute live recording (`ticks`) | Read against the data API's print times: +163% on stake with spot 2 s before the print, −30% at 5 s. But those times run a median 2.2 s **after** the fill (1,302 fills matched by transaction hash): "2 s before" is about the fill's own moment. With that correction the pre-registered rule loses even in-sample (−4.3%; 1 s late −7.2%; every variant ≤ +1.7%) | Lead; pre-registered; recorder built (0.4.0) | Stale asks are lifted within a second of the move; whether we can be that fast is what the recorder measures | — |
 
 ## 4. What the markets taught us
 
@@ -398,7 +398,7 @@ stands now.
 | EVM new pools on chain | trading-evm `evm-1` (record-only, 7 days) | On-chain capture at block speed with sales at fixed ages | A design that passes the design gate on evm-1's capture, for a group scout-2 calls GO |
 | Meteora DBC graduates | trading-scout FEAT-104 | +7.4% a trade on 59 in scout-1's re-reading; creator liquidity can be locked | Whether locked liquidity dumps less, on an on-chain capture |
 | Polymarket intraday weather and Fed | trading-polymarket paper runs | Stage 0 INCONCLUSIVE (data- and sample-limited) | Each lane's own Stage 1 verdict |
-| Crypto Up/Down stale quotes after a spot move | trading-polymarket FEAT-147 | Second-level prints show a 2–5 s edge after a Binance move that minute data hid (it was on §6 as "latency trades: an artefact of minute data" until 2026-11-04) | First our latency against how long stale asks survive, on a recorder; then the pre-registered rule on a fresh window |
+| Crypto Up/Down stale quotes after a spot move | trading-polymarket FEAT-147 | Cheap asks left stale by a Binance move are lifted within a second, an edge minute data cannot see (it was on §6 as "latency trades: an artefact of minute data" until 2026-11-04). In fill time it is gone within a second: the pre-registered rule loses in-sample once the data API's 2.2 s lag is removed | First our latency against how long stale asks live, on three days of `ticks`; then the pre-registered rule on a fresh window |
 | Learning under a frozen rule (FEAT-105 selector, FEAT-106 crash model) | trading-pump, for any reopened lane | Adaptive rules cut losses | Walk-forward beats the best fixed rule on every capture |
 
 ## 8. The strategy library
@@ -475,3 +475,6 @@ runs a venue's captures (converted to the records by its module:
   it was judged on minute data and 45 minutes of ticks, and second-level
   prints show a 2–5 s edge after a spot move. Now a §3.5 row and a §7 lead
   (FEAT-147).
+- 2026-11-04: FEAT-147 corrected: the data API's trade times run 2.2 s
+  after the fill, so the "2–5 s" edge is under a second in fill time, and
+  the rule loses in-sample once corrected (§1, §3.5, §7).

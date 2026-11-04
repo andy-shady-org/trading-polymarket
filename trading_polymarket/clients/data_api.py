@@ -34,6 +34,7 @@ class TradePrint:
     price: float
     size: float
     wallet: str = ""
+    transaction_hash: str = ""
 
     @classmethod
     def from_api(cls, raw: Mapping[str, Any]) -> TradePrint | None:
@@ -49,6 +50,7 @@ class TradePrint:
                 price=float(raw["price"]),
                 size=float(raw["size"]),
                 wallet=str(raw.get("proxy_wallet") or "").lower(),
+                transaction_hash=str(raw.get("transaction_hash") or "").lower(),
             )
         except (KeyError, TypeError, ValueError):
             return None

@@ -32,7 +32,7 @@ starts or stops; link the record.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Next release | **`v0.4.0`** (2026-11-04, to be tagged, on `release/v0.4.0`): `updown-history` and `updown-backtest` (FEAT-146, research); nothing a lane does changes. Still to do: CI on the tag, pip-audit and the package build, the signed tag, the install in `runtimes/polymarket` | [`releases/0.4.0.md`](releases/0.4.0.md) |
+| Next release | **`v0.4.0`** (2026-11-04, to be tagged, on `release/v0.4.0`): `updown-history`, `updown-backtest`, `ticks` and `ticks-report` (FEAT-146, FEAT-147, research); trading-core `>=0.5.0,<0.8`; nothing a lane does changes. Still to do: CI on the tag, pip-audit and the package build, the signed tag, the install in `runtimes/polymarket` | [`releases/0.4.0.md`](releases/0.4.0.md) |
 | Latest release | **`v0.3.0`** (2026-11-04), the merge commit `119daa2` on `main`: trading-core `>=0.3.0,<0.8` and trusted loading; not installed in the runtime. Before it, **`v0.2.1`** (2026-10-30, `541f15d`), which the stopped 0.2.1 runs used with trading-core `v0.2.2` | [`CHANGELOG.md`](../../CHANGELOG.md), [`releases/0.3.0.md`](releases/0.3.0.md), [`releases/0.2.1.md`](releases/0.2.1.md) |
 | Release gate, `v0.2.1` | PASS locally (2026-10-30): Ruff, Black, flake8, mypy clean; 443 tests, 100% statement and branch coverage on Python 3.11, 3.12, 3.13 and 3.14 against trading-core 0.2.2. Not recorded yet: CI on the tag, the live smoke run and the kill-and-restart drill (the release record still says "pending") | [`releases/0.2.1.md`](releases/0.2.1.md) |
 | Earlier releases | `v0.2.0` (2026-10-29, 425 tests) and `v0.1.0` (2026-10-28, 320 tests) passed locally; CI on those tags was not recorded | [`releases/0.2.0.md`](releases/0.2.0.md), `CHANGELOG.md` 0.1.0 |
