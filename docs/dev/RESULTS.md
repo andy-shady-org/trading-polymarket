@@ -25,6 +25,7 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 | Date | Data | Lane | Config | Positions | Net | Verdict |
 |---|---|---|---|---|---|---|
+| 2026-11-04 | `data/updown`, every taker trade of 8,615 BTC 5-minute Up/Down markets, 5 Oct – 3 Nov | crypto Up/Down late longshot (FEAT-146; research, no lane) | pre-registered: ≤ 5 c from 240 s, $5, next buy print, held to settlement | 4,500 | −$3,802.34 | NO-GO (all three checks fail; the 9 descriptive variants all lose) |
 | 2026-10-30 | `weather-intraday.jsonl`, 757 events 12–27 Oct | weather (late-day model study) | candidate means, σ fitted per half | – | – | none: a study; the TP-11 model it chose is replayed in [`releases/0.2.1.md`](releases/0.2.1.md) |
 | 2026-10-29 | `fed.jsonl`, 17 meetings Dec 2024 – Oct 2026 | fed | default `fed`, half-spread 0.01 | 23 | +$25.08 | NO-GO on `min_positions` only → Stage 0 INCONCLUSIVE (sample-limited) |
 | 2026-10-29 | `pairs suggest`, 53 candidates | crossvenue | – | – | – | none: no backtest possible, no pair approved |
@@ -37,6 +38,63 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
+
+### 2026-11-04 — crypto Up/Down late longshot (FEAT-146): NO-GO
+
+**Question.** The wallet `@vega7` made +$33.7K on $81.8K over 10,363 BTC
+5-minute Up/Down markets, almost all of it from buys under 5 c in the last
+two minutes. Does that rule earn on every market, not only the ones the
+wallet picked?
+
+**Data.** `trading-polymarket updown-history --start 2026-10-05 --end
+2026-11-04`: 30 days, 8,615 markets (288 a day; 263 on 2026-11-01, when
+Polymarket listed no markets from 04:55 to 06:55 UTC, the night US clocks
+went back), 12.9 million taker trades, 209 MB. Every outcome agrees with
+Chainlink's start and end prices (7 markets have none); Up won 49.6%. All
+540 of the wallet's trades in these markets are in the data.
+
+**Rule.** As pre-registered in
+[`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)
+before the run, with no change: the first buy print of an outcome at or
+below the cap from the start second is the signal; the fill is the next buy
+print of that outcome in a later second with at least $5 notional at most
+the cap + 1 c; one entry a market, held to settlement, taker fee
+`0.07 × p(1 − p)` a share. Prints after the window closes are not used
+(about 1,200 a day, when the outcome is all but known). Halves: 5–19 Oct
+and 20 Oct – 3 Nov. `trading-polymarket updown-backtest --start 2026-10-05
+--end 2026-11-04` (`research/updown_backtest.py`, 43 s).
+
+| Rule | Entries | Won | Avg price | Return | 1st half | 2nd half | Without best 1% | p |
+|---|---|---|---|---|---|---|---|---|
+| **cap 5 c from 240 s (primary)** | **4,500** | **2.07%** | **0.0223** | **−16.9%** | **−26.9%** | **−7.8%** | **−84.5%** | **0.78** |
+| cap 2 c from 180 s | 5,779 | 1.28% | 0.0139 | −18.3% | −5.2% | −29.8% | −96.6% | 0.78 |
+| cap 2 c from 240 s | 3,893 | 1.00% | 0.0121 | −19.3% | −21.1% | −17.8% | −106.9% | 0.90 |
+| cap 2 c from 270 s | 1,726 | 0.93% | 0.0114 | −40.6% | −31.0% | −48.6% | −106.9% | 0.83 |
+| cap 5 c from 180 s | 7,057 | 2.79% | 0.0293 | −18.0% | −15.8% | −20.1% | −69.4% | 0.77 |
+| cap 5 c from 270 s | 1,908 | 1.47% | 0.0177 | −43.8% | −50.8% | −37.7% | −98.5% | 0.86 |
+| cap 10 c from 180 s | 7,644 | 5.42% | 0.0573 | −19.8% | −9.7% | −29.8% | −55.3% | 0.89 |
+| cap 10 c from 240 s | 4,803 | 4.10% | 0.0420 | −19.3% | −18.6% | −20.0% | −71.2% | 0.64 |
+| cap 10 c from 270 s | 2,035 | 3.00% | 0.0318 | −42.3% | −49.6% | −35.9% | −84.9% | 0.70 |
+| cap 5 c from 0 s until 180 s (early control) | 2,347 | 3.45% | 0.0413 | −22.9% | −36.2% | −10.7% | −57.2% | 0.96 |
+
+**Verdict: NO-GO.** The primary rule fails all three checks: negative in
+both halves, negative without the best 1%, and a win rate below its average
+fill price (p = 0.78 for "above"). Every descriptive variant loses too,
+early as well as late. Of the primary's −$3,802.34, $1,539.93 is fees; with
+no fee it still loses about 10%. Buying at the signal print itself (an
+optimistic fill the rule does not allow) loses more, −37.2% on 7,833
+entries, so the fill model is not what sinks it.
+
+**What it means.** On these markets the cheapest side wins slightly less
+often than its price says, and the fee takes another ~7% of the stake.
+The wallet's profit is not the rule: it is its selection (what it knew or
+watched when it bought) or luck in a few fat-tailed wins; without its 50
+best markets it lost $15.5K. Its sales of near-certain winners at 0.96–0.98
+were not tested. A condition known at entry (spot against the start
+price, say) would be a new hypothesis: pre-registered, then judged on a new
+window, not on these 30 days. FEAT-103 (cheap side up to 35 c with spot
+flat) is not answered by this, but its prior is lower. Recorded in
+trading-core's master ledger (§3.5, §6) and lessons (§1.33, §3.17).
 
 ### 2026-10-30 — the late-day weather model, measured (after the 0.2.0 pilot)
 

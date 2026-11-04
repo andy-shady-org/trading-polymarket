@@ -83,6 +83,9 @@ in each (the master copies are trading-core's; its
 - **[HEALTH] Feed Health Must Not Depend On Holding:** the engine's market-data health is fed by the module; notifying only from `get_quote` meant a flat run went stale, stale health skipped the pipeline, and nothing read the venue again (TP-10). A module notifies from a read that happens whatever it holds (the heartbeat).
 - **[MODEL] The Day Knows More Than The Station:** late on the event day, how far the forecast has already missed *today* predicts the rest of the day; the station's average bias does not (TP-11). Measure a model on the exact question it trades (here: "does the max still rise?"), not only on all buckets: 0.2.0 looked fine on Brier and was off by 5x on that question.
 - **[SIZING] Kelly Assumes Independence:** bets settled on one day share its weather and thesis; size them as one bet, or cap them per day (TP-12).
+- **[EVIDENCE] A Wallet's Record Is Not Its Rule:** `@vega7` made +$33.7K buying Up/Down sides under 5 c late in the window; the same rule on all 8,615 markets of 30 days lost 16.9% (FEAT-146). Replay a wallet's pattern on the whole population before believing it.
+- **[DATA] Cut A Replay At The Close:** Up/Down markets keep printing for a minute or so after the window ends, with the loser near zero (about 1,200 prints a day). A replay uses only prints before the close, or the rule's own deadline.
+- **[API] Missing Up/Down Windows Are Real:** Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC on 2026-11-01 (US clocks went back). A day short of 288 is not always a collection gap; check the slugs on Gamma.
 
 ## Project Overview
 

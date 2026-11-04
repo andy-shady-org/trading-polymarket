@@ -44,7 +44,7 @@ orders.
 | FEAT-101 | Up/Down tick recorder and maker study | Research, then a lane | The professional seat in these markets is the maker's (rebates, rewards); find the phases where makers earn |
 | FEAT-102 | Full-set scanner: both sides, depth, duration, loop | Research, then an executor | `arb` exists but has never been run; measure whether full-set gaps are frequent, large and lasting |
 | FEAT-103 | Expiry-fade backtest | Research | A cheap test of one more taker rule; low prior |
-| FEAT-146 | Up/Down trade backfill and late-longshot backtest | Research | A profitable wallet's pattern, testable on every trade of past markets without waiting for a recorder |
+| FEAT-146 | Up/Down trade backfill and late-longshot backtest | Research | A profitable wallet's pattern, testable on every trade of past markets without waiting for a recorder. Built (0.4.0); the backtest is **NO-GO** (2026-11-04, [`RESULTS.md`](RESULTS.md)) |
 
 ### FEAT-101: Up/Down tick recorder and maker study
 * **Class / Priority:** Income (research) · P2
@@ -88,4 +88,6 @@ orders.
   - **Pass bar (primary variant):** return on stake after fees above zero in both halves (15 days each); above zero with the best 1% of markets by profit removed; and a win rate above the average fill price with one-sided binomial p < 0.05.
   - **Then:** a pass is confirmed on FEAT-101's ticks (the book, not only prints) before any lane; a fail is recorded as NO-GO in `docs/STRATEGY-LEDGER.md`. Selling winners at 0.96–0.98 is a separate question, not part of this test.
 * **Dependencies:** none. **Impact:** closes the question in a day; shares the backfill with FEAT-103, which can now use second-level prints instead of minute prices.
+* **Built (part 2, 0.4.0):** `trading-polymarket updown-backtest` (`research/updown_backtest.py`).
+* **Result (2026-11-04): NO-GO.** The primary rule lost $3,802.34 on 4,500 entries (−16.9% on stake; halves −26.9% and −7.8%; −84.5% without the best 1%); it won 2.07% at an average fill of 2.23 c (p = 0.78). Every descriptive variant lost. Run on the pre-registered data and rule without change; prints after a window's close are not used. Details: [`RESULTS.md`](RESULTS.md).
 
