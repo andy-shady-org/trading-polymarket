@@ -431,8 +431,8 @@ and a rule that needs only the four records can be promoted to the core.
 | Capital rotation (FEAT-24) | FEAT-135 | readings |
 | Copy trading (FEAT-54) | FEAT-136 `wallet_follow` | trades |
 | Take-profit tiers, stall exit, trading hours, a lane's own exits, break-even reporting | FEAT-92 to FEAT-95, FEAT-116 (built) | — |
-| Polymarket's Fed and crossvenue lanes (a price against a reference) | FEAT-137 `reference_gap` (proposed) | readings, reference |
-| Polymarket's favourite–longshot and weather lanes (a probability band) | FEAT-138 `probability_band` (proposed) | readings, outcome |
+| Polymarket's Fed and crossvenue lanes (a price against a reference) | FEAT-137 `reference_gap` | readings, reference |
+| Polymarket's favourite–longshot and weather lanes (a probability band) | FEAT-138 `probability_band` | readings, resolution, outcome |
 
 `trading-core-lanes list` prints the library; `trading-core-lanes sweep`
 runs a venue's captures (converted to the records by its module:
@@ -461,3 +461,5 @@ runs a venue's captures (converted to the records by its module:
 - 2026-11-03: §8: the library is built in trading-core (unreleased); the
   creator family's needs split (creator, funder, name); polymarket's lanes
   mapped to the proposed outcome-market rules (FEAT-137, FEAT-138).
+- 2026-11-03: §8: FEAT-137 and FEAT-138 built in trading-core
+  (unreleased).

@@ -205,8 +205,11 @@ any lane.
 5. **An empty pool is not a price.** Many new Uniswap v4 pools hold no
    liquidity in range and many new v2 pairs have no reserves in their first
    minutes; lists still show reserves and volume. Read the pool's own state
-   before trusting a number about it. *(trading-scout FEAT-84; trading-evm
-   0.1.0 live checks.)*
+   before trusting a number about it, and report a check on an empty pool
+   as an error, never as the token refusing a sale: on scout-2 most v4
+   "failures" were launch positions withdrawn minutes after creation (a
+   pulled pool traps a buyer; it says nothing about the token's code).
+   *(trading-scout FEAT-84, SC-7; trading-evm 0.1.0 live checks.)*
 6. **A pool smaller than the trade has no price.** Record the pool's native
    depth with every check and flag a pair under 10× the trade as thin.
    *(trading-scout SC-2: pairs valued at $55,000 held 0.0001 BNB.)*
@@ -535,3 +538,5 @@ any lane.
 - 2026-11-03: every number checked against its source by a separate
   reader before the first copy; 22 corrections and 5 missing items made
   then.
+- 2026-11-03: §5 lesson 5: an empty pool's check is an error, not a
+  verdict on the token (trading-scout SC-7, from scout-2).
