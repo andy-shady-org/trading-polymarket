@@ -12,6 +12,7 @@ these commands collect evidence and look at what the lanes see:
 ``metars``         append recent METARs to the archive (intraday backtests)
 ``history``        collect resolved markets + price histories
 ``updown-history`` collect crypto Up/Down markets: every trade, spot by second
+``updown-backtest`` replay the late-longshot rule on them (FEAT-146)
 ``weather-history``collect resolved temperature events + price histories
 ``fed-history``    collect settled Fed meetings on Polymarket and Kalshi
 ``calibrate``      build the favourite lane's calibration table
@@ -48,6 +49,7 @@ from trading_polymarket.research import fed as fed_mod
 from trading_polymarket.research import history as hist
 from trading_polymarket.research import metar_archive, recorder, updown
 from trading_polymarket.research import pairs_suggest as suggest_mod
+from trading_polymarket.research import updown_backtest as ubt
 from trading_polymarket.research import weather_backtest as wbt
 from trading_polymarket.research.records import append_jsonl
 from trading_polymarket.strategies.weather import (
@@ -247,6 +249,52 @@ async def cmd_updown_history(args: argparse.Namespace, out: Printer) -> int:
         )
     )
     return 1 if result.days_failed else 0
+
+
+def _percent(value: float | None) -> str:
+    return "-" if value is None else f"{value * 100:+.1f}%"
+
+
+def _summary_line(summary: ubt.Summary) -> str:
+    halves = " ".join(_percent(v) for v in summary.roi_halves)
+    rate = "-" if summary.win_rate is None else f"{summary.win_rate * 100:.2f}%"
+    price = "-" if summary.average_price is None else f"{summary.average_price:.4f}"
+    p_value = "-" if summary.p_value is None else f"{summary.p_value:.3g}"
+    return (
+        f"{summary.rule.name:<28} {summary.entries:>6} {rate:>7} {price:>7} "
+        f"{_percent(summary.roi):>7} {halves:>15} "
+        f"{_percent(summary.roi_without_top):>8} {p_value:>8} "
+        f"{'PASS' if summary.passed else 'fail'}"
+    )
+
+
+async def cmd_updown_backtest(args: argparse.Namespace, out: Printer) -> int:
+    start, end = updown.parse_day(args.start), updown.parse_day(args.end)
+    split = start + (end - start) / 2
+    markets = updown.load_markets(
+        args.input, args.asset, args.window, start=start, end=end
+    )
+    count, entries = ubt.replay(markets, ubt.GRID, stake=args.stake)
+    if not count:
+        out(f"no markets in {args.input}: run `trading-polymarket updown-history`")
+        return 1
+    out(f"{count} markets, {start} to {end} (second half from {split})")
+    out(
+        f"{'rule':<28} {'trades':>6} {'won':>7} {'price':>7} {'roi':>7} "
+        f"{'halves':>15} {'-top1%':>8} {'p':>8}"
+    )
+    summaries = [ubt.summarise(r, count, entries[r], split=split) for r in ubt.GRID]
+    for summary in summaries:
+        out(_summary_line(summary))
+    primary = summaries[ubt.GRID.index(ubt.PRIMARY)]
+    path = _write(args.out, ubt.audit_records(entries[ubt.PRIMARY], ubt.PRIMARY))
+    _write(
+        str(Path(args.out).with_suffix(".summary.jsonl")),
+        [s.to_dict() for s in summaries],
+    )
+    verdict = "PASS" if primary.passed else "FAIL"
+    out(f"primary ({ubt.PRIMARY.name}): {verdict}; its trades written to {path}")
+    return 0
 
 
 async def cmd_weather_history(args: argparse.Namespace, out: Printer) -> int:
@@ -493,6 +541,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--concurrency", type=int, default=6, help="markets read at once")
     p.add_argument("--out", default=updown.DEFAULT_UPDOWN_DIR)
 
+    p = command("updown-backtest", "replay the late-longshot rule (FEAT-146)")
+    p.add_argument("--asset", default="btc", choices=sorted(updown.SPOT_SYMBOLS))
+    p.add_argument("--window", default="5m", choices=sorted(updown.WINDOWS))
+    p.add_argument("--start", required=True, help="YYYY-MM-DD (UTC)")
+    p.add_argument("--end", required=True, help="YYYY-MM-DD (UTC, exclusive)")
+    p.add_argument("--stake", type=float, default=ubt.STAKE, help="USDC an entry")
+    p.add_argument("--input", default=updown.DEFAULT_UPDOWN_DIR)
+    p.add_argument("--out", default="data/backtest/updown.jsonl")
+
     p = command("weather-history", "collect resolved temperature events")
     p.add_argument("--start", required=True)
     p.add_argument("--end", required=True)
@@ -554,6 +611,7 @@ COMMANDS = {
     "metars": cmd_metars,
     "history": cmd_history,
     "updown-history": cmd_updown_history,
+    "updown-backtest": cmd_updown_backtest,
     "weather-history": cmd_weather_history,
     "calibrate": cmd_calibrate,
     "fed-history": cmd_fed_history,
