@@ -6,9 +6,15 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 1. Now
 
-- [ ] **Runs:** keep `weather-0.2.1` and `fed-0.2.1` going: the daily check
-      ([`RUNBOOK.md` §4](RUNBOOK.md#4-daily-check-5-minutes)) and `metars`
-      in cron. Read each out when it has its positions (weather 150, about
+- [ ] **Runs:** `weather-0.2.1` and `fed-0.2.1` **stopped** on 2026-11-03
+      at 05:57 UTC (a clean stop of both, about 3 d 16 h after their start;
+      weather 16 positions closed, net −$68.46, 3 open; fed 2 closed, net
+      −$0.21). Restart them on the same release copy and configs, so they
+      keep their pre-registration (a restart resumes from the status file;
+      the gap is noted in the release record, not filled), or close them
+      and pre-register `weather-1` and `fed-1` on `v0.3.0`. While they run:
+      the daily check ([`RUNBOOK.md` §4](RUNBOOK.md#4-daily-check-5-minutes))
+      and `metars` in cron. Read each out when it has its positions (weather 150, about
       seven weeks; fed 60; neither before 3 weeks): verdict into
       [`releases/0.2.1.md`](releases/0.2.1.md#read-out), the top of
       [`RESULTS.md`](RESULTS.md) and [`RELEASE-GATE.md` §1](RELEASE-GATE.md#1-current-status).
@@ -20,7 +26,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 2. Next
 
-- [ ] **Trusted loading (trading-core 0.3.0, FEAT-89 / FEAT-90; this repository is under its Needed by):** the next release (`v0.3.0`) declares `trading-core>=0.3.0,<0.6` in `pyproject.toml` (done on `main`, 2026-11-03: the 443 tests pass at 100% coverage on trading-core 0.4.0 and 0.5.0, Python 3.11 and 3.14, and mypy is clean against 0.5.0) and is tagged with `git tag -s`; `runtime-trading` has a `modules.toml` (written 2026-10-31) and needs `allowed_signers` with the signing key (trading-core's `SECURITY.md`, "Signed releases"). Its `bin/install-release.sh` already refuses an unsigned tag (`ALLOW_UNSIGNED=1` for the old ones).
+- [ ] **`v0.3.0` on trading-core `v0.7.0`, with trusted loading (trading-core 0.3.0, FEAT-89 / FEAT-90; this repository is under its Needed by):** the next release declares `trading-core>=0.3.0,<0.8` (`<0.6` on `main` since 2026-11-03) and is tagged with `git tag -s`; `runtime-trading` has a `modules.toml` (written 2026-10-31) and needs `allowed_signers` with the signing key (trading-core's `SECURITY.md`, "Signed releases"). Its `bin/install-release.sh` already refuses an unsigned tag (`ALLOW_UNSIGNED=1` for the old ones).
 - [ ] **Evidence:** re-run `weather-history --start 2026-08-01` once to pick
       up the ~60 events the first collection did not reach (it is
       resumable).
