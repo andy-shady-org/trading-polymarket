@@ -86,6 +86,8 @@ in each (the master copies are trading-core's; its
 - **[EVIDENCE] A Wallet's Record Is Not Its Rule:** `@vega7` made +$33.7K buying Up/Down sides under 5 c late in the window; the same rule on all 8,615 markets of 30 days lost 16.9% (FEAT-146). Replay a wallet's pattern on the whole population before believing it.
 - **[DATA] Cut A Replay At The Close:** Up/Down markets keep printing for a minute or so after the window ends, with the loser near zero (about 1,200 prints a day). A replay uses only prints before the close, or the rule's own deadline.
 - **[EVIDENCE] A Verdict Has A Resolution:** Up/Down "latency trades" were closed on minute data; second-level prints showed +163% on 2-second-old spot and −30% on 5-second-old (FEAT-147). Say what resolution judged an idea before calling it dead, and judge speed edges on ticks.
+- **[API] The Data API's Time Is Not The Fill's:** `data-api /v2/trades` `timestamp` runs a median 2.2 s after the fill on the market WebSocket (FEAT-147). A study that lagged spot by it called an instant reaction "2 s late" and found an edge that vanished once corrected. Measure a timestamp against the fill's own feed (`ticks-report`) before timing anything from it.
+- **[API] The Market WebSocket Is A Firehose:** one BTC 5-minute market sends ~850 `price_change` events a second, 98% of them size changes at an unchanged best price. Keep the book in memory and write only what the study needs.
 - **[API] Missing Up/Down Windows Are Real:** Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC on 2026-11-01 (US clocks went back). A day short of 288 is not always a collection gap; check the slugs on Gamma.
 
 ## Project Overview
@@ -112,7 +114,7 @@ trading-polymarket/
 │   ├── calibration.py   # CalibrationTable (price × hours bins, shrunk win rates)
 │   ├── clients/         # http (paced, retrying), gamma, clob, kalshi, weather, news
 │   ├── strategies/      # common, filters, router; weather, favourite, momentum, crossvenue (the fed and crossvenue lanes)
-│   ├── research/        # records, history, backtest, weather_backtest, metar_archive, fed, pairs_suggest, bias, arb, recorder
+│   ├── research/        # records, history, backtest, weather_backtest, metar_archive, fed, pairs_suggest, bias, arb, recorder, updown (+ _backtest, _stale), ticks, ticks_report
 │   ├── data/            # stations.json
 │   ├── cli.py           # trading-polymarket
 │   └── tests/           # unit (mirrored), integration, property, support, fixtures
@@ -182,8 +184,9 @@ one-line pointers.
 * `trading-core check --config F`: validate settings and build the module.
 * `trading-core-audit pnl / cuts / verdict`, `trading-core-events`: read a run or a backtest.
 * `trading-polymarket scan | weather | record | arb`: look at what the lanes see (read only).
-* `trading-polymarket metars | bias | history | weather-history | fed-history`: collect data.
-* `trading-polymarket calibrate | backtest favourite|weather|fed`: Stage 0 evidence, written as trading-core audit records.
+* `trading-polymarket metars | bias | history | weather-history | fed-history | updown-history`: collect data.
+* `trading-polymarket ticks` / `ticks-report`: record Up/Down books, fills and spot to the millisecond, and read our latency off them (FEAT-147).
+* `trading-polymarket calibrate | backtest favourite|weather|fed | updown-backtest`: Stage 0 evidence, written as trading-core audit records.
 * `trading-polymarket pairs suggest | approve | remove | list`: the crossvenue lane's reviewed pairs.
 
 ---

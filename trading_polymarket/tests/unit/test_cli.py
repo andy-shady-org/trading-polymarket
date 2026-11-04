@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gzip
 import json
+from collections import Counter
 from datetime import date
 from functools import partial
 from pathlib import Path
@@ -13,7 +14,14 @@ from trading_polymarket import cli
 from trading_polymarket.clients.http import Response
 from trading_polymarket.module import PolymarketModule
 from trading_polymarket.research.records import append_jsonl
-from trading_polymarket.research.updown import UpDownMarket, day_path, day_start
+from trading_polymarket.research.ticks import TickWriter
+from trading_polymarket.research.updown import (
+    SpotDay,
+    UpDownMarket,
+    day_path,
+    day_start,
+    spot_path,
+)
 from trading_polymarket.research.updown_backtest import PRIMARY
 from trading_polymarket.tests.support.factories import (
     NOW,
@@ -469,3 +477,119 @@ def test_updown_backtest(tmp_path: Path) -> None:
     assert len(out.read_text().splitlines()) == 4
     summary = out.with_suffix(".summary.jsonl").read_text().splitlines()
     assert len(summary) == 10
+
+
+def test_updown_backtest_stale(tmp_path: Path) -> None:
+    data, out = tmp_path / "updown", tmp_path / "bt" / "stale.jsonl"
+    day = date(2026, 11, 5)
+    start = day_start(day) + 3600
+    trades = [[100, 0, 1, 0.03, 500, "0xw"], [243, 0, 1, 0.04, 500, "0xw"]]
+    market = UpDownMarket("m", "c", start, start + 300, 0, None, None, 0.07, 0)
+    path = day_path(data, "btc", "5m", day)
+    path.parent.mkdir(parents=True)
+    row = market.to_dict() | {"trades": trades}
+    path.write_bytes(gzip.compress((json.dumps(row) + "\n").encode()))
+    closes: list[float | None] = [None] * 86400
+    closes[3599], closes[3600 + 249] = 100_000.0, 99_990.0
+    spot = spot_path(data, "BTCUSDT", day)
+    spot.parent.mkdir(parents=True)
+    spot_day = SpotDay("BTCUSDT", day_start(day), tuple(closes))
+    spot.write_bytes(gzip.compress(json.dumps(spot_day.to_dict()).encode()))
+    args = ("--start", "2026-11-05", "--end", "2026-11-06", "--input", str(data))
+    code, lines = run(
+        "updown-backtest",
+        "--rule",
+        "stale",
+        "--timestamp-offset",
+        "0",
+        *args,
+        "--out",
+        str(out),
+    )
+    assert code == 0
+    # Spot is on the line from 240 s (the last close carries): a fill at 243.
+    primary = "cap 5c from 240s spot -1.5bp 2s late"
+    assert lines[2].startswith(primary) and lines[2].split()[8] == "1"
+    assert lines[-1].startswith(
+        "primary (cap 5c from 240s spot -1.5bp 2s late): INCONCLUSIVE"
+    )
+    assert len(out.read_text().splitlines()) == 2
+    assert len(out.with_suffix(".summary.jsonl").read_text().splitlines()) == 9
+
+
+def test_ticks_records_until_stopped(
+    transport: FakeTransport, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    seen: dict[str, Any] = {}
+
+    async def fake_record(gamma: Any, http: Any, **options: Any) -> Counter[str]:
+        seen.update(options)
+        options["log"]("book: btc-updown-5m-1")
+        return Counter({"spot": 2, "quotes": 3})
+
+    monkeypatch.setattr(cli.ticks_mod, "record", fake_record)
+    code, lines = run("ticks", "--hours", "0.5", "--out", str(tmp_path))
+    assert code == 0 and seen["hours"] == 0.5 and seen["directory"] == str(tmp_path)
+    assert lines[0].endswith(" book: btc-updown-5m-1")
+    assert lines[-1] == f"stopped; rows written: quotes 3, spot 2 (in {tmp_path})"
+    monkeypatch.setattr(cli.ticks_mod, "record", lambda *a, **k: _empty())
+    assert run("ticks", "--out", str(tmp_path))[1][-1].startswith(
+        "stopped; rows written: nothing"
+    )
+
+
+async def _empty() -> Counter[str]:
+    return Counter()
+
+
+def test_ctrl_c_stops_a_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def interrupted(args: Any, out: Any) -> int:
+        raise KeyboardInterrupt
+
+    monkeypatch.setitem(cli.COMMANDS, "ticks", interrupted)
+    assert run("ticks") == (130, ["stopped"])
+
+
+def test_ticks_report(transport: FakeTransport, tmp_path: Path) -> None:
+    code, lines = run("ticks-report", "--input", str(tmp_path / "none"))
+    assert code == 1 and lines[0].startswith("no recording in")
+    start = int(NOW) // 300 * 300 - 3600  # a market over before the clock
+    writer = TickWriter(tmp_path)
+    at = start * 1000
+    writer.write("spot", [at + 80, at, at, 100_000.0], rx=at)
+    writer.write("probes", [at, 250.0, start], rx=at)
+    writer.write("trades", [at, at + 500, f"{start}:0", "BUY", 0.5, 2.0, "0xaa"], rx=at)
+    market = {"rx": at, "start": start, "end": start + 300, "condition_id": "0xc"}
+    writer.write("markets", market, rx=at)
+    writer.close()
+    row = {
+        "timestamp": start + 3,
+        "outcome_index": 0,
+        "side": "BUY",
+        "price": 0.5,
+        "size": 2,
+        "transaction_hash": "0xaa",
+    }
+    transport.add("/v2/trades", {"data": [row], "pagination": {}})
+    code, lines = run("ticks-report", "--input", str(tmp_path), "--start", "2026-10-28")
+    assert code == 0
+    assert lines[0].startswith("recorded 2026-10-28 to 2026-10-28 (1 days): 1 spot")
+    assert lines[1].startswith("Binance receive delay") and "median 80" in lines[1]
+    assert "median 250" in lines[2]
+    assert "median 2.50" in lines[3]
+    assert lines[4] == "  updown-backtest --rule stale --timestamp-offset 2.50"
+    assert lines[5].startswith("signals: 0") and lines[6].endswith(": none")
+    assert lines[-1] == "decision (FEAT-147 part 1): not enough days (1 of 3)"
+    code, lines = run(
+        "ticks-report",
+        "--input",
+        str(tmp_path),
+        "--offset-markets",
+        "0",
+        "--end",
+        "2026-10-29",
+    )
+    assert code == 0 and not any("timestamp-offset" in line for line in lines)
+    transport.add("/v2/trades", {"data": [], "pagination": {}})
+    code, lines = run("ticks-report", "--input", str(tmp_path))
+    assert lines[3].endswith(": none") and lines[4].startswith("signals")

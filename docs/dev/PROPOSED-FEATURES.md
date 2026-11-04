@@ -56,6 +56,7 @@ orders.
   - **The maker study:** a simulated quote at the best bid or ask, counted as filled only when a trade prints **through** its price (never on a touch, so queue position cannot flatter it), with two pull rules taken from CloddsBot's crypto strategies and tested here: pull on a spot move above a threshold, and shorten or pull when book imbalance turns against the quote. Phases kept only where the simulated maker earns in both halves of the recording.
 * **Then:** if a phase earns after adverse selection on two separate recordings, a maker lane needs live order placement (`LiveExecutor`, `LIVE-TRADING.md`), which paper cannot judge honestly (the sports study's note); it would start at Stage 2 with a tiny size, not as a paper pilot.
 * **Dependencies:** none for the recorder; live execution for a lane. **Impact:** the only seat in these markets the studies so far leave open.
+* **Recorder built (0.4.0) as `ticks`** (FEAT-147): best bid and ask, fills and spot to the millisecond. The maker study (`ticks-report` per phase, the simulated quote) is not built.
 
 ### FEAT-102: Full-set scanner: both sides, depth, duration, loop
 * **Class / Priority:** Income (research) · P2
@@ -110,4 +111,6 @@ orders.
   - **Descriptive only:** `L` in {1, 2, 3, 5} s; `cap` in {3, 5, 10} c; the spot threshold at −4, −1.5 and 0 bp; signals from 120 s instead of 240 s.
 * **Then:** a pass on both parts is still a print replay: whether our order gets the ask is a race paper cannot judge. A lane would start at Stage 2 (live canary, the smallest size) once live execution is built (`LIVE-TRADING.md`). A fail is recorded as NO-GO in `docs/STRATEGY-LEDGER.md`.
 * **Dependencies:** FEAT-101's recorder (part 1 builds it); FEAT-146's collector and backtest (part 2 extends `updown-backtest`). **Impact:** the first lead with a mechanism (stale quotes) and a winner who trades it; also says whether our setup can compete on speed at all.
+* **Built (0.4.0):** part 1, `trading-polymarket ticks` and `ticks-report` (`research/ticks.py`, `research/ticks_report.py`); part 2, `updown-backtest --rule stale` (`research/updown_stale.py`). Two readings the rule's text left open, fixed in the code before any data it is judged on exists: spot "at `τ`" is the one-second candle that ended at `τ` (opened at `τ − 1`), and the start price is the candle that ended at the window's start. The recorder's signal uses the live best ask at or below `cap` + 1 c where the backtest uses the last print.
+* **First measurement (2026-11-04, 6 minutes): the data API's times run a median 2.2 s after the fill.** The study's lags were in that time, so the edge after a spot move is under a second, and the rule with the offset loses even in-sample (−4.3%; [`RESULTS.md`](RESULTS.md)). Part 1 now decides it: whether stale asks outlive our delay.
 

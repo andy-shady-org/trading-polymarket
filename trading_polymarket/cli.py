@@ -12,7 +12,9 @@ these commands collect evidence and look at what the lanes see:
 ``metars``         append recent METARs to the archive (intraday backtests)
 ``history``        collect resolved markets + price histories
 ``updown-history`` collect crypto Up/Down markets: every trade, spot by second
-``updown-backtest`` replay the late-longshot rule on them (FEAT-146)
+``updown-backtest`` replay FEAT-146's or FEAT-147's rule on them
+``ticks``          record Up/Down books, fills and spot to the millisecond
+``ticks-report``   latency, stale asks and timestamp offset from a recording
 ``weather-history``collect resolved temperature events + price histories
 ``fed-history``    collect settled Fed meetings on Polymarket and Kalshi
 ``calibrate``      build the favourite lane's calibration table
@@ -30,7 +32,7 @@ import argparse
 import asyncio
 import json
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -38,7 +40,7 @@ from typing import Any
 from trading_polymarket import __version__
 from trading_polymarket import pairs as pairs_mod
 from trading_polymarket.clients.data_api import DataApiClient
-from trading_polymarket.clients.http import HttpError
+from trading_polymarket.clients.http import HttpError, JsonHttp
 from trading_polymarket.clients.spot import SpotClient
 from trading_polymarket.config import LANES, PolymarketSettings
 from trading_polymarket.module import PolymarketModule
@@ -49,7 +51,10 @@ from trading_polymarket.research import fed as fed_mod
 from trading_polymarket.research import history as hist
 from trading_polymarket.research import metar_archive, recorder, updown
 from trading_polymarket.research import pairs_suggest as suggest_mod
+from trading_polymarket.research import ticks as ticks_mod
+from trading_polymarket.research import ticks_report as treport
 from trading_polymarket.research import updown_backtest as ubt
+from trading_polymarket.research import updown_stale as ustale
 from trading_polymarket.research import weather_backtest as wbt
 from trading_polymarket.research.records import append_jsonl
 from trading_polymarket.strategies.weather import (
@@ -255,17 +260,41 @@ def _percent(value: float | None) -> str:
     return "-" if value is None else f"{value * 100:+.1f}%"
 
 
-def _summary_line(summary: ubt.Summary) -> str:
+def _summary_line(summary: ubt.Summary, width: int) -> str:
     halves = " ".join(_percent(v) for v in summary.roi_halves)
     rate = "-" if summary.win_rate is None else f"{summary.win_rate * 100:.2f}%"
     price = "-" if summary.average_price is None else f"{summary.average_price:.4f}"
     p_value = "-" if summary.p_value is None else f"{summary.p_value:.3g}"
     return (
-        f"{summary.rule.name:<28} {summary.entries:>6} {rate:>7} {price:>7} "
+        f"{summary.rule.name:<{width}} {summary.entries:>6} {rate:>7} {price:>7} "
         f"{_percent(summary.roi):>7} {halves:>15} "
         f"{_percent(summary.roi_without_top):>8} {p_value:>8} "
         f"{'PASS' if summary.passed else 'fail'}"
     )
+
+
+def _updown_replay(
+    args: argparse.Namespace, markets: Iterable[updown.UpDownMarket]
+) -> tuple[int, Sequence[Any], dict[Any, list[ubt.Entry]]]:
+    """(markets read, the rules in order, entries by rule) for ``--rule``."""
+    if args.rule == "stale":
+        spot = ustale.SpotSeries(args.input, updown.SPOT_SYMBOLS[args.asset])
+        count, stale = ustale.replay(
+            markets,
+            spot,
+            ustale.GRID,
+            offset=args.timestamp_offset,
+            stake=args.stake,
+        )
+        return count, ustale.GRID, dict(stale)
+    count, longshot = ubt.replay(markets, ubt.GRID, stake=args.stake)
+    return count, ubt.GRID, dict(longshot)
+
+
+def _updown_verdict(args: argparse.Namespace, by_rule: dict[Any, ubt.Summary]) -> str:
+    if args.rule == "stale":
+        return ustale.verdict(by_rule[ustale.PRIMARY], by_rule[ustale.STRESS])
+    return "PASS" if by_rule[ubt.PRIMARY].passed else "FAIL"
 
 
 async def cmd_updown_backtest(args: argparse.Namespace, out: Printer) -> int:
@@ -274,26 +303,103 @@ async def cmd_updown_backtest(args: argparse.Namespace, out: Printer) -> int:
     markets = updown.load_markets(
         args.input, args.asset, args.window, start=start, end=end
     )
-    count, entries = ubt.replay(markets, ubt.GRID, stake=args.stake)
+    count, rules, entries = _updown_replay(args, markets)
     if not count:
         out(f"no markets in {args.input}: run `trading-polymarket updown-history`")
         return 1
+    width = max(len(r.name) for r in rules)
     out(f"{count} markets, {start} to {end} (second half from {split})")
     out(
-        f"{'rule':<28} {'trades':>6} {'won':>7} {'price':>7} {'roi':>7} "
+        f"{'rule':<{width}} {'trades':>6} {'won':>7} {'price':>7} {'roi':>7} "
         f"{'halves':>15} {'-top1%':>8} {'p':>8}"
     )
-    summaries = [ubt.summarise(r, count, entries[r], split=split) for r in ubt.GRID]
-    for summary in summaries:
-        out(_summary_line(summary))
-    primary = summaries[ubt.GRID.index(ubt.PRIMARY)]
-    path = _write(args.out, ubt.audit_records(entries[ubt.PRIMARY], ubt.PRIMARY))
+    by_rule = {r: ubt.summarise(r, count, entries[r], split=split) for r in rules}
+    for summary in by_rule.values():
+        out(_summary_line(summary, width))
+    primary = rules[0] if args.rule == "stale" else ubt.PRIMARY
+    target = args.out or f"data/backtest/updown-{args.rule}.jsonl"
+    path = _write(target, ubt.audit_records(entries[primary], primary))
     _write(
-        str(Path(args.out).with_suffix(".summary.jsonl")),
-        [s.to_dict() for s in summaries],
+        str(Path(target).with_suffix(".summary.jsonl")),
+        [s.to_dict() for s in by_rule.values()],
     )
-    verdict = "PASS" if primary.passed else "FAIL"
-    out(f"primary ({ubt.PRIMARY.name}): {verdict}; its trades written to {path}")
+    verdict = _updown_verdict(args, by_rule)
+    out(f"primary ({primary.name}): {verdict}; its trades written to {path}")
+    return 0
+
+
+async def cmd_ticks(args: argparse.Namespace, out: Printer) -> int:
+    module = build_module(args)
+    counts = await ticks_mod.record(
+        module.gamma,
+        JsonHttp(transport=module.http.transport, max_retries=0),
+        asset=args.asset,
+        window=args.window,
+        directory=args.out,
+        hours=args.hours,
+        spot_url=args.spot_url,
+        log=lambda message: out(f"{datetime.now():%H:%M:%S} {message}"),
+    )
+    written = ", ".join(f"{n} {counts[n]}" for n in sorted(counts)) or "nothing"
+    out(f"stopped; rows written: {written} (in {args.out})")
+    return 0
+
+
+def _quantile_line(label: str, found: dict[str, float] | None, digits: int = 0) -> str:
+    if found is None:
+        return f"{label}: none"
+    p10, p50, p90 = (f"{found[k]:.{digits}f}" for k in ("p10", "p50", "p90"))
+    return f"{label}: p10 {p10}, median {p50}, p90 {p90} (n {found['n']:.0f})"
+
+
+async def _report_offsets(
+    args: argparse.Namespace, recording: treport.Recording, out: Printer
+) -> None:
+    module = build_module(args)
+    offsets = await treport.fetch_offsets(
+        recording,
+        DataApiClient(module.http),
+        markets=args.offset_markets,
+        now=module.clock(),
+    )
+    label = "data API time less the fill's WebSocket time (s)"
+    out(_quantile_line(label, treport.quantiles(offsets), 2))
+    middle = treport.median(offsets)
+    if middle is not None:
+        out(f"  updown-backtest --rule stale --timestamp-offset {middle:.2f}")
+
+
+async def cmd_ticks_report(args: argparse.Namespace, out: Printer) -> int:
+    start = updown.parse_day(args.start) if args.start else None
+    end = updown.parse_day(args.end) if args.end else None
+    recording = treport.load_recording(args.input, start=start, end=end)
+    if not recording.days:
+        out(f"no recording in {args.input}: run `trading-polymarket ticks`")
+        return 1
+    quotes = sum(len(q.rx) for q in recording.quotes.values())
+    out(
+        f"recorded {recording.days[0]} to {recording.days[-1]} "
+        f"({len(recording.days)} days): {len(recording.spot)} spot, {quotes} quotes, "
+        f"{len(recording.trades)} fills, {len(recording.probes)} probes"
+    )
+    delays = treport.quantiles(treport.receive_delays(recording))
+    out(_quantile_line("Binance receive delay (ms, with any clock difference)", delays))
+    rtts = treport.quantiles(treport.round_trips(recording))
+    out(_quantile_line("round trip to the CLOB (ms)", rtts))
+    if args.offset_markets:
+        await _report_offsets(args, recording, out)
+    found = treport.signals(recording)
+    takeable = sum(s.takeable for s in found)
+    censored = sum(s.censored for s in found)
+    out(
+        f"signals: {len(found)}; takeable {takeable}; "
+        f"the ask outlived the window {censored}"
+    )
+    lifetimes = treport.quantiles([float(s.lifetime) for s in found])
+    out(_quantile_line("  stale ask lifetime (ms)", lifetimes))
+    ours = treport.quantiles([s.delay for s in found if s.delay is not None])
+    out(_quantile_line("  our delay (ms)", ours))
+    out(f"decision (FEAT-147 part 1): {treport.decision(len(recording.days), found)}")
     return 0
 
 
@@ -546,9 +652,39 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--window", default="5m", choices=sorted(updown.WINDOWS))
     p.add_argument("--start", required=True, help="YYYY-MM-DD (UTC)")
     p.add_argument("--end", required=True, help="YYYY-MM-DD (UTC, exclusive)")
+    p.add_argument(
+        "--rule",
+        default="longshot",
+        choices=["longshot", "stale"],
+        help="longshot: FEAT-146; stale: FEAT-147 (cheap side after a spot move)",
+    )
+    p.add_argument(
+        "--timestamp-offset",
+        type=float,
+        default=0.0,
+        help="stale: seconds the data API's time runs after the fill (ticks-report)",
+    )
     p.add_argument("--stake", type=float, default=ubt.STAKE, help="USDC an entry")
     p.add_argument("--input", default=updown.DEFAULT_UPDOWN_DIR)
-    p.add_argument("--out", default="data/backtest/updown.jsonl")
+    p.add_argument("--out", help="default data/backtest/updown-<rule>.jsonl")
+
+    p = command("ticks", "record Up/Down books, fills and spot (FEAT-147)")
+    p.add_argument("--asset", default="btc", choices=sorted(updown.SPOT_SYMBOLS))
+    p.add_argument("--window", default="5m", choices=sorted(updown.WINDOWS))
+    p.add_argument("--hours", type=float, help="stop after this long (default: Ctrl-C)")
+    p.add_argument("--spot-url", help="Binance trade stream (default: the mirror)")
+    p.add_argument("--out", default=ticks_mod.DEFAULT_TICKS_DIR)
+
+    p = command("ticks-report", "latency, stale asks and timestamp offset (FEAT-147)")
+    p.add_argument("--input", default=ticks_mod.DEFAULT_TICKS_DIR)
+    p.add_argument("--start", help="YYYY-MM-DD (UTC; default: the first day)")
+    p.add_argument("--end", help="YYYY-MM-DD (UTC, exclusive; default: all)")
+    p.add_argument(
+        "--offset-markets",
+        type=int,
+        default=20,
+        help="markets to fetch from the data API for the timestamp offset (0: skip)",
+    )
 
     p = command("weather-history", "collect resolved temperature events")
     p.add_argument("--start", required=True)
@@ -612,6 +748,8 @@ COMMANDS = {
     "history": cmd_history,
     "updown-history": cmd_updown_history,
     "updown-backtest": cmd_updown_backtest,
+    "ticks": cmd_ticks,
+    "ticks-report": cmd_ticks_report,
     "weather-history": cmd_weather_history,
     "calibrate": cmd_calibrate,
     "fed-history": cmd_fed_history,
@@ -626,6 +764,9 @@ def main(argv: Sequence[str] | None = None, *, out: Printer = print) -> int:
         return asyncio.run(COMMANDS[args.command](args, out))
     except BrokenPipeError:  # output piped into `head`: not an error
         return 0
+    except KeyboardInterrupt:  # Ctrl-C ends `ticks`; files are closed on the way
+        out("stopped")
+        return 130
     except (OSError, ValueError, HttpError) as exc:
         out(f"error: {exc}")
         return 2

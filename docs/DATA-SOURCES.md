@@ -24,7 +24,9 @@ dashboard (`api requests`, `api failures`, `last api error`).
 | `gamma-api.polymarket.com/markets?slug=…&closed=true` | Settled Up/Down markets by slug (`updown-history`) | Up to 100 slugs a request; a crypto Up/Down slug is `<asset>-updown-<window>-<start>`, the window's start in Unix seconds. `events[0].eventMetadata` holds `priceToBeat` and `finalPrice` (Chainlink's 60-second average at the start and end) once settled |
 | `gamma-api.polymarket.com/public-search?q=` | Text search (fed scout: "Fed Decision in"; fed history) | `events_status=active|closed`, `limit_per_type` |
 | `clob.polymarket.com/book?token_id=` | Live order book (quotes, filters, paper fills, exit value) | Bids ascending and asks descending (best **last**); 404 once the market closes. 1500 req / 10 s |
-| `data-api.polymarket.com/v2/trades?condition_id=` | Every trade in a market (`updown-history`) | `limit` ≤ 500, newest first; cursor `pagination.next_cursor` while `pagination.has_more`. One row per **taker** order as it filled (wallet, `side`, `outcome_index`, average `price`, `size`, `timestamp` in seconds); makers do not appear. About 1,600 rows per 5-minute BTC market. The first version (`/trades`) answers 410 since late October 2026 |
+| `data-api.polymarket.com/v2/trades?condition_id=` | Every trade in a market (`updown-history`) | `limit` ≤ 500, newest first; cursor `pagination.next_cursor` while `pagination.has_more`. One row per **taker** order as it filled (wallet, `side`, `outcome_index`, average `price`, `size`, `timestamp` in seconds, `transaction_hash`); makers do not appear. About 1,600 rows per 5-minute BTC market. **`timestamp` is not the fill's time:** it runs a median 2.2 s after the fill on the market WebSocket (p10 1.5 s, p90 2.8 s; 1,302 fills on 2026-11-04, matched by transaction hash). The first version (`/trades`) answers 410 since late October 2026 |
+| `wss://ws-subscriptions-clob.polymarket.com/ws/market` | Live books and fills (`ticks`) | Subscribe with `{"assets_ids": [...], "type": "market"}`. Events: `book` (a full snapshot, re-sent often), `price_change` (`price_changes`: `asset_id`, `price`, `size` at that level, `side` `BUY` bid / `SELL` ask, `best_bid`, `best_ask`), `last_trade_price` (`price`, `size`, `side`, `timestamp` ms, `transaction_hash`). One busy BTC 5-minute market sends about 850 `price_change` events a second. Send the text `PING` every few seconds (a socket was closed ~9 s after a connect without one); new markets need a new subscription (`ticks` reconnects each window) |
+| `clob.polymarket.com/time` | Server time in seconds (`ticks`' round-trip probe) | A plain number |
 | `clob.polymarket.com/prices-history` | Price series for research | Give **both** `startTs` and `endTs` (`endTs` alone is a 400); a window of ~3 weeks or more is refused (fed history asks 7 days at a time); `interval=max` returns an empty series at hourly fidelity for long-lived markets |
 
 Gamma fields the module reads: `id`, `question`, `conditionId`,
@@ -63,6 +65,12 @@ sits about 15 bp from Chainlink's USD start price (median, BTC, 2026-11-02),
 and its close-to-open direction matched the settled outcome in 240 of 288
 markets that day, so a backtest measures spot moves from Binance's own price
 at the start, and takes outcomes from Gamma.
+
+`ticks` reads Binance's live trades from the same mirror,
+`wss://data-stream.binance.vision/ws/<symbol>@aggTrade` (`p` price, `E`
+event time, `T` trade time, both in ms); `stream.binance.com:9443` is the
+main stream and works where port 9443 is open (`--spot-url`). Receive delay
+is `rx − T`, with any difference between the clocks.
 
 ## 3. Kalshi (reference prices, read only)
 

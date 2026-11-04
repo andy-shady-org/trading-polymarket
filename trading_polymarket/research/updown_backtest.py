@@ -29,7 +29,7 @@ import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Protocol
 
 from trading_polymarket.fees import FeeSchedule
 from trading_polymarket.research.records import round_trip
@@ -44,6 +44,13 @@ STRATEGY = "updown-longshot"
 EPSILON = 1e-9
 
 Trade = tuple[float, int, int, float, float, str]
+
+
+class NamedRule(Protocol):
+    """Any rule a summary can name (this module's and FEAT-147's)."""
+
+    @property
+    def name(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -208,7 +215,7 @@ def without_top(entries: Sequence[Entry], share: float = TOP_SHARE) -> list[Entr
 
 @dataclass(frozen=True)
 class Summary:
-    rule: Rule
+    rule: NamedRule
     markets: int
     entries: int
     wins: int
@@ -253,7 +260,7 @@ class Summary:
 
 
 def summarise(
-    rule: Rule, markets: int, entries: Sequence[Entry], *, split: date
+    rule: NamedRule, markets: int, entries: Sequence[Entry], *, split: date
 ) -> Summary:
     """The pass bar's numbers; ``split`` is the first day of the second half."""
     n = len(entries)
@@ -278,7 +285,7 @@ def summarise(
     )
 
 
-def audit_records(entries: Iterable[Entry], rule: Rule) -> list[dict[str, Any]]:
+def audit_records(entries: Iterable[Entry], rule: NamedRule) -> list[dict[str, Any]]:
     """The entries as trading-core audit round trips (``trading-core-audit pnl``)."""
     records: list[dict[str, Any]] = []
     for e in entries:
@@ -306,6 +313,7 @@ __all__ = [
     "PRIMARY",
     "STAKE",
     "Entry",
+    "NamedRule",
     "Rule",
     "Summary",
     "audit_records",

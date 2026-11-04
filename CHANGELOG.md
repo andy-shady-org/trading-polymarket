@@ -11,15 +11,23 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## 0.4.0: crypto Up/Down research (2026-11-04)
 
-Two research commands for crypto Up/Down markets (FEAT-146); no lane,
-setting or fill changes, so no run's result changes. Tested on
-trading-core `v0.7.0`. The backtest's result, NO-GO, is in
+Research commands for crypto Up/Down markets (FEAT-146, FEAT-147); no
+lane, setting or fill changes, so no run's result changes. Tested on
+trading-core `v0.7.0`; needs trading-core 0.5.0 or later (its WebSocket
+loop). The backtest's result, NO-GO, is in
 [`docs/dev/RESULTS.md`](docs/dev/RESULTS.md). Release record:
 [`docs/dev/releases/0.4.0.md`](docs/dev/releases/0.4.0.md).
 
 ### Added
 - `trading-polymarket updown-history` (FEAT-146, first part): collects crypto Up/Down markets of one asset and window, a day at a time, with every trade to the second (Polymarket's data API, `/v2/trades`), each market's outcome and Chainlink start and end prices (Gamma), and one-second spot (Binance's market-data mirror). Days are written whole and the command is resumable. New clients `clients/data_api.py` and `clients/spot.py`; `GammaClient.raw_markets_by_slugs`.
 - `trading-polymarket updown-backtest` (FEAT-146, second part): replays the pre-registered late-longshot rule on the collected trades (`research/updown_backtest.py`): the primary rule and the descriptive grid, each judged by the pre-registered bar, and the primary rule's trades as trading-core audit records.
+- `trading-polymarket ticks` and `ticks-report` (FEAT-147, part 1; FEAT-101's recorder): record the current and next Up/Down markets' best bid and ask, every fill and Binance spot to the millisecond with round trips to the CLOB, and report our delay against how long stale asks live, the data API's timestamp offset and the pre-registered decision (`research/ticks.py`, `research/ticks_report.py`).
+- `updown-backtest --rule stale` (FEAT-147, part 2): the pre-registered stale-quote rule with `--timestamp-offset` (`research/updown_stale.py`); `--out` now defaults to `data/backtest/updown-<rule>.jsonl` (was `updown.jsonl`).
+- The data API client keeps each trade's `transaction_hash`.
+
+### Changed
+- `trading-core>=0.5.0,<0.8` (was `>=0.3.0`): `ticks` runs on trading-core's WebSocket loop (`trading_core.ops.stream`, 0.5.0).
+- `Ctrl-C` ends any command with "stopped" and exit code 130 instead of a traceback.
 
 ### Docs
 - The runtime folder is `runtimes/polymarket` (it was `runtime-trading` until the repository split of 2026-11-02); `docs/dev/RUNBOOK.md` §9 runs the research commands from a release copy.

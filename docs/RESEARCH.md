@@ -125,8 +125,12 @@ trading-polymarket pairs suggest                     # data/pairs_suggested.json
 
 ```bash
 trading-polymarket updown-history --start 2026-10-05 --end 2026-11-04   # data/updown (resumable)
-trading-polymarket updown-backtest --start 2026-10-05 --end 2026-11-04
-trading-core-audit pnl --path data/backtest/updown.jsonl
+trading-polymarket updown-backtest --start 2026-10-05 --end 2026-11-04   # FEAT-146
+trading-core-audit pnl --path data/backtest/updown-longshot.jsonl
+trading-polymarket ticks --hours 72                 # data/ticks: books, fills, spot (FEAT-147)
+trading-polymarket ticks-report                     # latency, stale asks, timestamp offset
+trading-polymarket updown-backtest --rule stale --timestamp-offset 2.2 \
+    --start 2026-11-04 --end 2026-11-18             # FEAT-147, on the fresh window
 ```
 
 - **updown-history**: every settled 5-minute (or 15-minute) market of an
@@ -140,6 +144,16 @@ trading-core-audit pnl --path data/backtest/updown.jsonl
   signal itself, and nothing after the window's close counts: the market
   keeps trading for a minute or so after it, when the outcome is all but
   known.
+- **ticks / ticks-report** (FEAT-147): whether we are fast enough to buy a
+  cheap side before its stale ask is repriced after a spot move, measured
+  live: our receive delay and round trip against how long the asks lived.
+  Run `ticks` on the computer that would trade, in tmux, for at least three
+  days.
+- **The data API's times are not fill times.** They run a median 2.2 s
+  after the fill as the market's WebSocket reports it (2026-11-04, 1,302
+  fills); a replay that times a reaction to spot from the data API's time
+  is that much too generous. `ticks-report` measures the offset and
+  `updown-backtest --rule stale --timestamp-offset` applies it.
 - **Missing windows are real.** On 2026-11-01, the night US clocks went
   back, Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC
   (25 windows), so that day holds 263 markets, not 288.

@@ -276,8 +276,9 @@ any lane.
     that lasts seconds is invisible in minute data; before putting an idea
     on "do not test again", say what resolution judged it, and judge speed
     edges on ticks. *(trading-polymarket FEAT-147: Up/Down "latency trades"
-    were closed on minute data; second-level prints showed +163% a trade on
-    2-second-old spot and −30% on 5-second-old spot.)*
+    were closed on minute data; second-level prints showed cheap asks lifted
+    within a second of a spot move, +163% a trade where spot and fill
+    coincide.)*
 
 ## 3. Paper, replay and parity
 
@@ -339,6 +340,12 @@ any lane.
     the losing side near zero. Cut a replay at the close (and at a rule's
     own deadline). *(trading-polymarket FEAT-146: about 1,200 prints a day
     after the close, 110 of them cheap buys.)*
+18. **Know what a timestamp measures before you lag anything by it.** A
+    venue's trade time can be its settlement, not its fill: measure the
+    offset against the fill's own feed before timing a reaction from it.
+    *(trading-polymarket FEAT-147: the data API's times run 2.2 s after the
+    fill; a "2 s" reaction was really instant, and the rule built on it lost
+    once corrected.)*
 
 ## 4. Costs and execution
 
@@ -561,3 +568,5 @@ any lane.
 - 2026-11-04: §1 lesson 33 and §3 lesson 17, from trading-polymarket
   FEAT-146.
 - 2026-11-04: §2 lesson 22, from trading-polymarket FEAT-147.
+- 2026-11-04: §3 lesson 18, and §2 lesson 22's evidence corrected, from
+  FEAT-147's first recording (the data API's 2.2 s lag).

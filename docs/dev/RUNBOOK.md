@@ -238,7 +238,27 @@ bin/install-release.sh v0.7.0 v0.4.0
 V=venvs/polymarket-v0.4.0/bin
 $V/trading-polymarket updown-history --start 2026-10-05 --end 2026-11-04 --out data/updown
 $V/trading-polymarket updown-backtest --start 2026-10-05 --end 2026-11-04 \
-    --input data/updown --out data/backtest/updown.jsonl
+    --input data/updown --out data/backtest/updown-longshot.jsonl
+```
+
+The FEAT-147 recorder runs on this computer (it measures *our* latency), in
+its own tmux window, for at least three days; `Ctrl-C` stops it and its
+files stay readable (a file still being written is read up to its end):
+
+```bash
+tmux new -s ticks
+$V/trading-polymarket ticks --out data/ticks          # Ctrl-b d to detach
+$V/trading-polymarket ticks-report --input data/ticks # any time, from another window
+```
+
+About 60 MB a day for BTC 5-minute markets (fills and quotes about half each). Then, from 2026-11-18, the
+pre-registered backtest on the fresh window, with the offset the report
+printed:
+
+```bash
+$V/trading-polymarket updown-history --start 2026-11-04 --end 2026-11-18 --out data/updown
+$V/trading-polymarket updown-backtest --rule stale --timestamp-offset <median> \
+    --start 2026-11-04 --end 2026-11-18 --input data/updown
 ```
 
 A BTC 5-minute day is about 7 MB and three minutes to collect; a stopped
