@@ -89,6 +89,7 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 | Tool | Since | What it gives the operator |
 |---|---|---|
 | Resolved-market collector (`history`) | 0.1.0 | Resolved binary markets with hourly prices for the last 96 hours, resumable |
+| Up/Down collector (`updown-history`) | Unreleased | Crypto Up/Down markets of one asset and window, a gzipped file a day: outcomes, start and end prices, every trade to the second, one-second spot (FEAT-146) |
 | Calibration (`calibrate`) | 0.1.0 | The favourite lane's table (price × hours bins, shrunk win rates) with a train/test split and its sha256 |
 | Favourite backtest (`backtest favourite`) | 0.1.0 | Calibrates before a split date, replays after it |
 | Weather collector (`weather-history`) | 0.1.0 | Resolved temperature events with every bucket's outcome and prices, resumable |
@@ -105,7 +106,7 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 
 `trading-polymarket` (since 0.1.0) has twelve commands: `scan`, `weather`,
 `record`, `arb`, `bias`, `metars`, `history`, `weather-history`,
-`fed-history`, `calibrate`, `backtest` and `pairs`. An API failure is
+`updown-history`, `fed-history`, `calibrate`, `backtest` and `pairs`. An API failure is
 reported as `error: HTTP …` with exit code 2 (0.2.0). Every flag:
 [`CLI.md`](CLI.md).
 
@@ -113,5 +114,7 @@ reported as `error: HTTP …` with exit code 2 (0.2.0). Every flag:
 
 Since 0.1.0 one paced, retrying HTTP client serves every source, with
 counters on the dashboard: Gamma, CLOB, Open-Meteo, Aviation Weather Center,
-Google News RSS; Kalshi (read only) since 0.2.0. None needs a key
+Google News RSS; Kalshi (read only) since 0.2.0; Polymarket's data API
+(trades) and Binance's market-data mirror (spot) for `updown-history`
+(Unreleased). None needs a key
 ([`DATA-SOURCES.md`](DATA-SOURCES.md)).

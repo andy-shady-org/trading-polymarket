@@ -38,6 +38,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
       METARs during a run (`trading-polymarket record`) and add an intraday
       backtest from them.
 
+- [ ] **FEAT-146** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)): the late-longshot backtest on the 30-day backfill, judged by the pre-registered bar; then FEAT-103 on the same data.
 - [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the tick recorder, 24–48 h, then the maker study), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
 
 ## 3. Later

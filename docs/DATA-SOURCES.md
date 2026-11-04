@@ -21,8 +21,10 @@ dashboard (`api requests`, `api failures`, `last api error`).
 | `gamma-api.polymarket.com/markets/keyset` | Market listings (favourite, momentum scouts; history) | `limit` ≤ 100; cursor `after_cursor` → `next_cursor`; filters `closed`, `end_date_min`, `end_date_max`, `tag_slug`, `order`, `ascending`. 300 req / 10 s |
 | `gamma-api.polymarket.com/events/keyset` | Events with their markets (weather scout, arb, weather history) | 500 req / 10 s |
 | `gamma-api.polymarket.com/markets?clob_token_ids=…` | Market by token id (catalogue, resolution checks) | Batches of 20 tokens |
+| `gamma-api.polymarket.com/markets?slug=…&closed=true` | Settled Up/Down markets by slug (`updown-history`) | Up to 100 slugs a request; a crypto Up/Down slug is `<asset>-updown-<window>-<start>`, the window's start in Unix seconds. `events[0].eventMetadata` holds `priceToBeat` and `finalPrice` (Chainlink's 60-second average at the start and end) once settled |
 | `gamma-api.polymarket.com/public-search?q=` | Text search (fed scout: "Fed Decision in"; fed history) | `events_status=active|closed`, `limit_per_type` |
 | `clob.polymarket.com/book?token_id=` | Live order book (quotes, filters, paper fills, exit value) | Bids ascending and asks descending (best **last**); 404 once the market closes. 1500 req / 10 s |
+| `data-api.polymarket.com/v2/trades?condition_id=` | Every trade in a market (`updown-history`) | `limit` ≤ 500, newest first; cursor `pagination.next_cursor` while `pagination.has_more`. One row per **taker** order as it filled (wallet, `side`, `outcome_index`, average `price`, `size`, `timestamp` in seconds); makers do not appear. About 1,600 rows per 5-minute BTC market. The first version (`/trades`) answers 410 since late October 2026 |
 | `clob.polymarket.com/prices-history` | Price series for research | Give **both** `startTs` and `endTs` (`endTs` alone is a 400); a window of ~3 weeks or more is refused (fed history asks 7 days at a time); `interval=max` returns an empty series at hourly fidelity for long-lived markets |
 
 Gamma fields the module reads: `id`, `question`, `conditionId`,
@@ -50,6 +52,17 @@ A closed market whose `outcomePrices` are exactly `1` and `0` has resolved;
 the module quotes it at its payout and redeems positions at the next cycle.
 A closed market without final prices is waiting for UMA; positions stay open
 (stale quote) until it resolves.
+
+### Spot for crypto Up/Down (research)
+
+`updown-history` reads the asset's one-second candles from Binance's public
+market-data mirror, `data-api.binance.vision/api/v3/klines?interval=1s`
+(up to 1,000 a request, keyless; `api.binance.com` refuses some locations
+with HTTP 451). A second with no trade has no candle. Binance's USDT price
+sits about 15 bp from Chainlink's USD start price (median, BTC, 2026-11-02),
+and its close-to-open direction matched the settled outcome in 240 of 288
+markets that day, so a backtest measures spot moves from Binance's own price
+at the start, and takes outcomes from Gamma.
 
 ## 3. Kalshi (reference prices, read only)
 

@@ -7,6 +7,8 @@ Endpoints used (docs/DATA-SOURCES.md has the full notes):
   ``closed``, ``tag_slug``, ``end_date_min`` / ``end_date_max``, ``order``;
 * ``GET /markets?clob_token_ids=...`` - markets by outcome token id (open
   ones only, unless ``closed=true``, which returns the closed ones only);
+* ``GET /markets?slug=...`` - markets by slug, up to 100 a request (closed
+  ones only with ``closed=true``; the Up/Down backfill, ``research/updown.py``);
 * ``GET /public-search?q=...`` - text search over events.
 
 Published limits are 300 requests / 10 s for ``/markets`` and 500 / 10 s for
@@ -25,6 +27,7 @@ from trading_polymarket.markets import Market, markets_from_event
 GAMMA_URL = "https://gamma-api.polymarket.com"
 PAGE_LIMIT = 100
 TOKENS_PER_LOOKUP = 20
+SLUGS_PER_LOOKUP = 100
 
 
 def _items(payload: Any, key: str) -> tuple[list[Any], str | None]:
@@ -143,6 +146,23 @@ class GammaClient:
                 return market
         return None
 
+    async def raw_markets_by_slugs(
+        self, slugs: Sequence[str], *, closed: bool | None = True
+    ) -> list[dict[str, Any]]:
+        """The raw markets with these slugs (each with its ``events``), asked
+        for in batches; slugs Gamma does not know are left out."""
+        found: list[dict[str, Any]] = []
+        for start in range(0, len(slugs), SLUGS_PER_LOOKUP):
+            batch = list(slugs[start : start + SLUGS_PER_LOOKUP])
+            payload = await self.http.get_json(
+                self._url(
+                    "/markets", {"slug": batch, "limit": len(batch), "closed": closed}
+                )
+            )
+            items, _ = _items(payload, "markets")
+            found.extend(i for i in items if isinstance(i, dict))
+        return found
+
     async def search_events(
         self, query: str, *, status: str = "active", limit: int = 20
     ) -> list[dict[str, Any]]:
@@ -177,4 +197,10 @@ def resolved_only(markets: Sequence[Market]) -> list[Market]:
     return [m for m in markets if m.resolved]
 
 
-__all__ = ["GAMMA_URL", "GammaClient", "PAGE_LIMIT", "resolved_only"]
+__all__ = [
+    "GAMMA_URL",
+    "PAGE_LIMIT",
+    "SLUGS_PER_LOOKUP",
+    "GammaClient",
+    "resolved_only",
+]

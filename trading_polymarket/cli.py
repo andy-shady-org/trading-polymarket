@@ -11,6 +11,7 @@ these commands collect evidence and look at what the lanes see:
 ``bias``           measure each weather station's day-ahead forecast bias
 ``metars``         append recent METARs to the archive (intraday backtests)
 ``history``        collect resolved markets + price histories
+``updown-history`` collect crypto Up/Down markets: every trade, spot by second
 ``weather-history``collect resolved temperature events + price histories
 ``fed-history``    collect settled Fed meetings on Polymarket and Kalshi
 ``calibrate``      build the favourite lane's calibration table
@@ -35,7 +36,9 @@ from typing import Any
 
 from trading_polymarket import __version__
 from trading_polymarket import pairs as pairs_mod
+from trading_polymarket.clients.data_api import DataApiClient
 from trading_polymarket.clients.http import HttpError
+from trading_polymarket.clients.spot import SpotClient
 from trading_polymarket.config import LANES, PolymarketSettings
 from trading_polymarket.module import PolymarketModule
 from trading_polymarket.research import arb as arb_mod
@@ -43,7 +46,7 @@ from trading_polymarket.research import backtest as bt
 from trading_polymarket.research import bias as bias_mod
 from trading_polymarket.research import fed as fed_mod
 from trading_polymarket.research import history as hist
-from trading_polymarket.research import metar_archive, recorder
+from trading_polymarket.research import metar_archive, recorder, updown
 from trading_polymarket.research import pairs_suggest as suggest_mod
 from trading_polymarket.research import weather_backtest as wbt
 from trading_polymarket.research.records import append_jsonl
@@ -218,6 +221,32 @@ async def cmd_history(args: argparse.Namespace, out: Printer) -> int:
     )
     out(f"{written} markets appended to {args.out}")
     return 0
+
+
+async def cmd_updown_history(args: argparse.Namespace, out: Printer) -> int:
+    module = build_module(args)
+    result = await updown.collect(
+        module.gamma,
+        DataApiClient(module.http),
+        SpotClient(module.http),
+        asset=args.asset,
+        window=args.window,
+        start=updown.parse_day(args.start),
+        end=updown.parse_day(args.end),
+        directory=args.out,
+        concurrency=args.concurrency,
+        progress=out,
+    )
+    out(
+        f"{result.days_written} days written ({result.markets} markets, "
+        f"{result.trades} trades), {result.days_skipped} already in {args.out}"
+        + (
+            f"; not written: {', '.join(result.days_failed)}"
+            if result.days_failed
+            else ""
+        )
+    )
+    return 1 if result.days_failed else 0
 
 
 async def cmd_weather_history(args: argparse.Namespace, out: Printer) -> int:
@@ -456,6 +485,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-markets", type=int, default=2000)
     p.add_argument("--out", default=hist.DEFAULT_HISTORY_PATH)
 
+    p = command("updown-history", "collect crypto Up/Down markets and their trades")
+    p.add_argument("--asset", default="btc", choices=sorted(updown.SPOT_SYMBOLS))
+    p.add_argument("--window", default="5m", choices=sorted(updown.WINDOWS))
+    p.add_argument("--start", required=True, help="YYYY-MM-DD (UTC)")
+    p.add_argument("--end", required=True, help="YYYY-MM-DD (UTC, exclusive)")
+    p.add_argument("--concurrency", type=int, default=6, help="markets read at once")
+    p.add_argument("--out", default=updown.DEFAULT_UPDOWN_DIR)
+
     p = command("weather-history", "collect resolved temperature events")
     p.add_argument("--start", required=True)
     p.add_argument("--end", required=True)
@@ -516,6 +553,7 @@ COMMANDS = {
     "bias": cmd_bias,
     "metars": cmd_metars,
     "history": cmd_history,
+    "updown-history": cmd_updown_history,
     "weather-history": cmd_weather_history,
     "calibrate": cmd_calibrate,
     "fed-history": cmd_fed_history,
