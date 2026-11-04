@@ -45,6 +45,7 @@ orders.
 | FEAT-102 | Full-set scanner: both sides, depth, duration, loop | Research, then an executor | `arb` exists but has never been run; measure whether full-set gaps are frequent, large and lasting |
 | FEAT-103 | Expiry-fade backtest | Research | A cheap test of one more taker rule; low prior |
 | FEAT-146 | Up/Down trade backfill and late-longshot backtest | Research | A profitable wallet's pattern, testable on every trade of past markets without waiting for a recorder. Built (0.4.0); the backtest is **NO-GO** (2026-11-04, [`RESULTS.md`](RESULTS.md)) |
+| FEAT-147 | Up/Down stale quotes after a spot move | Research, then a lane | Second-level prints show a 2–5 s edge after a Binance move, the edge the bot `@vega7` appears to trade; takeable only if we are fast enough |
 
 ### FEAT-101: Up/Down tick recorder and maker study
 * **Class / Priority:** Income (research) · P2
@@ -90,4 +91,23 @@ orders.
 * **Dependencies:** none. **Impact:** closes the question in a day; shares the backfill with FEAT-103, which can now use second-level prints instead of minute prices.
 * **Built (part 2, 0.4.0):** `trading-polymarket updown-backtest` (`research/updown_backtest.py`).
 * **Result (2026-11-04): NO-GO.** The primary rule lost $3,802.34 on 4,500 entries (−16.9% on stake; halves −26.9% and −7.8%; −84.5% without the best 1%); it won 2.07% at an average fill of 2.23 c (p = 0.78). Every descriptive variant lost. Run on the pre-registered data and rule without change; prints after a window's close are not used. Details: [`RESULTS.md`](RESULTS.md).
+
+### FEAT-147: Up/Down stale quotes after a spot move
+* **Class / Priority:** Research, then a lane · P1 · added 2026-11-04.
+* **Goal:** find out whether we can buy the cheap side of a BTC 5-minute Up/Down market in the seconds after Binance moves in its favour, before makers reprice, and whether that earns after fees.
+* **Why:** a study on FEAT-146's backfill (2026-11-04, [`RESULTS.md`](RESULTS.md); in-sample, descriptive). In the last minute, cheap buys (≤ 5 c) with Binance spot at or past the start price toward the bought side returned **+163%** on stake when spot is read 2 s before the print, and **−30%** when it is read 5 s before; every cell loses with spot 5 s old. The wallet `@vega7`, a Claude bot, won 22 of 540 cheap buys where 5-second-old spot predicts 11. This reopens the ledger's "latency trades" entry, which minute data had closed.
+* **Part 1, the recorder (first; decides whether we could take it at all):** `trading-polymarket ticks` (shared with FEAT-101), record-only, on the Mac. It subscribes to Binance's BTCUSDT trade stream (or its market-data mirror) and Polymarket's market WebSocket for the open BTC 5-minute markets (best bid and ask, depth near the top, trades), and writes daily JSONL with local receive times in milliseconds. It measures:
+  - **the timestamp offset:** the data API's trade `timestamp` against the moment the same trade appears on the market WebSocket (the CLOB matches off chain and settles on Polygon; which time the data API reports is not known);
+  - **how long a stale ask lives:** for each signal of the rule below, the time from the Binance trade that met the condition until the side's best ask at or below `cap` + 1 c is gone or repriced;
+  - **our own latency:** Binance's event time against our receive time, plus a round trip to the CLOB's host.
+
+  **Decision:** the lead is takeable only if, in at least half of the signals over at least three days of recording, the stale ask lives longer than our receive delay plus one round trip. If not, FEAT-147 stops there: NO-GO for us, whatever the backtest says.
+* **Part 2, the rule (pre-registered here, 2026-11-04, before any data it is judged on exists):**
+  - **Data:** a fresh window, BTC 5-minute markets of **2026-11-04 to 2026-11-17** (14 days), collected with `updown-history` after the 17th. The study's 30 days found the rule and are not used to judge it.
+  - **Signal:** at the first second `τ` in [240, 300) of a window at which, for an outcome `o`, the Binance one-second close at `τ` is at or past −1.5 bp from the window's first Binance close in `o`'s favour, and `o`'s last print at or before `τ` was at or below `cap` = 5 c.
+  - **Fill:** the first `BUY` print of `o` at or below `cap` + 1 c with notional at least the stake ($5), timestamped in [`τ + L`, `τ + L + 5`] s, at that print's price; none in that interval, no entry. `L` = 2 s, after correcting the data API's timestamp by the median offset part 1 measured. One entry a market, held to settlement, taker fee `0.07 × p(1 − p)` a share; prints after the window's close are never used.
+  - **Pass bar:** return on stake after fees above zero in each 7-day half; above zero with the best 1% of markets removed; win rate above the average fill price at one-sided binomial p < 0.05; not negative at `L` = 3 s (the stress cost); at least 200 entries, or the verdict is INCONCLUSIVE.
+  - **Descriptive only:** `L` in {1, 2, 3, 5} s; `cap` in {3, 5, 10} c; the spot threshold at −4, −1.5 and 0 bp; signals from 120 s instead of 240 s.
+* **Then:** a pass on both parts is still a print replay: whether our order gets the ask is a race paper cannot judge. A lane would start at Stage 2 (live canary, the smallest size) once live execution is built (`LIVE-TRADING.md`). A fail is recorded as NO-GO in `docs/STRATEGY-LEDGER.md`.
+* **Dependencies:** FEAT-101's recorder (part 1 builds it); FEAT-146's collector and backtest (part 2 extends `updown-backtest`). **Impact:** the first lead with a mechanism (stale quotes) and a winner who trades it; also says whether our setup can compete on speed at all.
 

@@ -72,8 +72,10 @@ offline on recorded data, with every fee priced in.
 7. **Polymarket:** day-ahead weather and the favourite–longshot bias are
    NO-GO; the market forecasts better than our models. Intraday weather and
    the Fed lane (Polymarket against Kalshi) are in paper on limited
-   evidence. Sports across venues and crypto Up/Down latency trades have no
-   edge.
+   evidence. Sports across venues has no edge. On crypto Up/Down, taking
+   at market prices loses to the fee (FEAT-146), but second-level prints
+   show a 2–5 s edge after a spot move, a speed race now being measured
+   (FEAT-147, §7).
 
 What carries forward is not a strategy but a **method** (§2), a set of
 **facts about these markets** (§4), a **playbook for the next venue** (§5)
@@ -207,13 +209,14 @@ pre-registered test; without it the idea stays closed.
 | Favourite–longshot bias | Buy favourites 0.80–0.97 near close | 4,454 resolved markets; test 1,403 | −$22 / 5, −$33 / 95, −$147 / 746 | NO-GO | Favourites won less often than priced on this venue | Calibration by category and by event, on a new window |
 | Fed: Polymarket vs Kalshi | Buy Polymarket buckets below Kalshi's price, sell on convergence | 16 meetings, 58 buckets | +$25.08 / 23 (adjusted +$23.15); held to resolution −$2.51 | INCONCLUSIVE (sample-limited); paper `fed-0.2.1` | The PnL is selling into convergence; neither venue forecasts better | Its own Stage 1 GO on 60 positions |
 | Sports across venues | The Fed rule on Polymarket and Kalshi games | Study of 2026-10-30 (project notes, not in a repository): 2,063 live sides; 503 settled games | Median gap 0.5 c, p90 1.0 c; the rule triggers 0 times in major sports | NO-GO (study) | Venues are arbitraged to half a cent; the taker fee is larger | Listing-time gaps in tennis and esports, from recorded books |
-| Crypto Up/Down taker | Lognormal fair value from spot vs the market | Study of 2026-10-30 (project notes; maker figures in trading-polymarket FEAT-101): 2,940 markets (minute data); 45 min of ticks | +20–50% a trade on stale prices; −1% to −12% at the next print; market log-loss 0.30 vs model 0.36 | NO-GO (study) | Minute data hides the repricing; the market is more accurate | — |
+| Crypto Up/Down taker | Lognormal fair value from spot vs the market | Study of 2026-10-30 (project notes; maker figures in trading-polymarket FEAT-101): 2,940 markets (minute data); 45 min of ticks | +20–50% a trade on stale prices; −1% to −12% at the next print; market log-loss 0.30 vs model 0.36 | NO-GO (study) | Minute data hides the repricing; the market is more accurate | Reopened for the seconds after a spot move: FEAT-147 (2026-11-04) |
 | Crypto Up/Down maker (FEAT-101) | Quote only in the phases makers earn | 18,678 trades in 45 min | Makers −0.41 c / −0.07 c a share before the 20% rebate; +3.7 c at 30–60 s left (noisy) | Not started | Needs 24–48 h of ticks; paper cannot judge maker fills | A phase that earns in both halves of two recordings |
 | Crossvenue (any reviewed Polymarket / Kalshi pair) | The Fed rule on pairs a human approves | First `pairs suggest`: 53 candidates, mostly long-dated, with traps a title match cannot see | — | Built; no Stage 0 (no pair approved) | Arbitrary pairs have no history | Approved pairs and a recorded dry run of two weeks or more |
 | Momentum (research) | Buy markets that moved ≥ 8% in the last hour, record attention | Never run | — | Off; no stage | No edge claimed | Its own pre-registered Stage 0 |
 | Full-set scanner (FEAT-102) | `ask(Yes)+ask(No)+fees < 1` | Never run | — | Not started | Legs cannot be bought atomically | ≥ 10 gaps a day of ≥ $5 lasting ≥ 10 s for a week |
 | Expiry fade (FEAT-103) | Buy the cheap side in the last minutes | Not run | — | Not started; prior lower after FEAT-146 | FEAT-146 lost on the cheapest side (≤ 10 c); FEAT-103's band (up to 35 c, spot flat) is not tested | Positive after fees on FEAT-146's trade backfill, confirmed on ticks |
 | Crypto Up/Down late longshot (FEAT-146) | Buy the side at ≤ 5 c from 240 s into a BTC 5-minute window, filled at the next real buy print, held to settlement; the pattern of the wallet `@vega7` (+$33.7K on $81.8K) | Every taker trade of 8,615 BTC 5-minute markets, 2026-10-05 to 11-03; pre-registered | Primary: −$3,802 on 4,500 entries (−16.9% on stake; halves −26.9% / −7.8%; −84.5% without the best 1%); won 2.07% at an average 2.23 c. All 9 other caps (2–10 c) and start times (from 0 to 270 s) lose 17–44% | NO-GO | Cheap sides win slightly less often than priced and the fee is ~7% of the stake; the wallet's profit is selection or luck in a few fat-tailed wins (without its 50 best markets it lost) | A pre-registered condition known at entry (spot against the start price, say) that is positive in both halves of a new window |
+| Crypto Up/Down stale quotes after a spot move (FEAT-147) | Buy a side priced ≤ 5 c within seconds of Binance moving to or past the start price in its favour, before makers reprice; what the bot `@vega7` appears to do | Study of 2026-11-04 on FEAT-146's backfill (in-sample, descriptive): every cheap buy print in the last 3 minutes of 8,615 markets against one-second Binance spot | Last minute, spot at or past the line toward the cheap side: +163% on stake with spot read 2 s before the print, −30% at 5 s, −33% at 10 s; every cell loses with spot 5 s old. `@vega7` won 22 of 540 cheap buys where 5-second-old spot predicts 11 | Lead; pre-registered, not judged | An edge that lasts 2–5 s goes to whoever lifts the stale ask first; prints show someone filled, not that we would | — |
 
 ## 4. What the markets taught us
 
@@ -372,7 +375,6 @@ venue, or says why it is not brought back.
 | Returns from price lists without a sale check | **Everywhere** | Honeypots and taxes look like wins | — | Not brought back |
 | Day-ahead weather, favourite–longshot on Polymarket | Polymarket | The market is better calibrated | Category or event-level calibration on a new window | — (Polymarket lanes) |
 | Major-sports cross-venue gaps | Polymarket / Kalshi | Half a cent; fee is larger | — | — |
-| Crypto Up/Down latency trades | **Everywhere** | An artefact of minute data | — | Not brought back |
 | Buying the cheap side late in crypto Up/Down windows, unconditionally | Polymarket | 4,500 entries at ≤ 5 c lost 16.9%; every cap and start time lost (FEAT-146) | A condition known at entry, pre-registered and positive on a new window | — |
 | Raydium migration sniping | Pump.fun / PumpSwap | Pump.fun graduates migrate to PumpSwap | — | Not brought back (the venue is gone) |
 | Relaxing a holder or creator screen to get more trades | **Everywhere** | Rejected movers lost ~10% a trade against 6% for watched coins: insider pumps | — | — |
@@ -396,6 +398,7 @@ stands now.
 | EVM new pools on chain | trading-evm `evm-1` (record-only, 7 days) | On-chain capture at block speed with sales at fixed ages | A design that passes the design gate on evm-1's capture, for a group scout-2 calls GO |
 | Meteora DBC graduates | trading-scout FEAT-104 | +7.4% a trade on 59 in scout-1's re-reading; creator liquidity can be locked | Whether locked liquidity dumps less, on an on-chain capture |
 | Polymarket intraday weather and Fed | trading-polymarket paper runs | Stage 0 INCONCLUSIVE (data- and sample-limited) | Each lane's own Stage 1 verdict |
+| Crypto Up/Down stale quotes after a spot move | trading-polymarket FEAT-147 | Second-level prints show a 2–5 s edge after a Binance move that minute data hid (it was on §6 as "latency trades: an artefact of minute data" until 2026-11-04) | First our latency against how long stale asks survive, on a recorder; then the pre-registered rule on a fresh window |
 | Learning under a frozen rule (FEAT-105 selector, FEAT-106 crash model) | trading-pump, for any reopened lane | Adaptive rules cut losses | Walk-forward beats the best fixed rule on every capture |
 
 ## 8. The strategy library
@@ -468,3 +471,7 @@ runs a venue's captures (converted to the records by its module:
 - 2026-11-04: §3.5 and §6: crypto Up/Down late longshot (trading-polymarket
   FEAT-146) NO-GO on every taker trade of 30 days; FEAT-103's prior
   lowered.
+- 2026-11-04: §6 "Crypto Up/Down latency trades" (Everywhere) taken off:
+  it was judged on minute data and 45 minutes of ticks, and second-level
+  prints show a 2–5 s edge after a spot move. Now a §3.5 row and a §7 lead
+  (FEAT-147).

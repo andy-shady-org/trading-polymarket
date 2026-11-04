@@ -272,6 +272,12 @@ any lane.
 21. **Empty is not collected.** Store only records that hold the data the
     replay needs, and check coverage per period. *(trading-polymarket TP-4:
     1,190 events stored with empty price series.)*
+22. **A NO-GO holds only at the resolution it was measured at.** An edge
+    that lasts seconds is invisible in minute data; before putting an idea
+    on "do not test again", say what resolution judged it, and judge speed
+    edges on ticks. *(trading-polymarket FEAT-147: Up/Down "latency trades"
+    were closed on minute data; second-level prints showed +163% a trade on
+    2-second-old spot and −30% on 5-second-old spot.)*
 
 ## 3. Paper, replay and parity
 
@@ -554,3 +560,4 @@ any lane.
   verdict on the token (trading-scout SC-7, from scout-2).
 - 2026-11-04: §1 lesson 33 and §3 lesson 17, from trading-polymarket
   FEAT-146.
+- 2026-11-04: §2 lesson 22, from trading-polymarket FEAT-147.
