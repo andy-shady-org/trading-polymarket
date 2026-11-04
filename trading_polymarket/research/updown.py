@@ -308,6 +308,24 @@ def days(start: date, end: date) -> list[date]:
     return [start + timedelta(days=i) for i in range((end - start).days)]
 
 
+def _check(asset: str, window: str) -> None:
+    if asset not in SPOT_SYMBOLS:
+        raise ValueError(f"unknown asset {asset!r} (one of {', '.join(SPOT_SYMBOLS)})")
+    if window not in WINDOWS:
+        raise ValueError(f"unknown window {window!r} (one of {', '.join(WINDOWS)})")
+
+
+def _tally(
+    total: CollectResult, day: date, result: CollectResult, say: Progress
+) -> None:
+    total.days_written += 1
+    total.markets += result.markets
+    total.unsettled += result.unsettled
+    total.trades += result.trades
+    unsettled = f", {result.unsettled} not settled" if result.unsettled else ""
+    say(f"{day}: {result.markets} markets, {result.trades} trades{unsettled}")
+
+
 async def collect(
     gamma: GammaClient,
     data: DataApiClient,
@@ -324,10 +342,7 @@ async def collect(
 ) -> CollectResult:
     """Every day in ``[start, end)`` that is over and not yet on disk (a day
     still running is left out: its last markets have not settled)."""
-    if asset not in SPOT_SYMBOLS:
-        raise ValueError(f"unknown asset {asset!r} (one of {', '.join(SPOT_SYMBOLS)})")
-    if window not in WINDOWS:
-        raise ValueError(f"unknown window {window!r} (one of {', '.join(WINDOWS)})")
+    _check(asset, window)
     total = CollectResult()
     say = progress or _quiet
     moment = time.time() if now is None else now
@@ -353,12 +368,7 @@ async def collect(
             total.days_failed.append(day.isoformat())
             say(f"{day}: not written ({exc})")
             continue
-        total.days_written += 1
-        total.markets += result.markets
-        total.unsettled += result.unsettled
-        total.trades += result.trades
-        unsettled = f", {result.unsettled} not settled" if result.unsettled else ""
-        say(f"{day}: {result.markets} markets, {result.trades} trades{unsettled}")
+        _tally(total, day, result, say)
     return total
 
 

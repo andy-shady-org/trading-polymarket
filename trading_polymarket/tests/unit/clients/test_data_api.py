@@ -26,7 +26,8 @@ def client(transport: FakeTransport) -> DataApiClient:
 
 def test_a_row_is_read_or_refused() -> None:
     assert TradePrint.from_api(row(5)) == TradePrint(5.0, 1, "BUY", 0.04, 25.0, "0xabc")
-    assert TradePrint.from_api(row(5, proxy_wallet=None)).wallet == ""  # type: ignore[union-attr]
+    anonymous = TradePrint.from_api(row(5, proxy_wallet=None))
+    assert anonymous is not None and anonymous.wallet == ""
     assert TradePrint.from_api(row(5, side="HOLD")) is None
     assert TradePrint.from_api(row(5, price="x")) is None
     assert TradePrint.from_api({"side": "BUY"}) is None

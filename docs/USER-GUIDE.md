@@ -4,7 +4,7 @@ trading-polymarket plugs Polymarket into trading-core. It reads markets,
 order books, forecasts, observations and Kalshi's quotes from free public
 APIs, decides what to buy in independent **lanes**, simulates fills against
 the live order book (paper) and redeems positions when markets resolve. Live
-order placement is not built in 0.3.0: the path to real money goes through
+order placement is not built in 0.4.0: the path to real money goes through
 the capital gate in [`dev/RELEASE-GATE.md`](dev/RELEASE-GATE.md), whose §1
 says where each lane stands today.
 

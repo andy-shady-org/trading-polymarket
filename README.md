@@ -17,7 +17,7 @@ The Polymarket module for trading-core: free market data (Kalshi's quotes
 included, read only), book-walking paper fills with real fees, settlement at
 resolution, independent lanes, and the research tools that decide — with
 pre-registered verdicts — whether a lane is allowed near money. Version
-0.3.0; needs trading-core `>=0.3.0,<0.8` (tested on 0.7.0).
+0.4.0; needs trading-core `>=0.3.0,<0.8` (tested on 0.7.0).
 
 ## What it does
 
@@ -34,7 +34,7 @@ Stages are the capital gate's (0 Evidence, 1 Paper, 2 Live canary, 3
 Scale-up); the evidence and the runs in progress:
 [`docs/dev/RELEASE-GATE.md` §1](docs/dev/RELEASE-GATE.md#1-current-status).
 Every data source is free and keyless ([`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md)).
-Live order placement is not built in 0.3.0 ([`docs/LIVE-TRADING.md`](docs/LIVE-TRADING.md)).
+Live order placement is not built in 0.4.0 ([`docs/LIVE-TRADING.md`](docs/LIVE-TRADING.md)).
 
 ## Install and run
 

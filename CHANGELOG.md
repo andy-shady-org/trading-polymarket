@@ -9,9 +9,21 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+## 0.4.0: crypto Up/Down research (2026-11-04)
+
+Two research commands for crypto Up/Down markets (FEAT-146); no lane,
+setting or fill changes, so no run's result changes. Tested on
+trading-core `v0.7.0`. The backtest's result, NO-GO, is in
+[`docs/dev/RESULTS.md`](docs/dev/RESULTS.md). Release record:
+[`docs/dev/releases/0.4.0.md`](docs/dev/releases/0.4.0.md).
+
 ### Added
 - `trading-polymarket updown-history` (FEAT-146, first part): collects crypto Up/Down markets of one asset and window, a day at a time, with every trade to the second (Polymarket's data API, `/v2/trades`), each market's outcome and Chainlink start and end prices (Gamma), and one-second spot (Binance's market-data mirror). Days are written whole and the command is resumable. New clients `clients/data_api.py` and `clients/spot.py`; `GammaClient.raw_markets_by_slugs`.
 - `trading-polymarket updown-backtest` (FEAT-146, second part): replays the pre-registered late-longshot rule on the collected trades (`research/updown_backtest.py`): the primary rule and the descriptive grid, each judged by the pre-registered bar, and the primary rule's trades as trading-core audit records.
+
+### Docs
+- The runtime folder is `runtimes/polymarket` (it was `runtime-trading` until the repository split of 2026-11-02); `docs/dev/RUNBOOK.md` §9 runs the research commands from a release copy.
+- FEAT-146's result in `docs/dev/RESULTS.md`; `STRATEGY-LEDGER.md` and `LESSONS.md` copied from trading-core.
 
 ## 0.3.0: trading-core 0.7.0 and trusted loading (2026-11-04)
 

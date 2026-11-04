@@ -11,7 +11,7 @@ A run is `<name>-<n>`: `weather-1`, `fed-1`, then `weather-2`, … `<name>` says
 what the run is for (here, the lane it judges); `<n>` counts up per name and
 is never reused, even for a run that was stopped early. Its config is
 `configs/<run>.json` and every file it writes is in `data/<run>/`, both in
-runtime-trading.
+runtimes/polymarket.
 
 ## 2. Runs before the standard
 
