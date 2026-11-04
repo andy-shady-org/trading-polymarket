@@ -6,27 +6,19 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 1. Now
 
-- [ ] **Runs:** `weather-0.2.1` and `fed-0.2.1` **stopped** on 2026-11-03
-      at 05:57 UTC (a clean stop of both, about 3 d 16 h after their start;
-      weather 16 positions closed, net −$68.46, 3 open; fed 2 closed, net
-      −$0.21). Restart them on the same release copy and configs, so they
-      keep their pre-registration (a restart resumes from the status file;
-      the gap is noted in the release record, not filled), or close them
-      and pre-register `weather-1` and `fed-1` on `v0.3.0`. While they run:
-      the daily check ([`RUNBOOK.md` §4](RUNBOOK.md#4-daily-check-5-minutes))
-      and `metars` in cron. Read each out when it has its positions (weather 150, about
-      seven weeks; fed 60; neither before 3 weeks): verdict into
-      [`releases/0.2.1.md`](releases/0.2.1.md#read-out), the top of
-      [`RESULTS.md`](RESULTS.md) and [`RELEASE-GATE.md` §1](RELEASE-GATE.md#1-current-status).
-- [ ] **Release 0.2.1:** record the smoke run and the kill-and-restart drill
-      in [`releases/0.2.1.md`](releases/0.2.1.md) (both still "pending"
-      there).
+- [ ] **Runs:** `weather-1` and `fed-1` (v0.4.0) are pre-registered
+      ([`runs/weather-1.md`](runs/weather-1.md), [`runs/fed-1.md`](runs/fed-1.md)).
+      First the 0.4.0 smoke run and restart drill (`configs/smoke-0.4.0.json`,
+      recorded in `weather-1.md`), then start both. While they run: the daily
+      check ([`RUNBOOK.md` §4](RUNBOOK.md#4-daily-check-5-minutes)) and
+      `metars` in cron. Read each out when it has its positions (weather 150,
+      about seven weeks; fed 60; neither before 3 weeks).
 - [ ] **CI:** add the `TRADING_CORE_TOKEN` secret and run the matrix,
-      including on the `v0.2.1` tag ([`TESTING.md`](TESTING.md#3-ci)).
+      including on the `v0.4.0` tag ([`TESTING.md`](TESTING.md#3-ci)).
 
 ## 2. Next
 
-- [ ] **Release `v0.4.0`** (built on `release/v0.4.0`, [`releases/0.4.0.md`](releases/0.4.0.md); `v0.3.0` was tagged on 2026-11-04 and never installed in the runtime): CI on the tag (the `TRADING_CORE_TOKEN` secret), pip-audit and the package build, merge, signed tag; then `bin/install-release.sh v0.7.0 v0.4.0` in `runtimes/polymarket` (which has `allowed_signers`), so later Up/Down collections run from a tagged copy ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)); FEAT-146's backtest is not run again
+- [ ] **Release `v0.4.0`** (tagged and installed 2026-11-04): pip-audit and the package build, and CI on the tag ([`releases/0.4.0.md`](releases/0.4.0.md))
 - [ ] **Evidence:** re-run `weather-history --start 2026-08-01` once to pick
       up the ~60 events the first collection did not reach (it is
       resumable).
@@ -43,6 +35,9 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 - [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the tick recorder, 24–48 h, then the maker study), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
 
 ## 3. Later
+
+- [ ] **FEAT-149** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-149-library-rows-from-polymarkets-data-lane-rows)): `lane-rows`, so trading-core's sweep covers Polymarket's history; with the price-dependent fee in trading-core's sweep.
+- [ ] **FEAT-153** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-153-liquidity-rewards-scan-rewards-scan)): run `rewards-scan` daily for a few days, pick clean, quiet rewarded markets and fold them into the maker study (FEAT-101): record their books for a day and measure adverse selection before believing any estimate.
 
 ### 3.1 Weather lane
 

@@ -27,3 +27,7 @@ they shipped in. This file is appended to, never edited back.
 ## Up/Down research (2026-11-04, 0.4.0)
 
 - [x] **FEAT-146** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)): `updown-history` collected every taker trade of 8,615 BTC 5-minute markets (2026-10-05 to 11-03); `updown-backtest` ran the pre-registered late-longshot rule on them: **NO-GO** (−16.9% on stake over 4,500 entries; [`RESULTS.md`](RESULTS.md)). Recorded in trading-core's master ledger and lessons.
+
+## Runs (2026-11-04)
+
+- [x] **`weather-0.2.1` and `fed-0.2.1` closed** (stopped 2026-11-03 05:57 UTC; closed early, not judged: 16 and 2 positions; [`releases/0.2.1.md`](releases/0.2.1.md#read-out)). Their 0.2.1 smoke run and drill were never recorded. Replaced by `weather-1` and `fed-1` on `v0.4.0`, pre-registered with the same lane settings ([`runs/README.md`](runs/README.md)).

@@ -9,6 +9,9 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+### Added
+- `trading-polymarket rewards-scan` (FEAT-153): every market paying liquidity rewards today, its terms, the shares already resting inside its reward spread, and a one-snapshot estimate of a two-sided quote's reward, ranked, with ended markets and wide books flagged (`research/rewards.py`); `ClobClient.rewards_markets`, `GammaClient.raw_markets_by_condition_ids`.
+
 ## 0.4.0: crypto Up/Down research (2026-11-04)
 
 Research commands for crypto Up/Down markets (FEAT-146, FEAT-147); no

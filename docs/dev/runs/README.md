@@ -27,9 +27,14 @@ their release record, and they keep the names they were given:
 | `weather-0.2.1` | weather | 0.2.1 | [`../releases/0.2.1.md`](../releases/0.2.1.md) |
 | `fed-0.2.1` | fed | 0.2.1 | [`../releases/0.2.1.md`](../releases/0.2.1.md) |
 
-The next counted runs are `weather-1` and `fed-1`.
+## 3. Runs under the standard
 
-## 3. The template
+| Run | Lane | Release | Status | Record |
+|---|---|---|---|---|
+| `weather-1` | weather | 0.4.0 | pre-registered 2026-11-04; starts after the 0.4.0 smoke run | [`weather-1.md`](weather-1.md) |
+| `fed-1` | fed | 0.4.0 | pre-registered 2026-11-04; starts after the 0.4.0 smoke run | [`fed-1.md`](fed-1.md) |
+
+## 4. The template
 
 The top half is written and committed **before the run starts** and is
 never edited after; the read-out is added when the run ends. A correction is

@@ -158,6 +158,27 @@ trading-polymarket updown-backtest --rule stale --timestamp-offset 2.2 \
   back, Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC
   (25 windows), so that day holds 263 markets, not 288.
 
+## 4c. Liquidity rewards (FEAT-153)
+
+```bash
+trading-polymarket rewards-scan --limit 300           # data/rewards/rewards-<UTC time>.jsonl
+```
+
+Polymarket pays makers a daily pool per market for resting orders inside a
+reward spread at a minimum size, scored `((v − s) / v)² × size` and sampled
+each minute; with the midpoint in [0.10, 0.90] one side earns a third,
+outside it only two sides earn. `rewards-scan` lists every rewarded market,
+reads the best paid ones' books, and estimates a two-sided quote's share of
+the pool against the shares already inside the spread. It is **one
+snapshot**: the book is scored as if it were one maker, every resting share
+counts (orders below the minimum do not score, so the competition is
+overstated), the quote is assumed to rest all day, and adverse selection
+is ignored. Use it to choose markets for the maker study (FEAT-101), not
+to size a quote. On 2026-11-04, 107 of the 300 best-paid markets had ended
+(the US midterms, awaiting results) and 51 had books wider than twice their
+reward spread: rewards keep paying where quoting means trading against
+people who know the outcome.
+
 ## 5. Dry-run recording and arbitrage logging (during a paper run)
 
 ```bash

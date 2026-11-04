@@ -25,6 +25,7 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 | Date | Data | Lane | Config | Positions | Net | Verdict |
 |---|---|---|---|---|---|---|
+| 2026-11-04 | `weather-0.2.1`, `fed-0.2.1` (paper, closed early) | weather, fed | pre-registered 0.2.1 configs | 16 / 2 | −$67.27 / −$0.29 adjusted | not judged: 16 of 150 and 2 of 60 positions; closed in favour of `weather-1`, `fed-1` |
 | 2026-11-04 | a 6-minute `ticks` recording (2 markets, 1,302 fills); FEAT-146's 30 days | FEAT-147's timing, corrected (study) | pre-registered rule, `--timestamp-offset 2.2`, in-sample | 959 | −4.3% on stake | none: a study; the "2 s" edge was in the data API's time, 2.2 s after the fill |
 | 2026-11-04 | `data/updown` (FEAT-146's 30 days) and one-second Binance spot | crypto Up/Down: who wins, and cheap buys after a spot move (studies) | – | – | takers −$3.88M in total | none: studies; the spot-move lead is pre-registered as FEAT-147 |
 | 2026-11-04 | `data/updown`, every taker trade of 8,615 BTC 5-minute Up/Down markets, 5 Oct – 3 Nov | crypto Up/Down late longshot (FEAT-146; research, no lane) | pre-registered: ≤ 5 c from 240 s, $5, next buy print, held to settlement | 4,500 | −$3,802.34 | NO-GO (all three checks fail; the 9 descriptive variants all lose) |
@@ -40,6 +41,15 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
+
+### 2026-11-04 — `weather-0.2.1` and `fed-0.2.1` closed early, not judged
+
+Both stopped on 2026-11-03 and were closed on 2026-11-04 in favour of
+`weather-1` and `fed-1` on `v0.4.0`, with the same lane settings. Weather:
+16 closed, 4 won, adjusted −$67.27, 1 of 4 days positive; fed: 2 closed,
+adjusted −$0.29. Each is NO-GO on every check of its rules but far short of
+its sample (150 and 60), so neither judges its lane. Details and the
+weather run's open positions: [`releases/0.2.1.md`](releases/0.2.1.md#read-out).
 
 ### 2026-11-04 — FEAT-147's timing, corrected
 

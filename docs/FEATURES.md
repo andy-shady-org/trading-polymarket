@@ -93,6 +93,7 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 | Up/Down backtest (`updown-backtest`) | 0.4.0 | FEAT-146's late-longshot rule (`--rule longshot`) and FEAT-147's stale-quote rule (`--rule stale`), each with its pre-registered grid and verdict, on the collected trades; the primary rule's trades as audit records |
 | Book and spot recorder (`ticks`) | 0.4.0 | The current and next Up/Down markets' best bid and ask, every fill (with its transaction hash) and the asset's Binance trades, to the millisecond, with round trips to the CLOB (FEAT-147, FEAT-101's recorder) |
 | Recording report (`ticks-report`) | 0.4.0 | Our receive delay and round trip, the data API's timestamp offset, how long stale asks live after a spot move, and FEAT-147's part-1 decision |
+| Liquidity-rewards scan (`rewards-scan`) | Unreleased | Every market paying liquidity rewards, its terms (daily pool, minimum size, reward spread), the shares already resting inside its spread, and a one-snapshot estimate of a quote's reward, ranked; ended markets and wide books flagged (FEAT-153) |
 | Calibration (`calibrate`) | 0.1.0 | The favourite lane's table (price × hours bins, shrunk win rates) with a train/test split and its sha256 |
 | Favourite backtest (`backtest favourite`) | 0.1.0 | Calibrates before a split date, replays after it |
 | Weather collector (`weather-history`) | 0.1.0 | Resolved temperature events with every bucket's outcome and prices, resumable |
@@ -107,10 +108,10 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 
 ## 7. Command line
 
-`trading-polymarket` (since 0.1.0) has sixteen commands: `scan`, `weather`,
-`record`, `arb`, `bias`, `metars`, `history`, `weather-history`,
-`updown-history`, `updown-backtest`, `ticks`, `ticks-report`, `fed-history`,
-`calibrate`, `backtest` and `pairs`. An API failure is
+`trading-polymarket` (since 0.1.0) has seventeen commands: `scan`,
+`weather`, `record`, `arb`, `bias`, `metars`, `history`, `weather-history`,
+`updown-history`, `updown-backtest`, `ticks`, `ticks-report`,
+`rewards-scan`, `fed-history`, `calibrate`, `backtest` and `pairs`. An API failure is
 reported as `error: HTTP …` with exit code 2 (0.2.0). Every flag:
 [`CLI.md`](CLI.md).
 

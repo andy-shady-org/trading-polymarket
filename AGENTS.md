@@ -88,6 +88,7 @@ in each (the master copies are trading-core's; its
 - **[EVIDENCE] A Verdict Has A Resolution:** Up/Down "latency trades" were closed on minute data; second-level prints showed +163% on 2-second-old spot and −30% on 5-second-old (FEAT-147). Say what resolution judged an idea before calling it dead, and judge speed edges on ticks.
 - **[API] The Data API's Time Is Not The Fill's:** `data-api /v2/trades` `timestamp` runs a median 2.2 s after the fill on the market WebSocket (FEAT-147). A study that lagged spot by it called an instant reaction "2 s late" and found an edge that vanished once corrected. Measure a timestamp against the fill's own feed (`ticks-report`) before timing anything from it.
 - **[API] The Market WebSocket Is A Firehose:** one BTC 5-minute market sends ~850 `price_change` events a second, 98% of them size changes at an unchanged best price. Keep the book in memory and write only what the study needs.
+- **[REWARDS] Rewards Pay Where Quoting Is A Trap:** of the 300 best-paid rewarded markets on 2026-11-04, 107 had ended (elections awaiting results) and 51 had books wider than twice their reward spread. A reward pool says nothing about adverse selection; flag ended markets and wide books, and never rank a snapshot estimate as earnings.
 - **[API] Missing Up/Down Windows Are Real:** Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC on 2026-11-01 (US clocks went back). A day short of 288 is not always a collection gap; check the slugs on Gamma.
 
 ## Project Overview
