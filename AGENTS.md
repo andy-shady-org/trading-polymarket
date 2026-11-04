@@ -85,6 +85,7 @@ in each (the master copies are trading-core's; its
 - **[SIZING] Kelly Assumes Independence:** bets settled on one day share its weather and thesis; size them as one bet, or cap them per day (TP-12).
 - **[EVIDENCE] A Wallet's Record Is Not Its Rule:** `@vega7` made +$33.7K buying Up/Down sides under 5 c late in the window; the same rule on all 8,615 markets of 30 days lost 16.9% (FEAT-146). Replay a wallet's pattern on the whole population before believing it.
 - **[DATA] Cut A Replay At The Close:** Up/Down markets keep printing for a minute or so after the window ends, with the loser near zero (about 1,200 prints a day). A replay uses only prints before the close, or the rule's own deadline.
+- **[EVIDENCE] A Verdict Has A Resolution:** Up/Down "latency trades" were closed on minute data; second-level prints showed +163% on 2-second-old spot and −30% on 5-second-old (FEAT-147). Say what resolution judged an idea before calling it dead, and judge speed edges on ticks.
 - **[API] Missing Up/Down Windows Are Real:** Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC on 2026-11-01 (US clocks went back). A day short of 288 is not always a collection gap; check the slugs on Gamma.
 
 ## Project Overview

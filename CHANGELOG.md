@@ -23,7 +23,7 @@ trading-core `v0.7.0`. The backtest's result, NO-GO, is in
 
 ### Docs
 - The runtime folder is `runtimes/polymarket` (it was `runtime-trading` until the repository split of 2026-11-02); `docs/dev/RUNBOOK.md` §9 runs the research commands from a release copy.
-- FEAT-146's result in `docs/dev/RESULTS.md`; `STRATEGY-LEDGER.md` and `LESSONS.md` copied from trading-core.
+- FEAT-146's result in `docs/dev/RESULTS.md`, with two studies on its data (who wins in these markets; cheap buys after a spot move) and FEAT-147 proposed and pre-registered from them; `STRATEGY-LEDGER.md` and `LESSONS.md` copied from trading-core.
 
 ## 0.3.0: trading-core 0.7.0 and trusted loading (2026-11-04)
 

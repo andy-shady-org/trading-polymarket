@@ -25,6 +25,7 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 | Date | Data | Lane | Config | Positions | Net | Verdict |
 |---|---|---|---|---|---|---|
+| 2026-11-04 | `data/updown` (FEAT-146's 30 days) and one-second Binance spot | crypto Up/Down: who wins, and cheap buys after a spot move (studies) | – | – | takers −$3.88M in total | none: studies; the spot-move lead is pre-registered as FEAT-147 |
 | 2026-11-04 | `data/updown`, every taker trade of 8,615 BTC 5-minute Up/Down markets, 5 Oct – 3 Nov | crypto Up/Down late longshot (FEAT-146; research, no lane) | pre-registered: ≤ 5 c from 240 s, $5, next buy print, held to settlement | 4,500 | −$3,802.34 | NO-GO (all three checks fail; the 9 descriptive variants all lose) |
 | 2026-10-30 | `weather-intraday.jsonl`, 757 events 12–27 Oct | weather (late-day model study) | candidate means, σ fitted per half | – | – | none: a study; the TP-11 model it chose is replayed in [`releases/0.2.1.md`](releases/0.2.1.md) |
 | 2026-10-29 | `fed.jsonl`, 17 meetings Dec 2024 – Oct 2026 | fed | default `fed`, half-spread 0.01 | 23 | +$25.08 | NO-GO on `min_positions` only → Stage 0 INCONCLUSIVE (sample-limited) |
@@ -38,6 +39,52 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
+
+### 2026-11-04 — crypto Up/Down: who wins, and a speed edge (studies)
+
+**Questions.** If every backtest is NO-GO, who makes the money? And what
+does the bot `@vega7` see when it buys cheap? Both on FEAT-146's 30 days
+(every taker trade, valued at settlement after the taker fee); in-sample
+and descriptive.
+
+**Who wins.**
+- Takers as a whole lost $3.88M: $181K before fees (0.09% of the $194M
+  they traded) and $3.70M in fees (1.9%). Makers made the $181K, plus the
+  20% fee rebate (about $740K) and liquidity rewards. Prices are almost
+  exactly fair; a taker rule needs an edge above ~2% of notional to break
+  even.
+- 12,212 of 47,368 taker wallets (25.8%) were net positive, +$2.03M in
+  total; the rest lost $5.91M. Of the 3,179 wallets with 50 or more
+  markets in each half, 34.7% of first-half winners were positive in the
+  second half against 23.1% of first-half losers: some skill, but the
+  first half's top 50 made $207,538 and then lost $84,114.
+
+**Cheap buys against spot.** Every buy print at or below 5 c from 120 s to
+the close, one per market, outcome and cell, by Binance spot's distance
+from the window's start toward the bought side:
+
+| Last minute, spot at or past the line | Won | Price | Return |
+|---|---|---|---|
+| spot read 2 s before the print | 5.6% | 2.9 c | +163% |
+| 5 s before | 2.9% | 3.3 c | −30% |
+| 10 s before | 2.8% | 3.4 c | −33% |
+
+With spot 5 or 10 s old every cell loses; read at the print's own second
+(lag 0) the edge looks larger still, but that second may hold spot the
+buyer could not have seen. `@vega7` won 22 of its 540 cheap buys; the
+cells it bought in predict 16.9 wins with 2-second-old spot, 11.4 with
+5-second-old spot. Its entries come right after a move toward its side.
+
+**Reading.** The money in these markets goes to makers, and among takers to
+speed: cheap asks go stale for a few seconds after BTC moves, and the
+first to lift them wins. Minute data cannot see this, which is how the
+ledger's "latency trades" entry was closed. The rule found here is
+pre-registered as FEAT-147 and judged on a fresh window, after a recorder
+measures whether we are fast enough
+([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-147-updown-stale-quotes-after-a-spot-move)).
+About 4% of trade rows are exact repeats (runs of up to six or more,
+mostly at mid prices: bots repeating orders, most likely; the collector
+does not keep transaction hashes).
 
 ### 2026-11-04 — crypto Up/Down late longshot (FEAT-146): NO-GO
 
