@@ -15,12 +15,14 @@ Which runs are going now: [`RELEASE-GATE.md` §1](RELEASE-GATE.md#1-current-stat
 ## 1. The runtime folder
 
 Counted runs never run from the working repositories. They run from
-`~/projects/git/trading/runtime-trading`, a folder beside them that holds
+`~/projects/git/trading/runtimes/polymarket`, a folder beside them that holds
 tagged copies of trading-core and trading-polymarket, one venv per release,
-one config per run and one data folder per run:
+one config per run and one data folder per run. It was called
+`runtime-trading` until the repository split of 2026-11-02; records written
+before then use that name.
 
 ```text
-runtime-trading/
+runtimes/polymarket/
 ├── bin/
 │   ├── install-release.sh   # bin/install-release.sh <core tag> <module tag>: clones both tags, builds the venv
 │   └── run.sh               # bin/run.sh <config> <venv>: starts one run in this terminal
@@ -32,7 +34,7 @@ runtime-trading/
 └── README.md                # the runtime's own notes
 ```
 
-The scripts and the runtime's `README.md` live in runtime-trading, not in
+The scripts and the runtime's `README.md` live in runtimes/polymarket, not in
 this repository. What they do:
 
 - **`bin/install-release.sh v0.2.2 v0.2.1`** clones trading-core `v0.2.2` and
@@ -62,7 +64,7 @@ Before the first counted run of a release, check that the release copy sees
 live data:
 
 ```bash
-cd ~/projects/git/trading/runtime-trading
+cd ~/projects/git/trading/runtimes/polymarket
 bin/install-release.sh v0.2.2 v0.2.1
 bin/run.sh configs/smoke-0.2.1.json polymarket-v0.2.1      # writes data/smoke/; stop with Ctrl-C
 ```
@@ -86,7 +88,7 @@ the smoke run. A smoke run is never judged.
    `audit_log_path`, `event_log_path`, `log_file`) into `data/<run>/`:
 
    ```bash
-   cd ~/projects/git/trading/runtime-trading
+   cd ~/projects/git/trading/runtimes/polymarket
    cp ../trading-polymarket/configs/paper.example.json configs/weather-1.json   # then edit the four paths
    cp ../trading-polymarket/configs/verdict/weather.json configs/verdict/weather-1.json
    venvs/polymarket-v0.2.1/bin/trading-core check --config configs/weather-1.json
@@ -103,7 +105,7 @@ the smoke run. A smoke run is never judged.
 
 ```bash
 tmux new -s weather
-cd ~/projects/git/trading/runtime-trading
+cd ~/projects/git/trading/runtimes/polymarket
 bin/run.sh configs/weather-1.json polymarket-v0.2.1
 ```
 
@@ -222,3 +224,24 @@ run: press `Ctrl-C` in the middle of a cycle, then start the same command
 again with `RESUME=1`. Positions, their cost basis and the audit trail must
 continue; a market that resolved meanwhile must still redeem. Record the
 result in the release record.
+
+## 9. Research from a release copy
+
+Research commands need no run folder, guard or `RUN.txt`, but running them
+from the installed release records which code made the data. From 0.4.0,
+the crypto Up/Down backfill and its backtest (FEAT-146; their files in
+`data/updown/` and `data/backtest/`):
+
+```bash
+cd ~/projects/git/trading/runtimes/polymarket
+bin/install-release.sh v0.7.0 v0.4.0
+V=venvs/polymarket-v0.4.0/bin
+$V/trading-polymarket updown-history --start 2026-10-05 --end 2026-11-04 --out data/updown
+$V/trading-polymarket updown-backtest --start 2026-10-05 --end 2026-11-04 \
+    --input data/updown --out data/backtest/updown.jsonl
+```
+
+A BTC 5-minute day is about 7 MB and three minutes to collect; a stopped
+collection resumes where it left off. The install also checks every
+`configs/paper-*.json` against the new release; a pilot keeps the venv
+named on its own `bin/run.sh` line.

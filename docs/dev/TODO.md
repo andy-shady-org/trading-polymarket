@@ -26,7 +26,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 2. Next
 
-- [ ] **Release `v0.3.0`** (built on `release/v0.3.0`, [`releases/0.3.0.md`](releases/0.3.0.md)): pip-audit and the package build, CI on the tag (the `TRADING_CORE_TOKEN` secret), a smoke run and the restart drill on the release copy, merge, signed tag; `runtime-trading` needs `allowed_signers` with the signing key (trading-core's `SECURITY.md`, "Signed releases")
+- [ ] **Release `v0.4.0`** (built on `release/v0.4.0`, [`releases/0.4.0.md`](releases/0.4.0.md); `v0.3.0` was tagged on 2026-11-04 and never installed in the runtime): CI on the tag (the `TRADING_CORE_TOKEN` secret), pip-audit and the package build, merge, signed tag; then `bin/install-release.sh v0.7.0 v0.4.0` in `runtimes/polymarket` (which has `allowed_signers`), so later Up/Down collections run from a tagged copy ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)); FEAT-146's backtest is not run again
 - [ ] **Evidence:** re-run `weather-history --start 2026-08-01` once to pick
       up the ~60 events the first collection did not reach (it is
       resumable).
@@ -38,7 +38,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
       METARs during a run (`trading-polymarket record`) and add an intraday
       backtest from them.
 
-- [ ] **FEAT-146** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)): the late-longshot backtest on the 30-day backfill, judged by the pre-registered bar; then FEAT-103 on the same data.
+- [ ] **FEAT-103 on FEAT-146's backfill** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-103-expiry-fade-backtest)): the expiry fade (cheap side up to 35 c, spot flat) on the 30 days of trade prints, pre-registered first; its prior is lower after FEAT-146's NO-GO.
 - [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the tick recorder, 24–48 h, then the maker study), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
 
 ## 3. Later

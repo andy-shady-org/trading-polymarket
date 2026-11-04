@@ -24,3 +24,6 @@ they shipped in. This file is appended to, never edited back.
 
 - [x] **`v0.3.0` on trading-core `v0.7.0`, with trusted loading (trading-core 0.3.0, FEAT-89 / FEAT-90; this repository is under its Needed by):** `v0.3.0` declares `trading-core>=0.3.0,<0.8` (`<0.6` on `main` since 2026-11-03) and is tagged with `git tag -s`; `runtime-trading` has a `modules.toml` (written 2026-10-31) and needs `allowed_signers` with the signing key (trading-core's `SECURITY.md`, "Signed releases"). Its `bin/install-release.sh` already refuses an unsigned tag (`ALLOW_UNSIGNED=1` for the old ones). *(the code part, on `release/v0.3.0`; tested on trading-core `v0.7.0`; the tag and `allowed_signers` are the release's, in `TODO.md`)*
 
+## Up/Down research (2026-11-04, 0.4.0)
+
+- [x] **FEAT-146** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)): `updown-history` collected every taker trade of 8,615 BTC 5-minute markets (2026-10-05 to 11-03); `updown-backtest` ran the pre-registered late-longshot rule on them: **NO-GO** (−16.9% on stake over 4,500 entries; [`RESULTS.md`](RESULTS.md)). Recorded in trading-core's master ledger and lessons.

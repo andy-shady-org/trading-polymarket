@@ -121,6 +121,29 @@ trading-polymarket pairs suggest                     # data/pairs_suggested.json
   someone pairs them. The `crossvenue` lane's evidence is forward only
   (`record --lane crossvenue`, then paper).
 
+## 4b. Crypto Up/Down markets (FEAT-146)
+
+```bash
+trading-polymarket updown-history --start 2026-10-05 --end 2026-11-04   # data/updown (resumable)
+trading-polymarket updown-backtest --start 2026-10-05 --end 2026-11-04
+trading-core-audit pnl --path data/backtest/updown.jsonl
+```
+
+- **updown-history**: every settled 5-minute (or 15-minute) market of an
+  asset, a UTC day at a time: the outcome, Chainlink's start and end prices,
+  every taker trade to the second and one-second Binance spot. A BTC
+  5-minute day is about 7.7 MB gzipped and three minutes to read; it can be
+  stopped and run again.
+- **updown-backtest**: the late-longshot rule pre-registered in
+  [`dev/PROPOSED-FEATURES.md`](dev/PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)
+  (FEAT-146). A fill is the next real buy print after the signal, never the
+  signal itself, and nothing after the window's close counts: the market
+  keeps trading for a minute or so after it, when the outcome is all but
+  known.
+- **Missing windows are real.** On 2026-11-01, the night US clocks went
+  back, Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC
+  (25 windows), so that day holds 263 markets, not 288.
+
 ## 5. Dry-run recording and arbitrage logging (during a paper run)
 
 ```bash

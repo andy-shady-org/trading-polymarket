@@ -13,7 +13,7 @@ and the standard disagree, the standard wins and the page is fixed.
 | Page | What it holds |
 |---|---|
 | [`RELEASE-GATE.md`](RELEASE-GATE.md) | §1 current status (the only place it lives), §2 release gate, §3 capital gate and stages, §4 this repository's gates, §5 release record template, §6 versioning |
-| [`RUNBOOK.md`](RUNBOOK.md) | Operating a run: the runtime-trading folder, the smoke run, a counted run, the daily check, incidents, the read-out, drills |
+| [`RUNBOOK.md`](RUNBOOK.md) | Operating a run: the runtimes/polymarket folder, the smoke run, a counted run, the daily check, incidents, the read-out, drills |
 | [`RESULTS.md`](RESULTS.md) | The results log: every study, backtest and run, with its verdict (newest first) |
 | [`TODO.md`](TODO.md) | Open work only: Now / Next / Later, then by subject |
 | [`DONE.md`](DONE.md) | Finished work from 2026-10-31, under its `TODO.md` heading, with its release |

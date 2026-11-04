@@ -109,7 +109,7 @@ limit exceeded"); run research from your own machine.
 ## 6. Runtime repositories (hints only)
 
 `runtime/polymarket/` holds third-party projects used for ideas, never code.
-(It is not runtime-trading, the folder counted runs run from:
+(It is not runtimes/polymarket, the folder counted runs run from:
 [`dev/RUNBOOK.md` §1](dev/RUNBOOK.md#1-the-runtime-folder).)
 
 - **PolyWeather** (AGPL): bucket probability idea, city/station map; its

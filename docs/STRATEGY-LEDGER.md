@@ -212,7 +212,8 @@ pre-registered test; without it the idea stays closed.
 | Crossvenue (any reviewed Polymarket / Kalshi pair) | The Fed rule on pairs a human approves | First `pairs suggest`: 53 candidates, mostly long-dated, with traps a title match cannot see | — | Built; no Stage 0 (no pair approved) | Arbitrary pairs have no history | Approved pairs and a recorded dry run of two weeks or more |
 | Momentum (research) | Buy markets that moved ≥ 8% in the last hour, record attention | Never run | — | Off; no stage | No edge claimed | Its own pre-registered Stage 0 |
 | Full-set scanner (FEAT-102) | `ask(Yes)+ask(No)+fees < 1` | Never run | — | Not started | Legs cannot be bought atomically | ≥ 10 gaps a day of ≥ $5 lasting ≥ 10 s for a week |
-| Expiry fade (FEAT-103) | Buy the cheap side in the last minutes | Not run | — | Not started; prior low | — | Positive after fees on minute data, confirmed on ticks |
+| Expiry fade (FEAT-103) | Buy the cheap side in the last minutes | Not run | — | Not started; prior lower after FEAT-146 | FEAT-146 lost on the cheapest side (≤ 10 c); FEAT-103's band (up to 35 c, spot flat) is not tested | Positive after fees on FEAT-146's trade backfill, confirmed on ticks |
+| Crypto Up/Down late longshot (FEAT-146) | Buy the side at ≤ 5 c from 240 s into a BTC 5-minute window, filled at the next real buy print, held to settlement; the pattern of the wallet `@vega7` (+$33.7K on $81.8K) | Every taker trade of 8,615 BTC 5-minute markets, 2026-10-05 to 11-03; pre-registered | Primary: −$3,802 on 4,500 entries (−16.9% on stake; halves −26.9% / −7.8%; −84.5% without the best 1%); won 2.07% at an average 2.23 c. All 9 other caps (2–10 c) and start times (from 0 to 270 s) lose 17–44% | NO-GO | Cheap sides win slightly less often than priced and the fee is ~7% of the stake; the wallet's profit is selection or luck in a few fat-tailed wins (without its 50 best markets it lost) | A pre-registered condition known at entry (spot against the start price, say) that is positive in both halves of a new window |
 
 ## 4. What the markets taught us
 
@@ -372,6 +373,7 @@ venue, or says why it is not brought back.
 | Day-ahead weather, favourite–longshot on Polymarket | Polymarket | The market is better calibrated | Category or event-level calibration on a new window | — (Polymarket lanes) |
 | Major-sports cross-venue gaps | Polymarket / Kalshi | Half a cent; fee is larger | — | — |
 | Crypto Up/Down latency trades | **Everywhere** | An artefact of minute data | — | Not brought back |
+| Buying the cheap side late in crypto Up/Down windows, unconditionally | Polymarket | 4,500 entries at ≤ 5 c lost 16.9%; every cap and start time lost (FEAT-146) | A condition known at entry, pre-registered and positive on a new window | — |
 | Raydium migration sniping | Pump.fun / PumpSwap | Pump.fun graduates migrate to PumpSwap | — | Not brought back (the venue is gone) |
 | Relaxing a holder or creator screen to get more trades | **Everywhere** | Rejected movers lost ~10% a trade against 6% for watched coins: insider pumps | — | — |
 | A trade-feed stop trigger, or Yellowstone gRPC for a 60 s signal | Pump.fun / PumpSwap | The feed crossed the stop 0.07 s before the curve read, at the same price; migration events already arrive within ~1 s | A lane whose edge is lost to latency, shown in live fills | — |
@@ -463,3 +465,6 @@ runs a venue's captures (converted to the records by its module:
   mapped to the proposed outcome-market rules (FEAT-137, FEAT-138).
 - 2026-11-03: §8: FEAT-137 and FEAT-138 built in trading-core
   (unreleased).
+- 2026-11-04: §3.5 and §6: crypto Up/Down late longshot (trading-polymarket
+  FEAT-146) NO-GO on every taker trade of 30 days; FEAT-103's prior
+  lowered.

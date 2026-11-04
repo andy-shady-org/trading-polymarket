@@ -44,7 +44,7 @@ orders.
 | FEAT-101 | Up/Down tick recorder and maker study | Research, then a lane | The professional seat in these markets is the maker's (rebates, rewards); find the phases where makers earn |
 | FEAT-102 | Full-set scanner: both sides, depth, duration, loop | Research, then an executor | `arb` exists but has never been run; measure whether full-set gaps are frequent, large and lasting |
 | FEAT-103 | Expiry-fade backtest | Research | A cheap test of one more taker rule; low prior |
-| FEAT-146 | Up/Down trade backfill and late-longshot backtest | Research | A profitable wallet's pattern, testable on every trade of past markets without waiting for a recorder |
+| FEAT-146 | Up/Down trade backfill and late-longshot backtest | Research | A profitable wallet's pattern, testable on every trade of past markets without waiting for a recorder. Built (0.4.0); the backtest is **NO-GO** (2026-11-04, [`RESULTS.md`](RESULTS.md)) |
 
 ### FEAT-101: Up/Down tick recorder and maker study
 * **Class / Priority:** Income (research) · P2
@@ -58,7 +58,7 @@ orders.
 
 ### FEAT-102: Full-set scanner: both sides, depth, duration, loop
 * **Class / Priority:** Income (research) · P2
-* **Goal:** measure, over a week, whether buying a complete set of outcomes for less than it pays is a real opportunity. Saguillo et al., "Unravelling the probabilistic forest: arbitrage in prediction markets" (arXiv 2508.03474), found such gaps were taken on Polymarket at scale; CloddsBot's version checks mid prices and binary Yes + No pairs, which on Polymarket are one mirrored book. `trading-polymarket arb` (`research/arb.py`) already checks binary pairs and neg-risk Yes sets at the best asks, but it has never been run (no `data/arb.jsonl` in `runtime-trading`).
+* **Goal:** measure, over a week, whether buying a complete set of outcomes for less than it pays is a real opportunity. Saguillo et al., "Unravelling the probabilistic forest: arbitrage in prediction markets" (arXiv 2508.03474), found such gaps were taken on Polymarket at scale; CloddsBot's version checks mid prices and binary Yes + No pairs, which on Polymarket are one mirrored book. `trading-polymarket arb` (`research/arb.py`) already checks binary pairs and neg-risk Yes sets at the best asks, but it has never been run (no `data/arb.jsonl` in `runtimes/polymarket`).
 * **Design:**
   - **The No side:** in an n-outcome neg-risk event, buying every No pays n − 1; record when the No asks sum, fees included, to less than that.
   - **Depth:** walk each leg's book to find the cost for 10, 50 and 100 sets and the largest size that still clears the threshold, not only the best level.
@@ -80,7 +80,7 @@ orders.
 * **Class / Priority:** Research · P2 · added 2026-11-04.
 * **Goal:** find out whether buying the cheap side of a 5-minute BTC Up/Down market late in its window earns after fees, on every market rather than one wallet's picks.
 * **Why:** the wallet `@vega7` (0x6ba2…8d0e) made +$33.7K on $81.8K over 10,363 of these markets (2026-04-19 to 2026-11-04, its public activity). Almost all of it came from buys under 5 c in the last two minutes (+$29.2K on 2,300 markets, 4% of them won) and it sold near-certain winners at 0.96–0.98 before the close. The result is fat-tailed: without its 50 best markets it is −$15.5K. It bought both sides in only 4.5% of markets.
-* **Built (part 1, Unreleased):** `trading-polymarket updown-history` (`research/updown.py`, `docs/CLI.md`): every settled market of an asset and window, a day at a time, with every taker trade to the second, the outcome and Chainlink's start and end prices, and one-second Binance spot. A 5-minute BTC day is about 1,600 trades a market, 7.7 MB gzipped, three minutes to read.
+* **Built (part 1, 0.4.0):** `trading-polymarket updown-history` (`research/updown.py`, `docs/CLI.md`): every settled market of an asset and window, a day at a time, with every taker trade to the second, the outcome and Chainlink's start and end prices, and one-second Binance spot. A 5-minute BTC day is about 1,600 trades a market, 7.7 MB gzipped, three minutes to read.
 * **Part 2, the backtest (pre-registered here, 2026-11-04, before any run):**
   - **Data:** BTC 5-minute markets of 2026-10-05 to 2026-11-03 (30 days, about 8,640 markets).
   - **Rule:** in each market, the first `BUY` print of an outcome at or below `cap` at or after `from` seconds into the window is the signal; the entry fills at the next `BUY` print of that outcome in a later second, at that print's price, if the print is at least the stake ($5) and its price is at most `cap` + 1 c; otherwise the next such print. One entry a market, held to settlement. Taker fee `0.07 × p(1 − p)` a share.
@@ -88,4 +88,6 @@ orders.
   - **Pass bar (primary variant):** return on stake after fees above zero in both halves (15 days each); above zero with the best 1% of markets by profit removed; and a win rate above the average fill price with one-sided binomial p < 0.05.
   - **Then:** a pass is confirmed on FEAT-101's ticks (the book, not only prints) before any lane; a fail is recorded as NO-GO in `docs/STRATEGY-LEDGER.md`. Selling winners at 0.96–0.98 is a separate question, not part of this test.
 * **Dependencies:** none. **Impact:** closes the question in a day; shares the backfill with FEAT-103, which can now use second-level prints instead of minute prices.
+* **Built (part 2, 0.4.0):** `trading-polymarket updown-backtest` (`research/updown_backtest.py`).
+* **Result (2026-11-04): NO-GO.** The primary rule lost $3,802.34 on 4,500 entries (−16.9% on stake; halves −26.9% and −7.8%; −84.5% without the best 1%); it won 2.07% at an average fill of 2.23 c (p = 0.78). Every descriptive variant lost. Run on the pre-registered data and rule without change; prints after a window's close are not used. Details: [`RESULTS.md`](RESULTS.md).
 

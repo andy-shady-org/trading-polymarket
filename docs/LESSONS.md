@@ -181,6 +181,12 @@ any lane.
     finds lucky wallets, many top scorers are snipers, insiders or wash
     bots, and a wallet known to be copied can sell into its copiers.
     *(pumpfun-trading FEAT-54.)*
+33. **Replay a winning wallet's pattern on every market, not its picks.**
+    Its record is the rule plus its selection and its luck; only the rule
+    on the whole population says whether there is an edge to take.
+    *(trading-polymarket FEAT-146: `@vega7` made +$33.7K buying Up/Down
+    sides under 5 c late in the window; the same rule on all 8,615 markets
+    of 30 days lost 16.9%.)*
 
 ## 2. Know the market before building
 
@@ -321,6 +327,12 @@ any lane.
     signal; costs come from quotes on the venue that fills. *(FEAT-65.)*
 16. **Paper is never cheaper than live.** An unknown fee is charged at the
     highest rate, never zero. *(trading-polymarket norm.)*
+17. **A replay uses only prints the rule could have traded in time.** A
+    market can keep trading after its outcome is all but known: crypto
+    Up/Down markets print for a minute or so after the window closes, with
+    the losing side near zero. Cut a replay at the close (and at a rule's
+    own deadline). *(trading-polymarket FEAT-146: about 1,200 prints a day
+    after the close, 110 of them cheap buys.)*
 
 ## 4. Costs and execution
 
@@ -540,3 +552,5 @@ any lane.
   then.
 - 2026-11-03: §5 lesson 5: an empty pool's check is an error, not a
   verdict on the token (trading-scout SC-7, from scout-2).
+- 2026-11-04: §1 lesson 33 and §3 lesson 17, from trading-polymarket
+  FEAT-146.

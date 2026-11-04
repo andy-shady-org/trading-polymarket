@@ -83,12 +83,15 @@ in each (the master copies are trading-core's; its
 - **[HEALTH] Feed Health Must Not Depend On Holding:** the engine's market-data health is fed by the module; notifying only from `get_quote` meant a flat run went stale, stale health skipped the pipeline, and nothing read the venue again (TP-10). A module notifies from a read that happens whatever it holds (the heartbeat).
 - **[MODEL] The Day Knows More Than The Station:** late on the event day, how far the forecast has already missed *today* predicts the rest of the day; the station's average bias does not (TP-11). Measure a model on the exact question it trades (here: "does the max still rise?"), not only on all buckets: 0.2.0 looked fine on Brier and was off by 5x on that question.
 - **[SIZING] Kelly Assumes Independence:** bets settled on one day share its weather and thesis; size them as one bet, or cap them per day (TP-12).
+- **[EVIDENCE] A Wallet's Record Is Not Its Rule:** `@vega7` made +$33.7K buying Up/Down sides under 5 c late in the window; the same rule on all 8,615 markets of 30 days lost 16.9% (FEAT-146). Replay a wallet's pattern on the whole population before believing it.
+- **[DATA] Cut A Replay At The Close:** Up/Down markets keep printing for a minute or so after the window ends, with the loser near zero (about 1,200 prints a day). A replay uses only prints before the close, or the rule's own deadline.
+- **[API] Missing Up/Down Windows Are Real:** Polymarket listed no BTC 5-minute markets from 04:55 to 06:55 UTC on 2026-11-01 (US clocks went back). A day short of 288 is not always a collection gap; check the slugs on Gamma.
 
 ## Project Overview
 
 `trading-polymarket` is the Polymarket trading module for trading-core. It reads Gamma (markets), CLOB (books, price history), Kalshi (reference quotes, read only), Open-Meteo (forecasts), Aviation Weather Center (METARs) and Google News RSS — all free and keyless — prices markets in independent lanes, simulates fills against the live book, redeems at resolution, and ships the research tools (history collection, calibration, backtests, bias tables, arbitrage logging) whose output trading-core's audit tools judge.
 
-Lanes: **weather** (daily-temperature markets: multi-model forecast + live METAR max-so-far against a known settlement rule; on by default), **favourite** (favourite–longshot bias from a calibration on resolved markets; off until calibrated and backtested), **momentum** (research; off), **fed** and **crossvenue** (Polymarket priced against Kalshi's free quote for the same question, convergence exits; off by default). Kalshi is read only. Live execution is not built (every live order and the balance read are refused); it is built after a lane passes Stage 1 (paper). Counted runs run from tagged release copies in `runtime-trading` (`docs/dev/RUNBOOK.md`).
+Lanes: **weather** (daily-temperature markets: multi-model forecast + live METAR max-so-far against a known settlement rule; on by default), **favourite** (favourite–longshot bias from a calibration on resolved markets; off until calibrated and backtested), **momentum** (research; off), **fed** and **crossvenue** (Polymarket priced against Kalshi's free quote for the same question, convergence exits; off by default). Kalshi is read only. Live execution is not built (every live order and the balance read are refused); it is built after a lane passes Stage 1 (paper). Counted runs run from tagged release copies in `runtimes/polymarket` (`docs/dev/RUNBOOK.md`).
 
 ---
 
@@ -141,7 +144,7 @@ one-line pointers.
 ### 2. Developer Artifacts (`docs/dev/`)
 * [**`docs/dev/README.md`**](docs/dev/README.md): Index and workflow.
 * [**`docs/dev/RELEASE-GATE.md`**](docs/dev/RELEASE-GATE.md): §1 current status, release gate, capital stages, release record, versioning.
-* [**`docs/dev/RUNBOOK.md`**](docs/dev/RUNBOOK.md): The runtime-trading folder, smoke run, counted runs, daily check, read-out, drills.
+* [**`docs/dev/RUNBOOK.md`**](docs/dev/RUNBOOK.md): The runtimes/polymarket folder, smoke run, counted runs, daily check, read-out, drills.
 * [**`docs/dev/RESULTS.md`**](docs/dev/RESULTS.md): Every study, backtest and run, with its verdict (newest first).
 * [**`docs/dev/TODO.md`**](docs/dev/TODO.md): Open work only (Now / Next / Later).
 * [**`docs/dev/DONE.md`**](docs/dev/DONE.md): Finished work from 2026-10-31.
@@ -168,13 +171,13 @@ one-line pointers.
    - Paper fills walk a book read with `max_age=0`; fees from each market's `feeSchedule`; positions held to resolution.
 3. **Evidence:**
    - Every lane is judged alone (`strategy` tag, `configs/verdict/<lane>.json`), on a pre-registered verdict, one capital stage at a time (`docs/dev/RELEASE-GATE.md` §3).
-   - Counted runs run from tagged release copies in runtime-trading, each with its own config and data folder (`docs/dev/RUNBOOK.md`).
+   - Counted runs run from tagged release copies in runtimes/polymarket, each with its own config and data folder (`docs/dev/RUNBOOK.md`).
 
 ---
 
 ## Runtime and Command Surface
 
-* `trading-core run --config F` (`"module": "polymarket"`): run the module (`--headless`, `--max-cycles N`; with `--live` and `"mode": "live"` the module refuses every order and the balance read); `SIGUSR1` toggles the operator pause. Counted runs start with runtime-trading's `bin/run.sh <config> <venv>`.
+* `trading-core run --config F` (`"module": "polymarket"`): run the module (`--headless`, `--max-cycles N`; with `--live` and `"mode": "live"` the module refuses every order and the balance read); `SIGUSR1` toggles the operator pause. Counted runs start with runtimes/polymarket's `bin/run.sh <config> <venv>`.
 * `trading-core check --config F`: validate settings and build the module.
 * `trading-core-audit pnl / cuts / verdict`, `trading-core-events`: read a run or a backtest.
 * `trading-polymarket scan | weather | record | arb`: look at what the lanes see (read only).

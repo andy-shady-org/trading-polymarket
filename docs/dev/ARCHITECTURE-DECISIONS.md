@@ -171,7 +171,7 @@ points to the record that replaced it, never deleted.
 ## ADR-013: Counted runs use tagged release copies
 
 - **Decision:** counted runs never run from the working repositories but
-  from tagged copies in runtime-trading, each release in its own venv.
+  from tagged copies in runtimes/polymarket, each release in its own venv.
 - **Why:** the repositories can change while a run keeps the code it was
   registered with; the install script refuses a dirty or moved copy, and
   each run's `run_started` records both commits.

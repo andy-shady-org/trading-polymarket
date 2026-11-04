@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import gzip
 import json
+from datetime import date
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,8 @@ from trading_polymarket import cli
 from trading_polymarket.clients.http import Response
 from trading_polymarket.module import PolymarketModule
 from trading_polymarket.research.records import append_jsonl
+from trading_polymarket.research.updown import UpDownMarket, day_path, day_start
+from trading_polymarket.research.updown_backtest import PRIMARY
 from trading_polymarket.tests.support.factories import (
     NOW,
     book_payload,
@@ -433,3 +437,35 @@ def test_updown_history(transport: FakeTransport, tmp_path: Path) -> None:
     transport.add("/markets?", Response(404, b"{}"))
     code, lines = run("updown-history", "--window", "15m", *args)
     assert code == 1 and lines[-1].endswith("not written: 2026-10-01, 2026-10-02")
+
+
+def test_updown_backtest(tmp_path: Path) -> None:
+    data, out = tmp_path / "updown", tmp_path / "bt" / "updown.jsonl"
+    args = ("--start", "2026-10-05", "--end", "2026-10-07", "--input", str(data))
+    code, lines = run("updown-backtest", *args, "--out", str(out))
+    assert code == 1 and lines == [
+        f"no markets in {data}: run `trading-polymarket updown-history`"
+    ]
+    for offset, winner in ((0, 0), (1, 1)):
+        day = date(2026, 10, 5 + offset)
+        start = day_start(day)
+        trades = [[250, 0, 1, 0.03, 500, "0xw"], [251, 0, 1, 0.03, 500, "0xw"]]
+        market = UpDownMarket(
+            f"m{offset}", "c", start, start + 300, winner, None, None, 0.07, 0
+        )
+        row = market.to_dict() | {"trades": trades}
+        path = day_path(data, "btc", "5m", day)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(gzip.compress((json.dumps(row) + "\n").encode()))
+    code, lines = run("updown-backtest", *args, "--out", str(out))
+    assert code == 0
+    assert (
+        lines[0] == "2 markets, 2026-10-05 to 2026-10-07 (second half from 2026-10-06)"
+    )
+    primary = next(line for line in lines if line.startswith(PRIMARY.name))
+    assert primary.endswith("fail") and " 2 " in primary
+    assert any(line.startswith("cap 2c") and "-" in line for line in lines)
+    assert lines[-1].startswith(f"primary ({PRIMARY.name}): FAIL")
+    assert len(out.read_text().splitlines()) == 4
+    summary = out.with_suffix(".summary.jsonl").read_text().splitlines()
+    assert len(summary) == 10
