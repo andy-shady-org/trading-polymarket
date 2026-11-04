@@ -10,7 +10,7 @@ on:
 # token with read-only "Contents" access to andy-shady-org/trading-core and
 # store it as the TRADING_CORE_TOKEN secret of this repository.
 env:
-  TRADING_CORE_REF: main
+  TRADING_CORE_REF: v0.7.0
 
 jobs:
   test:

@@ -9,7 +9,13 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+## 0.3.0: trading-core 0.7.0 and trusted loading (2026-11-04)
+
+Tested on trading-core `v0.7.0`; no lane, setting or fill changes. Release
+record: [`docs/dev/releases/0.3.0.md`](docs/dev/releases/0.3.0.md).
+
 ### Changed
+- `trading-core>=0.3.0,<0.8` (was `<0.6` on `main`); CI checks out trading-core `v0.7.0` (was `main`).
 - `trading-core>=0.3.0,<0.6` (was `>=0.2.0`, with no upper bound): a fresh install could pull a trading-core this module was never tested on, and trusted loading (trading-core 0.3.0) checks the declared range. Tested on trading-core 0.4.0 and 0.5.0. The running `v0.2.1` installs are unaffected.
 
 ### Docs
