@@ -10,12 +10,14 @@
   2026-10-30 cross-venue study's one open lead.)
 - **Kind:** record-only. Nothing is traded, no engine runs; the verdict
   decides whether a paper lane is built and pre-registered.
-- **Code:** trading-polymarket with FEAT-168 (`sports-gaps`,
-  `sports-gaps-report`; Unreleased on `main` at this writing), the commit
-  written to `data/sports-1/RUN.txt` with the start time. Read-out by the
-  same commit's `sports-gaps-report`.
-- **Command:** `trading-polymarket sports-gaps --interval 120 --out
-  data/sports-1` (the defaults: Polymarket's tennis and esports leagues
+- **Code:** trading-polymarket `v0.5.0` on trading-core `v0.7.0`, from the
+  release copies in `runtimes/polymarket/releases/`, venv
+  `polymarket-v0.5.0` (corrected 2026-11-07, before the start: this record
+  first named a commit of `main`; the operator chose to release first).
+  The tag's commit goes in `data/sports-1/RUN.txt` with the start time.
+  Read-out by the same release's `sports-gaps-report`.
+- **Command:** `venvs/polymarket-v0.5.0/bin/trading-polymarket sports-gaps
+  --interval 120 --out data/sports-1`, in its own tmux window (the defaults: Polymarket's tennis and esports leagues
   `atp`, `wta`, `itf`, `cs2`, `dota2`, `val`, `lol`, `codmw`, `mlbb`, `ow`;
   Kalshi's 13 match series in `research/sports_gaps.py`; each pair quoted
   until 3 h after its scheduled start).

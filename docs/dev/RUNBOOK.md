@@ -261,6 +261,21 @@ $V/trading-polymarket updown-backtest --rule stale --timestamp-offset <median> \
     --start 2026-11-04 --end 2026-11-18 --input data/updown
 ```
 
+From 0.5.0, the sports listing-gap recorder (FEAT-168) for `sports-1`
+([`runs/sports-1.md`](runs/sports-1.md)), in its own tmux window, record-only
+beside the paper runs (which keep their own venv):
+
+```bash
+bin/install-release.sh v0.7.0 v0.5.0
+V=venvs/polymarket-v0.5.0/bin
+tmux new -s sports
+$V/trading-polymarket sports-gaps --out data/sports-1          # Ctrl-b d to detach
+$V/trading-polymarket sports-gaps-report --input data/sports-1 # any time
+```
+
+About 100 pairs at a time, one Polymarket book and 13 Kalshi series reads
+every 2 minutes; a failed cycle is logged and the next one runs.
+
 A BTC 5-minute day is about 7 MB and three minutes to collect; a stopped
 collection resumes where it left off. The install also checks every
 `configs/paper-*.json` against the new release; a pilot keeps the venv

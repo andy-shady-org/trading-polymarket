@@ -18,6 +18,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 2. Next
 
+- [ ] **Release `v0.5.0`** (built 2026-11-07 on `release/v0.5.0`, [`releases/0.5.0.md`](releases/0.5.0.md)): merge, the signed tag on the merge, then `bin/install-release.sh v0.7.0 v0.5.0` in `runtimes/polymarket` and a 5-minute `sports-gaps` smoke from the release copy; pip-audit, the package build and CI on the tag
 - [ ] **Release `v0.4.0`** (tagged and installed 2026-11-04): pip-audit and the package build, and CI on the tag ([`releases/0.4.0.md`](releases/0.4.0.md))
 - [ ] **Evidence:** re-run `weather-history --start 2026-08-01` once to pick
       up the ~60 events the first collection did not reach (it is
@@ -31,12 +32,12 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
       backtest from them.
 
 - [ ] **FEAT-147** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-147-updown-stale-quotes-after-a-spot-move)): built in 0.4.0. Run `ticks` on the Mac for at least three days ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)), then `ticks-report` for the decision on part 1 (our delay against how long stale asks live) and the data API's timestamp offset; if takeable, from 2026-11-18 collect 2026-11-04 to 11-17 and run `updown-backtest --rule stale --timestamp-offset <median>`.
-- [ ] **`sports-1`** ([`runs/sports-1.md`](runs/sports-1.md), FEAT-168, pre-registered 2026-11-07): start `sports-gaps --out data/sports-1` on the Mac from `main` with FEAT-168 (the commit in `data/sports-1/RUN.txt`), record 14 days, then `sports-gaps-report --input data/sports-1`; record-only, beside the running lanes
+- [ ] **`sports-1`** ([`runs/sports-1.md`](runs/sports-1.md), FEAT-168, pre-registered 2026-11-07): after `v0.5.0` is installed, start `venvs/polymarket-v0.5.0/bin/trading-polymarket sports-gaps --out data/sports-1` on the Mac in its own tmux window (the tag's commit in `data/sports-1/RUN.txt`), record 14 days, then `sports-gaps-report --input data/sports-1`; record-only, beside the running lanes
 - [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the tick recorder, 24–48 h, then the maker study), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
 
 ## 3. Later
 
-- [ ] **FEAT-149** ([`DONE.md`](DONE.md#feat-149-library-rows-from-polymarkets-data-lane-rows)): `lane-rows` is built (Unreleased); release it with trading-core's next MINOR, which carries the sweep's price-dependent fee (`--price-fee-rate`). Then sweep each fee rate of `history`, `weather-history` and `fed-history`, and `updown-history` once FEAT-147's offset is decided.
+- [ ] **FEAT-149** ([`DONE.md`](DONE.md#feat-149-library-rows-from-polymarkets-data-lane-rows)): `lane-rows` is released in `v0.5.0`; the sweep's price-dependent fee (`--price-fee-rate`) comes with trading-core's next MINOR (`v0.8.0`). Then sweep each fee rate of `history`, `weather-history` and `fed-history`, and `updown-history` once FEAT-147's offset is decided.
 - [ ] **FEAT-153** ([`DONE.md`](DONE.md#feat-153-liquidity-rewards-scan-rewards-scan)): run `rewards-scan` daily for a few days, pick clean, quiet rewarded markets and fold them into the maker study (FEAT-101): record their books for a day and measure adverse selection before believing any estimate.
 
 ### 3.1 Weather lane
