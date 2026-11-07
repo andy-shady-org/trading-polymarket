@@ -9,6 +9,17 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-07
+
+The full-set scanner (FEAT-102), record-only, for the run `arb-1`: every
+open neg-risk event's Yes set and No set priced on full books with fees and
+depth, every gap's lifetime, size and profit recorded for a week, and the
+pre-registered decision. Fixes TP-13 (partial sets read as gaps). No lane,
+setting or fill changes, so no run's result changes; `weather-1` and `fed-1`
+stay on `v0.4.0`, `sports-1` on `v0.5.0`. Tested on trading-core `v0.7.0`;
+needs trading-core 0.6.0 or later (unchanged). Release record:
+[`docs/dev/releases/0.6.0.md`](docs/dev/releases/0.6.0.md).
+
 ### Added
 - `trading-polymarket arb --loop` and `arb-report` (FEAT-102, `research/arb_loop.py`, `research/arb_report.py`): record-only, every full-set gap on Polymarket, how big and how long. Every open neg-risk event's **Yes set** (pays 1) and **No set** (pays `n − 1`), priced on full books with each market's fee and walked for depth (the cost of 10, 50 and 100 sets; the most sets that each still earn `--min-profit`, 0.5 c, and their profit). Gamma's events every 15 minutes, every set's books every 5 minutes, sets within 3 c of a gap every 30 s and open gaps every 5 s; one folder a UTC day with each gap's lifetime, size, profit and longest run at $5 or more (`gaps.jsonl`), every read of an open gap with each leg's top levels (`observations.jsonl.gz`) and coverage (`sweeps.jsonl`, `catalogue.jsonl`). `arb-report` gives FEAT-102's decision for the run `arb-1` (`docs/dev/runs/arb-1.md`), with the qualifying gaps' days to resolution and return a year (each gap records its set's latest end date, `resolves`). `arb` without `--loop` prints the sets closest to a gap after one pass.
 - `ClobClient.books`: many books in one `POST /books` (500 a request); `JsonHttp.post_json` (the transport takes an optional body); `GammaClient.event_pages` (Gamma's events a page at a time).
