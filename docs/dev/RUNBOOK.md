@@ -276,6 +276,23 @@ $V/trading-polymarket sports-gaps-report --input data/sports-1 # any time
 About 100 pairs at a time, one Polymarket book and 13 Kalshi series reads
 every 2 minutes; a failed cycle is logged and the next one runs.
 
+From 0.6.0, the full-set recorder (FEAT-102) for `arb-1`
+([`runs/arb-1.md`](runs/arb-1.md)), in its own tmux window, record-only:
+
+```bash
+bin/install-release.sh v0.7.0 v0.6.0
+V=venvs/polymarket-v0.6.0/bin
+$V/trading-polymarket --version                               # must say 0.6.0
+tmux new -s arb
+$V/trading-polymarket arb --loop --hours 192 --out data/arb-1 # Ctrl-b d to detach
+$V/trading-polymarket arb-report --input data/arb-1           # any time
+```
+
+Each tick (5 s) re-reads the open gaps; a full pass over Gamma's events
+takes about 3 minutes every 15, and a sweep of every set's books (about 230
+`POST /books` requests) about 1.5 minutes every 5. A failed tick or pass is
+logged and retried; `Ctrl-C` writes the gaps still open as censored.
+
 A BTC 5-minute day is about 7 MB and three minutes to collect; a stopped
 collection resumes where it left off. The install also checks every
 `configs/paper-*.json` against the new release; a pilot keeps the venv

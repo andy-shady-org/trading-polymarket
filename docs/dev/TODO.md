@@ -33,7 +33,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 - [ ] **FEAT-147** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-147-updown-stale-quotes-after-a-spot-move)): part 1 read out 2026-11-07 on three days of `ticks` (stopped 12:41 UTC): **takeable** (89.9% of signals), offset **2.20 s** ([`RESULTS.md`](RESULTS.md#2026-11-07--ticks-on-3-days-feat-147-part-1-takeable-no-maker-seat-at-our-speed-feat-101)). From 2026-11-18: `updown-history --start 2026-11-04 --end 2026-11-18`, then `updown-backtest --rule stale --timestamp-offset 2.20` on that window ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)). **`ticks-2`** records the same window from 2026-11-07 13:25:01 UTC (stops itself about 2026-11-18 00:25 UTC); after part 2, its fill check, part 1 and the maker study as written in [`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-147-updown-stale-quotes-after-a-spot-move), not deciding. Before part 2: write and commit the fill-check script.
 - [ ] **`sports-1`** ([`runs/sports-1.md`](runs/sports-1.md), FEAT-168): running on `v0.5.0` since 2026-11-07 10:38:15 UTC (tmux window `sports`); on about 2026-11-21 10:38 UTC stop it and run `venvs/polymarket-v0.5.0/bin/trading-polymarket sports-gaps-report --input data/sports-1`; EXTEND adds 7 days, to 28 at most. Once it is running cleanly, `data/sports-1-false-start/` and the `-mistagged` release copy and venv can go
-- [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the recorder built; the maker study read out 2026-11-05 and 2026-11-07: no maker seat at our speed, [`RESULTS.md`](RESULTS.md#2026-11-07--ticks-on-3-days-feat-147-part-1-takeable-no-maker-seat-at-our-speed-feat-101); only a quote behind the top, which needs depth at each level, is left), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
+- [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 built (Unreleased, [`DONE.md`](DONE.md#feat-102-full-set-scanner-both-sides-depth-duration-loop)); its week is the run `arb-1` ([`runs/arb-1.md`](runs/arb-1.md)), on the next release. FEAT-101's maker study is read out (no maker seat at our speed); FEAT-103 is closed (NO-GO). None places an order.
 
 ## 3. Later
 
@@ -58,7 +58,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 - [ ] Live execution (`LiveExecutor`) with `py-clob-client-v2` as an optional
       extra, after a Stage 1 GO ([`LIVE-TRADING.md`](../LIVE-TRADING.md)).
 - [ ] CLOB market WebSocket for book updates (fewer REST reads, faster marks).
-- [ ] Arbitrage executor if `data/arb.jsonl` shows gaps worth it after fees (FEAT-102's decision rule).
+- [ ] Full-set executor (multi-leg orders, a trading-core change of its own), only if `arb-1` is GO under FEAT-102's rule ([`runs/arb-1.md`](runs/arb-1.md)).
 
 ### 3.4 Docs
 

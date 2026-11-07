@@ -90,6 +90,15 @@ class GammaClient:
             found.extend(i for i in items if isinstance(i, dict))
         return found
 
+    async def event_pages(
+        self, *, max_pages: int = 1, **params: Any
+    ) -> AsyncIterator[list[dict[str, Any]]]:
+        """``/events/keyset`` one page of raw events at a time, so a pass over
+        every open event (about 20,000 with 411,000 markets on 2026-11-07)
+        need not hold them all."""
+        async for items in self._pages("/events/keyset", "events", params, max_pages):
+            yield [i for i in items if isinstance(i, dict)]
+
     # -- parsed ---------------------------------------------------------------
     async def markets(self, *, max_pages: int = 1, **params: Any) -> list[Market]:
         """Tradable-shaped markets from ``/markets/keyset`` (malformed skipped)."""

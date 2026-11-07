@@ -67,6 +67,20 @@ async def test_events_return_markets_with_event_context() -> None:
     assert raw["id"] == "e1" and markets[0].event_title == "T"
 
 
+async def test_event_pages_yield_one_page_of_raw_events_at_a_time() -> None:
+    transport = FakeTransport(
+        {
+            "/events/keyset": Sequenced(
+                {"events": [{"id": "1"}, "junk"], "next_cursor": "c1"},
+                {"events": [{"id": "2"}]},
+            )
+        }
+    )
+    pages = [p async for p in client(transport).event_pages(max_pages=5, closed=False)]
+    assert pages == [[{"id": "1"}], [{"id": "2"}]]
+    assert "after_cursor=c1" in transport.calls[1]
+
+
 async def test_markets_by_tokens_batches_and_dedupes() -> None:
     transport = FakeTransport({"/markets?": [gamma_market(), gamma_market(), "junk"]})
     g = client(transport)

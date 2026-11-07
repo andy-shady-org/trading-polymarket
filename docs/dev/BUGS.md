@@ -5,7 +5,7 @@ Every bug fixed in trading-polymarket gets a row here and a test tagged
 `trading_polymarket/tests/unit/test_suite_layout.py` fails when a **RESOLVED**
 row has no tagged test, or a tag names no row.
 
-IDs are `TP-<n>` (next free: **TP-13**). Bugs in the engine belong in
+IDs are `TP-<n>` (next free: **TP-14**). Bugs in the engine belong in
 trading-core's own tracker (`TC-<n>`).
 
 When you fix a bug: add a row (status **RESOLVED**), a section below with
@@ -28,6 +28,7 @@ when the lesson is general.
 | **TP-10** | Critical | Module / Health | **RESOLVED** | A flat run went "market data stale" after `health_timeout_seconds` and never entered again |
 | **TP-11** | Critical | Strategy / Weather | **RESOLVED** | The late-day model priced a further rise at 20–35 % where ~7 % happens: daily-max bias at the peak hour, today's own error ignored |
 | **TP-12** | High | Strategy / Sizing | **RESOLVED** | Ten bets on one day's thesis, each Kelly-sized as if independent |
+| **TP-13** | High | Research / Arbitrage | **RESOLVED** | `arb` priced neg-risk Yes sets without their untradable outcomes, so a partial set (12 c for a $1 payout) read as a gap |
 
 ## TP-1: implausible weather edges taken at face value
 
@@ -256,3 +257,29 @@ keeps in the same cycle. Held tokens whose lane or closing day is unknown
 (after a restart) count against every lane or day.
 
 **Test:** `tests/unit/strategies/test_router.py::test_a_lane_holds_at_most_its_cap_on_one_day`.
+
+## TP-13: partial outcome sets read as arbitrage
+
+**Found:** 2026-11-07, the first live pass of FEAT-102's loop over every open
+neg-risk event: 65 Yes sets read open in one sweep, the best "earning" 88 c
+a set on 2,414 sets ($1,352). Gamma showed the cause: in augmented events
+(Abbotsford-Mission by-election, AFC Asian Cup 2027 Group C) the listed names
+held 3–12 % between them and the rest of the field sat in an "Other" market
+that was not yet accepting orders, and in unlisted placeholders.
+
+**Root cause:** `ArbScanner` (0.1.0, never run) kept only the event's
+*tradable* markets and summed their asks as if they were every outcome. A
+market that is closed without a result, inactive, malformed, or an augmented
+event's untradable "Other" is still an outcome that can win; leaving it out
+makes any set look cheap.
+
+**Fix:** `research/arb.py` (FEAT-102) builds a set only when it is complete:
+every listed market must be tradable or closed and resolved No (one resolved
+Yes means the event is decided); in an augmented event unlisted placeholders
+may be left out only while "Other" (`negRiskOther`) is tradable, and such
+sets stay flagged `augmented` (and outside FEAT-102's decision). An event
+with a market Gamma's data cannot parse has no set. The next pass found
+10,768 full sets instead of 14,532 (30 augmented instead of 3,830) and 2 open,
+worth $2–3 each.
+
+**Test:** `tests/unit/research/test_arb.py::test_a_live_outcome_that_cannot_be_bought_leaves_no_full_set` and `::test_an_augmented_event_has_no_full_set_until_other_can_be_bought`.

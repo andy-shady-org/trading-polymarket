@@ -11,6 +11,10 @@ so the client carries no credentials. What it does carry:
   (pumpfun learning "Probe Free APIs Before Picking Defaults");
 * **counters**: requests, retries and failures, shown on the dashboard.
 
+Reads are ``GET``; :meth:`JsonHttp.post_json` sends a JSON body for the
+read-only batch endpoints that take one (the CLOB's ``POST /books``), with
+the same pacing and retries.
+
 The transport is injectable, so tests never touch the network. The default
 runs ``urllib`` in a worker thread, keeping the event loop free.
 """
@@ -24,7 +28,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 from urllib.parse import urlencode, urlsplit
 
 USER_AGENT = "trading-polymarket/0.1 (+paper research)"
@@ -38,7 +42,16 @@ class Response:
     headers: Mapping[str, str] = field(default_factory=dict)
 
 
-Transport = Callable[[str, float, Mapping[str, str]], Awaitable[Response]]
+class Transport(Protocol):
+    """Sends one request: ``GET`` without ``data``, ``POST`` with it."""
+
+    def __call__(
+        self,
+        url: str,
+        timeout: float,
+        headers: Mapping[str, str],
+        data: bytes | None = None,
+    ) -> Awaitable[Response]: ...
 
 
 class HttpError(RuntimeError):
@@ -50,8 +63,10 @@ class HttpError(RuntimeError):
         self.url = url
 
 
-def _fetch(url: str, timeout: float, headers: Mapping[str, str]) -> Response:
-    request = urllib.request.Request(url, headers=dict(headers))
+def _fetch(
+    url: str, timeout: float, headers: Mapping[str, str], data: bytes | None = None
+) -> Response:
+    request = urllib.request.Request(url, data=data, headers=dict(headers))
     try:
         with urllib.request.urlopen(request, timeout=timeout) as reply:
             return Response(reply.status, reply.read(), dict(reply.headers))
@@ -60,10 +75,10 @@ def _fetch(url: str, timeout: float, headers: Mapping[str, str]) -> Response:
 
 
 async def urllib_transport(
-    url: str, timeout: float, headers: Mapping[str, str]
+    url: str, timeout: float, headers: Mapping[str, str], data: bytes | None = None
 ) -> Response:
     """The default transport: blocking ``urllib`` in a worker thread."""
-    return await asyncio.to_thread(_fetch, url, timeout, headers)
+    return await asyncio.to_thread(_fetch, url, timeout, headers, data)
 
 
 def build_url(base: str, path: str, params: Mapping[str, Any] | None = None) -> str:
@@ -132,15 +147,24 @@ class JsonHttp:
 
     async def get(self, url: str) -> bytes:
         """The body of ``url``; raises :class:`HttpError` when it cannot be read."""
-        host = urlsplit(url).netloc
+        return await self._request(url, None)
+
+    async def _send(self, url: str, data: bytes | None) -> Response:
         headers = {"User-Agent": USER_AGENT, "Accept": "application/json, */*"}
+        if data is None:
+            return await self.transport(url, self.timeout, headers)
+        headers["Content-Type"] = "application/json"
+        return await self.transport(url, self.timeout, headers, data)
+
+    async def _request(self, url: str, data: bytes | None) -> bytes:
+        host = urlsplit(url).netloc
         attempt = 0
         while True:
             await self._pace(host)
             self.requests += 1
             response: Response | None
             try:
-                response = await self.transport(url, self.timeout, headers)
+                response = await self._send(url, data)
             except (OSError, TimeoutError) as exc:
                 response = None
                 error = f"{type(exc).__name__}: {exc}"
@@ -166,6 +190,15 @@ class JsonHttp:
 
     async def get_json(self, url: str) -> Any:
         body = await self.get(url)
+        try:
+            return json.loads(body)
+        except ValueError as exc:
+            self.failures += 1
+            raise HttpError(f"invalid JSON from {url}: {exc}", url=url) from exc
+
+    async def post_json(self, url: str, payload: Any) -> Any:
+        """``POST`` ``payload`` as JSON to a read-only endpoint; the parsed reply."""
+        body = await self._request(url, json.dumps(payload).encode("utf-8"))
         try:
             return json.loads(body)
         except ValueError as exc:

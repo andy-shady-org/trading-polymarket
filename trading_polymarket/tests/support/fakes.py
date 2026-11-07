@@ -38,6 +38,7 @@ class FakeTransport:
 
     routes: dict[str, Route] = field(default_factory=dict)
     calls: list[str] = field(default_factory=list)
+    bodies: list[bytes] = field(default_factory=list)
 
     def add(self, key: str, value: Route) -> FakeTransport:
         self.routes[key] = value
@@ -47,9 +48,15 @@ class FakeTransport:
         return sum(1 for url in self.calls if key in url)
 
     async def __call__(
-        self, url: str, timeout: float, headers: Mapping[str, str]
+        self,
+        url: str,
+        timeout: float,
+        headers: Mapping[str, str],
+        data: bytes | None = None,
     ) -> Response:
         self.calls.append(url)
+        if data is not None:
+            self.bodies.append(data)
         for key, value in self.routes.items():
             if key not in url:
                 continue

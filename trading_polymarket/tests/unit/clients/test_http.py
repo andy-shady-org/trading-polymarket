@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import io
 import urllib.error
+import urllib.request
+from collections.abc import Mapping
 
 import pytest
 
@@ -86,6 +88,36 @@ async def test_gives_up_after_max_retries_on_network_errors() -> None:
     assert info.value.status == 500
 
 
+async def test_post_json_sends_a_json_body_with_its_content_type() -> None:
+    seen: list[dict[str, str]] = []
+    transport = FakeTransport({"/books": [{"asset_id": "a"}]})
+
+    async def spy(
+        url: str,
+        timeout: float,
+        headers: Mapping[str, str],
+        data: bytes | None = None,
+    ) -> Response:
+        seen.append(dict(headers))
+        return await transport(url, timeout, headers, data)
+
+    http = JsonHttp(transport=spy, min_interval=0.0)
+    assert await http.post_json("https://x.test/books", [{"token_id": "a"}]) == [
+        {"asset_id": "a"}
+    ]
+    assert transport.bodies == [b'[{"token_id": "a"}]']
+    assert seen[0]["Content-Type"] == "application/json"
+    assert await http.get_json("https://x.test/books") == [{"asset_id": "a"}]
+    assert "Content-Type" not in seen[1]
+
+
+async def test_post_json_rejects_a_reply_that_is_not_json() -> None:
+    http = fake_http(FakeTransport({"/b": "{not json"}))
+    with pytest.raises(HttpError):
+        await http.post_json("https://x.test/b", [])
+    assert http.failures == 1
+
+
 async def test_invalid_json_is_an_error() -> None:
     http = fake_http(FakeTransport({"/b": "{not json"}))
     with pytest.raises(HttpError):
@@ -156,8 +188,34 @@ def test_fetch_returns_body_and_http_errors(monkeypatch: pytest.MonkeyPatch) -> 
     assert reply.status == 500 and reply.headers == {}
 
 
+def test_fetch_posts_its_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: list[bytes | None] = []
+
+    class Reply(io.BytesIO):
+        status = 200
+        headers: dict[str, str] = {}
+
+        def __enter__(self) -> Reply:
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            return None
+
+    def capture(request: urllib.request.Request, timeout: float) -> Reply:
+        sent.append(request.data)  # type: ignore[arg-type]
+        return Reply(b"[]")
+
+    monkeypatch.setattr(http_mod.urllib.request, "urlopen", capture)
+    assert http_mod._fetch("https://x.test", 1, {}, b"{}").body == b"[]"
+    assert sent == [b"{}"]
+
+
 async def test_urllib_transport_runs_fetch_in_a_thread(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(http_mod, "_fetch", lambda u, t, h: Response(200, u.encode()))
+    monkeypatch.setattr(
+        http_mod, "_fetch", lambda u, t, h, d: Response(200, u.encode() + (d or b""))
+    )
     assert (await urllib_transport("https://x.test", 1, {})).body == b"https://x.test"
+    reply = await urllib_transport("https://x.test", 1, {}, b"!")
+    assert reply.body == b"https://x.test!"

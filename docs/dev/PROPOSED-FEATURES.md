@@ -42,10 +42,9 @@ orders.
 | ID | Feature | Kind | Why |
 |---|---|---|---|
 | FEAT-101 | Up/Down tick recorder and maker study | Research, then a lane | The professional seat in these markets is the maker's (rebates, rewards); find the phases where makers earn |
-| FEAT-102 | Full-set scanner: both sides, depth, duration, loop | Research, then an executor | `arb` exists but has never been run; measure whether full-set gaps are frequent, large and lasting |
 | FEAT-147 | Up/Down stale quotes after a spot move | Research, then a lane | Second-level prints show a 2–5 s edge after a Binance move, the edge the bot `@vega7` appears to trade; takeable only if we are fast enough |
 
-Built or closed, and moved to [`DONE.md`](DONE.md#built-proposals-moved-from-proposed-featuresmd-2026-11-07) on 2026-11-07: FEAT-146 (`v0.4.0`; NO-GO), FEAT-149 (`lane-rows`, Unreleased), FEAT-153 (`rewards-scan`, Unreleased) and FEAT-103 (Unreleased; NO-GO, closed). FEAT-147 stays here while its pre-registered part 1 decision is open ([`TODO.md`](TODO.md)).
+Built or closed, and moved to [`DONE.md`](DONE.md#built-proposals-moved-from-proposed-featuresmd-2026-11-07) on 2026-11-07: FEAT-146 (`v0.4.0`; NO-GO), FEAT-149 (`lane-rows`, Unreleased), FEAT-153 (`rewards-scan`, Unreleased) and FEAT-103 (Unreleased; NO-GO, closed); FEAT-102 (`arb --loop`, `arb-report`, Unreleased) on 2026-11-07, to [`DONE.md`](DONE.md#feat-102-full-set-scanner-both-sides-depth-duration-loop). FEAT-147 stays here while its pre-registered part 1 decision is open ([`TODO.md`](TODO.md)).
 
 ### FEAT-101: Up/Down tick recorder and maker study
 * **Class / Priority:** Income (research) · P2
@@ -59,18 +58,6 @@ Built or closed, and moved to [`DONE.md`](DONE.md#built-proposals-moved-from-pro
 * **Recorder built (0.4.0) as `ticks`** (FEAT-147): best bid and ask, fills and spot to the millisecond. The maker study (`ticks-report` per phase, the simulated quote) is not built; its first read is scheduled for 2026-11-05 on the Mac's recording.
 * **Read out 2026-11-07 on three days of `ticks`** ([`RESULTS.md`](RESULTS.md#2026-11-07--ticks-on-3-days-feat-147-part-1-takeable-no-maker-seat-at-our-speed-feat-101)): a maker always at the top earns +1.82 c a share after the rebate (5 of 6 phases in both halves), but 99.8% of its fills come within 250 ms of the price reaching the top; placed as the top was 25 ms before, every phase already loses (−0.92 c; −1.96 c at 100 ms, −2.29 c at 250 ms), while our round trip is 117 ms. **No maker seat at our speed.** Still open: a quote behind the top, which needs a recording with depth at each level.
 * **Then, for every venue:** a phase that earns becomes the first family of trading-core FEAT-148 (order-book records, a resting-order simulator, maker and liquidity-provider rules in the strategy library).
-
-### FEAT-102: Full-set scanner: both sides, depth, duration, loop
-* **Class / Priority:** Income (research) · P2
-* **Goal:** measure, over a week, whether buying a complete set of outcomes for less than it pays is a real opportunity. Saguillo et al., "Unravelling the probabilistic forest: arbitrage in prediction markets" (arXiv 2508.03474), found such gaps were taken on Polymarket at scale; CloddsBot's version checks mid prices and binary Yes + No pairs, which on Polymarket are one mirrored book. `trading-polymarket arb` (`research/arb.py`) already checks binary pairs and neg-risk Yes sets at the best asks, but it has never been run (no `data/arb.jsonl` in `runtimes/polymarket`).
-* **Design:**
-  - **The No side:** in an n-outcome neg-risk event, buying every No pays n − 1; record when the No asks sum, fees included, to less than that.
-  - **Depth:** walk each leg's book to find the cost for 10, 50 and 100 sets and the largest size that still clears the threshold, not only the best level.
-  - **Duration:** a gap seen is re-checked every few seconds until it closes; record its lifetime.
-  - **Loop mode:** `arb --loop --interval 30` for a long run in tmux or cron, with a daily summary (`arb-report`: count, size, profit and lifetime by event category, augmented events apart).
-  - Fees per market from its fee schedule (most non-sports, non-crypto markets have none).
-* **Decision rule (written before the week starts):** an executor is worth building only if, after fees, there are at least 10 gaps a day of at least $5 each at a fillable size, lasting at least 10 s. trading-core opens one instrument per signal, so an executor needs multi-leg orders, a core change of its own.
-* **Dependencies:** none. **Impact:** risk-free when filled; the question is only whether anything is left after the bots that already take these.
 
 ### FEAT-147: Up/Down stale quotes after a spot move
 * **Class / Priority:** Research, then a lane · P1 · added 2026-11-04.

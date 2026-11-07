@@ -28,7 +28,7 @@ pre-registered verdicts — whether a lane is allowed near money. Version
 | **momentum** | Research: sharp moves, with attention metrics | off | research, none |
 | **fed** | Fed-decision buckets bought below Kalshi's quote for the same meeting, sold when the venues converge | off (paper config: `paper-fed.example.json`) | 1, paper |
 | **crossvenue** | The same for any Polymarket/Kalshi pair a human reviewed (`pairs approve`) | off until pairs are approved | 0, not started |
-| arbitrage | Yes + No < 1 and neg-risk Σ Yes < 1, logged only | record only | none |
+| full sets | a neg-risk event's Yes set or No set below its payout after fees, recorded only (FEAT-102) | record only | none |
 
 Stages are the capital gate's (0 Evidence, 1 Paper, 2 Live canary, 3
 Scale-up); the evidence and the runs in progress:

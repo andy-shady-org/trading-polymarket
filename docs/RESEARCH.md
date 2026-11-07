@@ -227,17 +227,38 @@ none ambiguous, with a median mid gap of 1 c on 211 rows where both books
 were quoted. The run that judges it is `sports-1`
 ([`dev/runs/sports-1.md`](dev/runs/sports-1.md)).
 
-## 5. Dry-run recording and arbitrage logging (during a paper run)
+## 5. Dry-run recording and full-set gaps
 
 ```bash
 trading-polymarket record --cycles 288 --interval 300     # 24 h, every 5 min
-trading-polymarket arb --pages 10                          # once, or from cron
+trading-polymarket arb                                     # every full set, once
+trading-polymarket arb --loop --out data/arb-1             # record gaps until stopped
+trading-polymarket arb-report --input data/arb-1           # FEAT-102's decision
 ```
 
 `record` writes each cycle's signals (with entry metrics) and rejection counts
 to `data/record/<date>.jsonl` without trading — useful to grow the sample
-beyond what the paper engine's risk limits let through. `arb` appends
-structural gaps to `data/arb.jsonl`.
+beyond what the paper engine's risk limits let through.
+
+`arb` (FEAT-102, from 0.6.0) prices every **full set** of every open neg-risk
+event on its books: a Yes set (one Yes of every live outcome) pays 1, a No
+set pays `n − 1`. A set is a gap when it costs less, fees included; its depth
+gives the most sets that each still earn `--min-profit` (0.5 c) and their
+total profit. A set exists only when every outcome can be bought or has
+resolved No (TP-13; in augmented events only while `Other` is tradable, and
+then flagged). Binary Yes + No pairs are not checked: on Polymarket the No
+book is the Yes book mirrored, so a pair costs 1 plus the spread. `--loop`
+refreshes the events from Gamma every 15 minutes, reads every set's books
+every 5 minutes (CLOB `POST /books`, about 230 requests), re-reads the sets
+within 3 c of a gap every 30 s and every open gap every 5 s, and writes one
+folder a UTC day: `gaps.jsonl` (each gap's lifetime, size and profit, and its
+longest run at $5 or more), `observations.jsonl.gz` (every read of an open
+gap with each leg's top levels), `sweeps.jsonl` and `catalogue.jsonl`
+(coverage). `arb-report` counts the gaps that meet FEAT-102's rule and gives
+its decision ([`dev/runs/arb-1.md`](dev/runs/arb-1.md)), with each
+qualifying gap's days to resolution and return a year: a full set pays only
+when its event resolves, so a small gap on a far event can earn less than
+cash (two open on 2026-11-07 resolved in 2027 and 2028).
 
 ## 6. Results log
 

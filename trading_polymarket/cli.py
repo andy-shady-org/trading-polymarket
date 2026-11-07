@@ -7,7 +7,8 @@ these commands collect evidence and look at what the lanes see:
 ``scan``           run the enabled lanes once on live data, print the signals
 ``weather``        model vs market for every open temperature event
 ``record``         dry-run the lanes every N seconds, log signals to JSONL
-``arb``            record-only scan for binary-pair / neg-risk arbitrage
+``arb``            full-set gaps in neg-risk events, once or ``--loop`` (FEAT-102)
+``arb-report``     FEAT-102's decision on an ``arb --loop`` recording
 ``bias``           measure each weather station's day-ahead forecast bias
 ``metars``         append recent METARs to the archive (intraday backtests)
 ``history``        collect resolved markets + price histories
@@ -48,12 +49,18 @@ from trading_polymarket.clients.spot import SpotClient
 from trading_polymarket.config import LANES, PolymarketSettings
 from trading_polymarket.module import PolymarketModule
 from trading_polymarket.research import arb as arb_mod
+from trading_polymarket.research import (
+    arb_loop,
+    arb_report,
+    metar_archive,
+    recorder,
+    updown,
+)
 from trading_polymarket.research import backtest as bt
 from trading_polymarket.research import bias as bias_mod
 from trading_polymarket.research import fed as fed_mod
 from trading_polymarket.research import history as hist
 from trading_polymarket.research import lane_rows as lane_mod
-from trading_polymarket.research import metar_archive, recorder, updown
 from trading_polymarket.research import pairs_suggest as suggest_mod
 from trading_polymarket.research import rewards as rewards_mod
 from trading_polymarket.research import sports_gaps as sports_mod
@@ -178,20 +185,108 @@ async def cmd_record(args: argparse.Namespace, out: Printer) -> int:
     return 0
 
 
+def _arb_settings(args: argparse.Namespace) -> arb_loop.Settings:
+    return arb_loop.Settings(
+        min_profit=args.min_profit,
+        watch_margin=args.watch_margin,
+        qualify=args.qualify,
+        recheck=args.recheck,
+        watch=args.watch,
+        sweep=args.sweep,
+        catalogue=args.catalogue,
+        max_pages=args.pages,
+    )
+
+
+def _set_line(spec: arb_mod.SetSpec, q: arb_mod.SetQuote) -> str:
+    best = q.best_profit(spec.payout)
+    flags = ("  OPEN" if q.open else "") + ("  (augmented)" if spec.augmented else "")
+    return (
+        f"{spec.kind:<7} {spec.title[:48]:<48} {len(spec.markets):>3} legs "
+        f"profit/set {'-' if best is None else format(best, '+.4f')} "
+        f"x{q.max_size:,.0f} = ${q.max_profit:,.2f}{flags}"
+    )
+
+
 async def cmd_arb(args: argparse.Namespace, out: Printer) -> int:
     module = build_module(args)
-    scanner = arb_mod.ArbScanner(
-        module.gamma, module.books, min_profit=args.min_profit, min_size=args.min_size
-    )
-    found = await scanner.scan(max_pages=args.pages)
-    append_jsonl(args.out, (o.to_dict() for o in found))
-    for o in found[:20]:
-        flag = " (augmented)" if o.augmented else ""
-        out(
-            f"{o.kind:<13} {o.title[:50]:<50} cost {o.cost:.4f} "
-            f"profit {o.profit:.4f} x{o.size:,.0f}{flag}"
+    if args.loop:
+        counts = await arb_loop.record(
+            module.gamma,
+            module.clob,
+            directory=args.out,
+            hours=args.hours,
+            settings=_arb_settings(args),
+            log=lambda message: out(f"{datetime.now():%H:%M:%S} {message}"),
         )
-    out(f"{len(found)} opportunities appended to {args.out}")
+        written = ", ".join(f"{n} {counts[n]}" for n in sorted(counts)) or "nothing"
+        out(f"stopped; rows written: {written} (in {args.out})")
+        return 0
+    found, priced = await arb_loop.scan_once(
+        module.gamma, module.clob, min_profit=args.min_profit, max_pages=args.pages
+    )
+    row = found.row(0.0, 0.0)
+    out(
+        f"{row['events']} events, {row['neg_risk_events']} neg-risk, "
+        f"{row['sets']} full sets ({row['augmented_sets']} augmented), "
+        f"{row['no_full_set']} without one"
+    )
+    for spec, q in priced[: args.top]:
+        out(_set_line(spec, q))
+    gaps = [(s, q) for s, q in priced if q.open]
+    plain = sum(not s.augmented for s, _ in gaps)
+    out(f"{len(gaps)} sets open now ({plain} not augmented); nothing is ordered")
+    return 0
+
+
+def _arb_report_lines(summary: dict[str, Any]) -> list[str]:
+    lines = [
+        f"{d['day']}: {d['sweeps']} sweeps{'' if d['covered'] else ' (not covered)'}, "
+        f"{d['gaps']} gaps, {d['qualifying']} qualifying, "
+        f"{d['augmented_gaps']} augmented"
+        for d in summary["days"]
+    ]
+
+    def q(name: str, spec: str) -> str:
+        v = summary[name]
+        if v is None:
+            return f"{name}: -"
+        return f"{name}: " + " / ".join(
+            f"{k} {format(v[k], spec)}" for k in ("p10", "p50", "p90", "max")
+        )
+
+    lines += [
+        f"gaps {summary['gaps']} (augmented apart {summary['augmented_gaps']}, "
+        f"censored {summary['censored']}); qualifying {summary['qualifying']}, "
+        f"their peak profit ${summary['qualifying_peak_profit']:,.2f}",
+        q("lifetime", ",.1f"),
+        q("peak_max_profit", ",.2f"),
+        q("peak_max_size", ",.0f"),
+        q("qualifying_days_to_resolution", ",.0f"),
+        q("qualifying_annualized", ".1%"),
+        "by kind: "
+        + (", ".join(f"{k} {v}" for k, v in summary["by_kind"].items()) or "-"),
+        "by tag: "
+        + (", ".join(f"{k} {v}" for k, v in summary["by_tag"].items()) or "-"),
+        f"decision (FEAT-102, runs/arb-1.md): {summary['verdict']} "
+        f"on {summary['covered_days']} covered days",
+    ]
+    return lines
+
+
+async def cmd_arb_report(args: argparse.Namespace, out: Printer) -> int:
+    start = updown.parse_day(args.start) if args.start else None
+    end = updown.parse_day(args.end) if args.end else None
+    gaps, sweeps = arb_report.load(args.input, start=start, end=end)
+    if not gaps and not sweeps:
+        out(f"no recording in {args.input}: run `trading-polymarket arb --loop`")
+        return 1
+    summary = arb_report.summarize(gaps, sweeps)
+    for line in _arb_report_lines(summary):
+        out(line)
+    if args.json:
+        Path(args.json).write_text(json.dumps(summary, indent=2, sort_keys=True))
+        out(f"summary written to {args.json}")
     return 0
 
 
@@ -762,11 +857,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--interval", type=float, default=300.0)
     p.add_argument("--out", default=recorder.DEFAULT_RECORD_DIR)
 
-    p = command("arb", "record-only arbitrage scan")
-    p.add_argument("--pages", type=int, default=5)
-    p.add_argument("--min-profit", type=float, default=0.005)
-    p.add_argument("--min-size", type=float, default=5.0)
-    p.add_argument("--out", default="data/arb.jsonl")
+    p = command("arb", "full-set gaps in neg-risk events, record-only (FEAT-102)")
+    p.add_argument("--loop", action="store_true", help="record until stopped")
+    p.add_argument("--hours", type=float, help="with --loop: stop after this long")
+    p.add_argument("--out", default=arb_loop.DEFAULT_ARB_DIR)
+    p.add_argument("--pages", type=int, default=arb_loop.MAX_EVENT_PAGES)
+    p.add_argument("--min-profit", type=float, default=arb_mod.DEFAULT_MIN_PROFIT)
+    p.add_argument("--qualify", type=float, default=arb_loop.QUALIFY_PROFIT)
+    p.add_argument("--watch-margin", type=float, default=arb_loop.WATCH_MARGIN)
+    p.add_argument("--recheck", type=float, default=arb_loop.RECHECK_SECONDS)
+    p.add_argument("--watch", type=float, default=arb_loop.WATCH_SECONDS)
+    p.add_argument("--sweep", type=float, default=arb_loop.SWEEP_SECONDS)
+    p.add_argument("--catalogue", type=float, default=arb_loop.CATALOGUE_SECONDS)
+    p.add_argument("--top", type=int, default=20, help="without --loop: sets shown")
+
+    p = command("arb-report", "FEAT-102's decision on an arb recording")
+    p.add_argument("--input", default=arb_loop.DEFAULT_ARB_DIR)
+    p.add_argument("--start", help="YYYY-MM-DD (UTC; default: the first day)")
+    p.add_argument("--end", help="YYYY-MM-DD (UTC, exclusive; default: all)")
+    p.add_argument("--json", help="also write the summary to this file")
 
     p = command("bias", "measure weather-station forecast bias")
     p.add_argument("--days", type=int, default=14)
@@ -956,6 +1065,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "record": cmd_record,
     "arb": cmd_arb,
+    "arb-report": cmd_arb_report,
     "bias": cmd_bias,
     "metars": cmd_metars,
     "history": cmd_history,

@@ -9,6 +9,16 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+### Added
+- `trading-polymarket arb --loop` and `arb-report` (FEAT-102, `research/arb_loop.py`, `research/arb_report.py`): record-only, every full-set gap on Polymarket, how big and how long. Every open neg-risk event's **Yes set** (pays 1) and **No set** (pays `n − 1`), priced on full books with each market's fee and walked for depth (the cost of 10, 50 and 100 sets; the most sets that each still earn `--min-profit`, 0.5 c, and their profit). Gamma's events every 15 minutes, every set's books every 5 minutes, sets within 3 c of a gap every 30 s and open gaps every 5 s; one folder a UTC day with each gap's lifetime, size, profit and longest run at $5 or more (`gaps.jsonl`), every read of an open gap with each leg's top levels (`observations.jsonl.gz`) and coverage (`sweeps.jsonl`, `catalogue.jsonl`). `arb-report` gives FEAT-102's decision for the run `arb-1` (`docs/dev/runs/arb-1.md`), with the qualifying gaps' days to resolution and return a year (each gap records its set's latest end date, `resolves`). `arb` without `--loop` prints the sets closest to a gap after one pass.
+- `ClobClient.books`: many books in one `POST /books` (500 a request); `JsonHttp.post_json` (the transport takes an optional body); `GammaClient.event_pages` (Gamma's events a page at a time).
+
+### Changed
+- `arb` no longer checks binary Yes + No pairs (a market's No book is its Yes book mirrored, so a pair costs 1 plus the spread), reads every open event instead of the 5 most active pages, and writes a folder (`--out`, `data/arb`) instead of `data/arb.jsonl`; `--min-size` is gone (a set's minimum is its legs' minimum order size).
+
+### Fixed
+- TP-13: `arb` summed the asks of an event's tradable markets as if they were every outcome, so a set missing an outcome that could still win (an inactive or unresolved market, or an augmented event's `Other` before it accepts orders) read as a gap. A set is now built only when it is complete.
+
 ## [0.5.0] - 2026-11-07
 
 Research commands, record-only: the sports listing-gap recorder and its

@@ -23,7 +23,7 @@ checkout path (default `../trading-core`) or any pip requirement, e.g.
 The suite (443 tests collected at v0.2.1, 2026-10-31:
 `pytest --collect-only -q`) runs in a few seconds. Python 3.11's coverage
 tracer can miss a `continue` right after an `await`; prefer code that does
-not need one (see `research/arb.py`) over pragmas.
+not need one (return early and let the caller decline) over pragmas.
 
 ## 2. Isolation
 
