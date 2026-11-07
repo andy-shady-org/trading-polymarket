@@ -25,6 +25,7 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 | Date | Data | Lane | Config | Positions | Net | Verdict |
 |---|---|---|---|---|---|---|
+| 2026-11-07 | `data/ticks`, 3 days 0 h 9 min of the Mac's recording (4 Nov 12:31:56 to 7 Nov 12:41:03 UTC), 865 settled BTC 5-minute markets | FEAT-147 part 1 (are we fast enough), and the FEAT-101 maker study on 3 days (research, no lane) | pre-registered decision in `ticks-report` (v0.4.0); the maker rule as written on 2026-11-05 | 276 signals; 50,920 simulated maker fills | – | FEAT-147 part 1 **takeable** (89.9% of signals; offset 2.20 s): part 2 runs from 18 Nov. Maker at our speed: **NO-GO** (every phase loses from 25 ms; our round trip is 117 ms) |
 | 2026-11-07 | `data/updown`, FEAT-146's 8,615 BTC 5-minute markets, 5 Oct – 3 Nov, and one-second Binance spot | crypto Up/Down expiry fade (FEAT-103; research, no lane) | pre-registered: 300–60 s left, spot under 6 bp over 60 s, the side at 35 c or less, $5, next buy print within 5 s, held to settlement | 6,139 | −8.0% on stake | NO-GO: FAIL on every check; the mirror and the 4 other variants all lose; FEAT-103 closed |
 | 2026-11-04 | `weather-0.2.1`, `fed-0.2.1` (paper, closed early) | weather, fed | pre-registered 0.2.1 configs | 16 / 2 | −$67.27 / −$0.29 adjusted | not judged: 16 of 150 and 2 of 60 positions; closed in favour of `weather-1`, `fed-1` |
 | 2026-11-04 | a 6-minute `ticks` recording (2 markets, 1,302 fills); FEAT-146's 30 days | FEAT-147's timing, corrected (study) | pre-registered rule, `--timestamp-offset 2.2`, in-sample | 959 | −4.3% on stake | none: a study; the "2 s" edge was in the data API's time, 2.2 s after the fill |
@@ -42,6 +43,143 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
+
+### 2026-11-07 — `ticks` on 3 days: FEAT-147 part 1 takeable; no maker seat at our speed (FEAT-101)
+
+**Recording.** `trading-polymarket ticks` (v0.4.0) on the Mac, BTC
+5-minute Up/Down markets, from 2026-11-04 12:31:56 to 2026-11-07 12:41:03
+UTC (stopped by the operator with Ctrl-C after three days; 3 d 0 h 9 min,
+129 MB in `runtimes/polymarket/data/ticks/`): 2.13 million Binance trades,
+5.09 million book tops, 1.36 million fills, 8,620 probes; 868 markets, of
+which 865 lie wholly inside the recording and are settled (Gamma,
+`closed=true`; the token order checked against the recorder's keys on
+every one). **Gaps:** the outage of 2026-11-05 05:53 UTC (spot 693 s,
+quotes 684 s) and two quote gaps after it (06:08, 202 s; 06:11, 124 s);
+five more quote gaps of 32–46 s; none in the probes.
+
+#### FEAT-147 part 1: takeable
+
+**Rule.** As pre-registered in
+[`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-147-updown-stale-quotes-after-a-spot-move)
+on 2026-11-04 and built in `research/ticks_report.py` (v0.4.0, `da27223`)
+before the recording: the lead is takeable when, over at least three days,
+at least half of the signals are takeable, a signal being takeable when
+its stale ask outlives our receive delay plus one round trip.
+
+**Result** (`trading-polymarket ticks-report --input data/ticks`, from a
+worktree of the v0.4.0 tag on trading-core v0.7.0, Python 3.13):
+
+| Measure | p10 | Median | p90 | n |
+|---|---|---|---|---|
+| Binance receive delay (ms, with any clock difference) | 132 | 134 | 139 | 2,130,184 |
+| Round trip to the CLOB (ms) | 112 | 117 | 124 | 8,598 |
+| Data API time less the fill's WebSocket time (s) | 1.47 | **2.20** | 2.91 | 36,010 |
+| Stale ask lifetime (ms) | 261 | 4,588 | 53,480 | 276 |
+| Our delay (ms) | 245 | 251 | 260 | 276 |
+
+**Decision: takeable.** 248 of 276 signals (89.9%) outlived our delay.
+The offset for part 2 is `--timestamp-offset 2.20`, the same as the
+6-minute reading of 2026-11-04.
+
+**Descriptive, not deciding** (`ticks_describe.py`, below):
+- **128 signals (46%) are censored:** the ask was still there when the
+  window closed. They count as takeable under the rule, but nobody took
+  them, so they say nothing about a race. On the **148 asks that did go**,
+  81.1% outlived our delay; their lifetime was 208 / 696 / 6,067 ms
+  (p10 / median / p90), and the margin over our delay −42 / +441 /
+  +5,815 ms. 59.5% lived longer than 500 ms, 43.2% longer than 1 s.
+- **Stable:** takeable 94.1%, 89.8%, 83.9% and 95.5% on 4, 5, 6 and 7 Nov
+  (34, 88, 87, 67 signals); 91.2% and 88.7% by half.
+- **Size at the ask:** median 551 shares, $22.78 notional; 80.4% of signals
+  had at least $5 at the ask (p10 $1.49).
+- **An independent recount** from the raw files, without this
+  repository's code (`check147.py`), found 277 signals, 249 takeable
+  (89.9%), 128 censored, and the same delays.
+- **Not looked at:** whether the signals' sides won. 4–7 Nov lies inside
+  part 2's fresh window (4–17 Nov); its outcomes are read only by
+  `updown-backtest --rule stale` from 18 Nov.
+
+**What it means.** The decision is about speed only: from this computer
+we would usually see the move and reach the CLOB before a cheap ask
+reprices. Whether buying those asks earns is part 2's question. The
+lifetimes are measured to our receipt of the quote that removed the ask,
+so they include Polymarket's feed delay to us; the order's own matching
+time is not measured. Both make the real margin somewhat smaller than
+shown.
+
+#### FEAT-101: the maker study, twice
+
+**Rule,** written before any result on 2026-11-05 13:10 UTC (project note
+`maker-study-1-2026-11-05`, not repeated here): per outcome token, a
+1-share bid at the best bid and a 1-share ask at the best ask, always
+resting; a fill only on a trade printing **through** the price, each quote
+state (one best price, until it changes) filled at most once; P&L per
+share against settlement; the rebate 20% of `0.07 × p(1 − p)`; adverse
+selection from the mid 1, 5 and 30 s later; phases by the time left; a
+phase **earns** when its mean after the rebate is above 0 in both halves
+of the recording (split at its midpoint, by fill time). Two pull rules
+(a 0.05% spot move against the quote over 5 s; book imbalance beyond
+±0.5) are reported beside it. All times are the WebSocket's `server_ms`.
+
+**First reading, 2026-11-05** (the first 24.5 h, 294 markets; the
+original script went with that session's workspace): 15,485 fills,
+**+1.99 c** a share after the rebate, 5 of 6 phases earning (not 180–240
+s), 90% by market +1.28 to +2.75 c. But 99.8% of the fills came within
+250 ms of the price first reaching the top (median 9 ms), and with our
+quote placed at the top as it was L ms before: 250 ms −2.48 c, 1 s
+−3.58 c, every phase negative.
+
+**This reading** (`maker.py`, rebuilt from the written rule; on the first
+24.5 h it gives 16,497 fills, +1.92 c, the same 5 of 6 phases and 99.8%
+within 250 ms, so the rebuild is close but not identical, about 6.5% more
+fills):
+
+| Phase (s left) | Fills | Before rebate | After | Half 1 | Half 2 | Earns |
+|---|---|---|---|---|---|---|
+| 0–30 | 2,333 | +2.36 c | +2.56 c | +3.93 | +1.34 | yes |
+| 30–60 | 7,075 | +2.48 | +2.71 | +2.39 | +3.10 | yes |
+| 60–120 | 12,939 | +0.73 | +0.98 | +0.48 | +1.51 | yes |
+| 120–180 | 9,602 | +1.52 | +1.80 | +2.26 | +1.30 | yes |
+| 180–240 | 8,164 | +1.29 | +1.58 | −0.02 | +3.49 | no |
+| 240–300 | 8,995 | +2.44 | +2.76 | +3.24 | +2.07 | yes |
+| all | 50,920 | +1.55 | **+1.82** | +1.73 | +1.93 | yes |
+
+- 90% by market (2,000 draws over markets): +1.47 to +2.16 c.
+- 99.8% of fills within 250 ms of the price first reaching the top
+  (median 9 ms). Adverse selection +1.54 / +1.51 / +1.46 c at 1 / 5 /
+  30 s. The spot pull: +1.85 c on 98% of fills; the imbalance pull:
+  +2.38 c on 57%.
+
+**At our speed** (our quote at the top as it was L ms before; a
+sensitivity check outside the written rule, as on 5 Nov):
+
+| L | Fills | After rebate | 90% by market | Phases earning |
+|---|---|---|---|---|
+| 0 ms (the rule) | 50,920 | +1.82 c | +1.47 to +2.16 | 5 of 6 |
+| 10 ms | 31,351 | +1.52 c | +1.09 to +1.96 | 5 of 6 |
+| 25 ms | 38,742 | **−0.92 c** | −1.33 to −0.52 | 0 of 6 |
+| 50 ms | 94,450 | **−1.40 c** | −1.71 to −1.10 | 0 of 6 |
+| 100 ms | 129,601 | **−1.96 c** | −2.21 to −1.72 | 0 of 6 (−0.98 to −4.34) |
+| 250 ms | 196,927 | **−2.29 c** | −2.49 to −2.08 | 0 of 6 (−2.05 to −5.57) |
+| 1 s | 260,979 | **−3.11 c** | −3.33 to −2.91 | 0 of 6 (−2.44 to −9.02) |
+
+**Verdict: no maker seat at our speed (NO-GO for a maker lane on these
+markets).** The top of the book earns about 2 c a share, but only for a
+maker who reprices within milliseconds: it still earns at 10 ms and is
+gone by 25 ms, while our round trip alone is 117 ms. Quotes we left at the top
+would be the stale quotes FEAT-147 measures being taken. The two readings
+overlap (the first day is in both), so they are not the "two separate
+recordings" FEAT-101 asks for; that would only matter for a co-located
+maker. What stays open is a passive quote **behind** the top, joining a
+queue it can see: the recorder keeps the top only, so that needs a
+recording with depth at each level.
+
+**Scripts** (in `runtimes/polymarket/analysis/`, outside this repository;
+run with the v0.4.0 package on the path), sha256:
+- `maker.py` `40f894cedc0ab8a5bb849eb4c826faefd85ba094bcd87d6dfbbc7bf7d5b74e34`
+- `ticks_describe.py` `6a9c00a086a79a658a819d886efcdd5cffa04f95485ccb6ea2879605fc5c92b3`
+- `check147.py` `b4be35d95b854e38f3e00a7b2a70224644b549d7b38c72515abe4aff9ea87ad7`
+- `settle.py` (Gamma settlements) `8d36e54561eadd656526a4eaf04e248366658c39d2e046797c6e7dec6cbc2bbe`
 
 ### 2026-11-04 — `weather-0.2.1` and `fed-0.2.1` closed early, not judged
 
