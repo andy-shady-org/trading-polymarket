@@ -73,12 +73,16 @@ carries its lane as `strategy`. Buy plans use fractional Kelly and keep
 of a held token (TP-8, 0.2.0) and drops signals past a lane's
 `max_positions_per_day` (0.2.1).
 
-## 5. Arbitrage scanner (record only)
+## 5. Full-set scanner (record only)
 
-Since 0.1.0: `trading-polymarket arb` checks live books for binary pairs
-whose asks plus fees sum below 1 and neg-risk sets whose Yes asks plus fees
-sum below 1, flags augmented events, and appends every gap to
-`data/arb.jsonl`. Nothing is traded.
+Since 0.1.0 `trading-polymarket arb` checked binary pairs and neg-risk Yes
+sets at the best asks of the most active events. From Unreleased (FEAT-102):
+every open neg-risk event's **Yes set and No set**, priced on full books with
+each market's fee (CLOB `POST /books`, 500 a request), with the depth that
+still earns 0.5 c a set; only complete sets (TP-13); `arb --loop` records
+every gap's lifetime, size and profit for a week-long run, and `arb-report`
+gives FEAT-102's decision (`dev/runs/arb-1.md`). Binary pairs are no longer
+checked (a mirrored book cannot price them below 1). Nothing is traded.
 
 ## 6. Research and backtests
 
@@ -111,8 +115,9 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 
 ## 7. Command line
 
-`trading-polymarket` (since 0.1.0) has twenty commands: `scan`,
-`weather`, `record`, `arb`, `bias`, `metars`, `history`, `weather-history`,
+`trading-polymarket` (since 0.1.0) has twenty-one commands: `scan`,
+`weather`, `record`, `arb`, `arb-report` (FEAT-102, Unreleased), `bias`,
+`metars`, `history`, `weather-history`,
 `updown-history`, `updown-backtest`, `ticks`, `ticks-report`,
 `rewards-scan`, `sports-gaps`, `sports-gaps-report` (FEAT-168, 0.5.0),
 `fed-history`, `calibrate`, `backtest`, `pairs` and `lane-rows`. An API failure is

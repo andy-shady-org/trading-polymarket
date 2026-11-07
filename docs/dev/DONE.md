@@ -85,3 +85,20 @@ Proposals whose work is done, moved whole and unedited from [`PROPOSED-FEATURES.
 * **First scan (2026-11-04):** 14,554 rewarded markets paying about $234,000 a day (median $5, p90 $32; 223 pay $100 or more). Of the 300 best paid, 107 had ended (awaiting results) and 51 had wide books. The 182 clean books held a median of about 10,000–12,500 shares inside the spread on each side; the snapshot estimates (median 4.5% a day of the quote's capital) are far too high to trust as earnings, because a thin book at one moment is not a day.
 * **Then:** pick a handful of clean, quiet markets and record their books for a day with `ticks`-style sampling (FEAT-101's maker study measures what a quote loses to adverse selection there); only a phase or market that earns after that becomes trading-core FEAT-148's first family.
 * **Dependencies:** none. **Impact:** points the maker study at the seat Polymarket subsidises.
+
+#### FEAT-102: Full-set scanner: both sides, depth, duration, loop
+* **Class / Priority:** Income (research) · P2
+* **Goal:** measure, over a week, whether buying a complete set of outcomes for less than it pays is a real opportunity. Saguillo et al., "Unravelling the probabilistic forest: arbitrage in prediction markets" (arXiv 2508.03474), found such gaps were taken on Polymarket at scale; CloddsBot's version checks mid prices and binary Yes + No pairs, which on Polymarket are one mirrored book. `trading-polymarket arb` (`research/arb.py`) already checks binary pairs and neg-risk Yes sets at the best asks, but it has never been run (no `data/arb.jsonl` in `runtimes/polymarket`).
+* **Design:**
+  - **The No side:** in an n-outcome neg-risk event, buying every No pays n − 1; record when the No asks sum, fees included, to less than that.
+  - **Depth:** walk each leg's book to find the cost for 10, 50 and 100 sets and the largest size that still clears the threshold, not only the best level.
+  - **Duration:** a gap seen is re-checked every few seconds until it closes; record its lifetime.
+  - **Loop mode:** `arb --loop --interval 30` for a long run in tmux or cron, with a daily summary (`arb-report`: count, size, profit and lifetime by event category, augmented events apart).
+  - Fees per market from its fee schedule (most non-sports, non-crypto markets have none).
+* **Decision rule (written before the week starts):** an executor is worth building only if, after fees, there are at least 10 gaps a day of at least $5 each at a fillable size, lasting at least 10 s. trading-core opens one instrument per signal, so an executor needs multi-leg orders, a core change of its own.
+* **Dependencies:** none. **Impact:** risk-free when filled; the question is only whether anything is left after the bots that already take these.
+* **Built (Unreleased, 2026-11-07; `research/arb.py`, `research/arb_loop.py`, `research/arb_report.py`, `ClobClient.books`, `JsonHttp.post_json`, `GammaClient.event_pages`):** as designed, with three changes found on live data before any run:
+  - **Binary pairs dropped:** a market's No book is its Yes book mirrored (39 of 39 markets), so Yes + No costs 1 plus the spread and is never a gap; the No side is the **No set** of a neg-risk event, read off the Yes bids.
+  - **The whole venue, not 5 pages:** every open event (about 20,000, 7,300 neg-risk with 114,000 markets), refreshed every 15 minutes; every set's books every 5 minutes with `POST /books` (500 a request); sets within 3 c of a gap every 30 s; open gaps every 5 s (the "every few seconds" of the design). `--loop --interval 30` became `--loop` with `--recheck`, `--watch`, `--sweep` and `--catalogue`.
+  - **Complete sets only (TP-13):** a set needs every outcome tradable or resolved No; augmented events count only while `Other` is tradable and are kept out of the decision.
+* **The decision rule made exact** before the run, in [`runs/arb-1.md`](runs/arb-1.md): a gap counts when its event is not augmented and every read for at least 10 s shows at least $5 of profit at the size that still earns 0.5 c a set; GO when 7 or more covered days average at least 10 such gaps and at least 5 in 7 of them reach 10.

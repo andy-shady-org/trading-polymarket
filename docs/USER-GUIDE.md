@@ -49,7 +49,7 @@ trading-core modules          # → polymarket, simulated
 trading-polymarket weather --city London        # model vs market, bucket by bucket
 trading-polymarket scan                         # what the enabled lanes would buy now
 trading-polymarket scan --lane fed              # one lane only
-trading-polymarket arb                          # structural gaps (record only)
+trading-polymarket arb                          # full-set gaps now (record only)
 ```
 
 ## 4. Stage 0: build the evidence

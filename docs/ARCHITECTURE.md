@@ -55,7 +55,7 @@ trading_polymarket/
 ├── strategies/      # common pricing, filters, router; lanes: weather, favourite, momentum,
 │                    #   crossvenue (the fed and crossvenue lanes: ReferenceScout / ReferenceAnalyst)
 ├── research/        # records (audit format), history, backtest, weather_backtest, metar_archive,
-│                    #   fed, pairs_suggest, bias, arb, recorder
+│                    #   fed, pairs_suggest, bias, arb (+ _loop, _report), recorder
 ├── data/            # stations.json (ICAO → coordinates), shipped with the package
 ├── cli.py           # trading-polymarket
 └── tests/           # mirrored unit tests, integration, property; 100% coverage

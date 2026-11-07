@@ -15,7 +15,7 @@ result in [`dev/RESULTS.md`](dev/RESULTS.md).
 | `momentum` | off | None (research lane collecting evidence) | Resolution, or the engine's generic exits if you configure them |
 | `fed` | off (`configs/paper-fed.example.json` turns it on) | Polymarket's Fed-decision buckets drifting away from Kalshi's quote for the same meeting, then converging | Convergence (sold), or resolution |
 | `crossvenue` | off (needs reviewed pairs) | The same, for any question a human paired across the two venues | Convergence (sold), or resolution |
-| arbitrage scanner | record only | Structural (Yes + No < 1, Σ Yes < 1) | Not traded |
+| full-set scanner | record only | Structural: a neg-risk event's Yes set or No set below its payout after fees (FEAT-102) | Not traded |
 
 Every lane goes through the same pipeline:
 
@@ -261,18 +261,25 @@ replay skips any meeting the venues settled differently, and the live lane's
 volume filters keep thin duplicates out, but the case is why pairs are
 matched on rules, not titles.
 
-## 6. Arbitrage scanner (record only)
+## 6. Full-set scanner (record only)
 
-`trading-polymarket arb` checks, on live books, two structural gaps:
+`trading-polymarket arb` (FEAT-102) checks, on live books, every open
+neg-risk event (exactly one outcome wins) for two structural gaps:
 
-- **binary pair**: `ask(Yes) + ask(No) + fees < 1`;
-- **neg-risk set**: in a mutually exclusive event, `Σ ask(Yes_i) + fees < 1`.
+- **Yes set**: one Yes of every live outcome, `Σ (ask(Yes_i) + fee) < 1`;
+- **No set**: one No of every live outcome, `Σ (ask(No_i) + fee) < n − 1`
+  (the No asks are `1 − bid(Yes_i)`: the books are mirrored).
 
-It records every gap above `--min-profit` with its depth to `data/arb.jsonl`.
-trading-core opens one instrument per signal, so the legs cannot be bought
-atomically; the log answers whether a dedicated executor would be worth
-building. Augmented neg-risk events (with an "Other" placeholder) are flagged:
-their Yes set may be incomplete, so the sum is not a guaranteed payout.
+A set counts only when it is complete: every outcome tradable or resolved No
+(TP-13). Binary Yes + No pairs are not checked: with a mirrored book they
+cost 1 plus the spread. trading-core opens one instrument per signal, so the
+legs cannot be bought atomically; `arb --loop` measures how often, how large
+and how long these gaps are, and `arb-report` judges FEAT-102's rule (at
+least 10 gaps a day of at least $5 at a fillable size, lasting at least
+10 s; [`dev/runs/arb-1.md`](dev/runs/arb-1.md)), which decides whether a
+dedicated executor is worth building. Augmented neg-risk events (with an
+"Other" outcome for names not yet listed) are flagged and kept out of the
+decision: a name added later can win without paying the set.
 
 ## 7. How a lane is judged
 

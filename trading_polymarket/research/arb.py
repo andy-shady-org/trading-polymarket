@@ -1,163 +1,318 @@
-"""Record-only scanner for structural arbitrage (no orders, ever).
+"""Full sets of a neg-risk event, priced on their books (FEAT-102; no orders, ever).
 
-Two shapes are checked on the live books:
+In a neg-risk event (``negRisk``) exactly one outcome wins, so:
 
-* **binary pair** - buying both Yes and No of one market costs
-  ``ask_yes + ask_no`` plus fees and pays exactly 1 at resolution;
-* **neg-risk set** - in a mutually exclusive event (``negRisk``) exactly one
-  Yes wins, so buying every Yes costs ``sum(asks)`` plus fees and pays 1.
+* **a Yes set** - one Yes share of every live outcome - pays exactly 1;
+* **a No set** - one No share of every live outcome - pays ``n - 1`` for
+  ``n`` live outcomes (every outcome but the winner pays 1).
 
-An opportunity is recorded when the cost is below ``1 - min_profit`` for at
-least ``min_size`` shares on every leg. trading-core opens one instrument per
-signal, so multi-leg trades cannot be executed atomically through the engine;
-the scanner's JSONL (``data/arb.jsonl``) measures how often, how large and how
-long these gaps are, which decides whether a dedicated executor is worth
-building (docs/STRATEGIES.md, docs/dev/TODO.md). Augmented neg-risk events
-(with an "Other" placeholder) are flagged: their Yes set may be incomplete.
+A set is a gap when it costs less than it pays, fees included. Binary Yes +
+No pairs are not checked: a binary market's No book is its Yes book
+mirrored (No ask = 1 - Yes bid, at the same size; 39 of 39 markets on
+2026-11-07), so a pair costs 1 plus the spread and is never below 1. For the
+same reason only Yes books are read: a No set's legs are walked on the Yes
+bids.
+
+**A set is only complete when every outcome is in it** (TP-13): each of the
+event's markets must be tradable, or closed and resolved No. A market closed
+without a result, inactive (in an event that is not augmented), malformed,
+or resolved Yes (the event is decided) leaves no set at all: buying the
+outcomes that happen to be open would not be a full set. In an augmented
+event (``negRiskAugmented``, with an "Other" outcome, ``negRiskOther``,
+standing for names not yet listed) unlisted placeholder markets (inactive,
+not closed) are left out, but only when "Other" itself is tradable: until it
+is, the listed names are only part of the field (on 2026-11-07, 3,830 of
+14,532 sets, some priced at 12 c for the set). Augmented sets are flagged
+``augmented``: a name added later can win without paying them.
+
+**Depth:** each leg's ladder is its book's levels with the taker fee per
+share added (``FeeSchedule.per_share`` at the level's price). Walking the
+legs together gives the marginal cost of each further set; it never falls,
+so the sets worth buying are a prefix:
+
+* ``best_cost`` - the cheapest set (every leg's best level);
+* ``cost_10`` / ``cost_50`` / ``cost_100`` - the total cost of that many sets,
+  ``None`` when a leg is too thin;
+* ``max_size`` / ``max_profit`` - the most sets each earning at least
+  ``min_profit`` after fees, and their total profit;
+* ``min_order`` - the largest minimum order size of the legs (a leg cannot be
+  bought below it).
+
+A set is **open** (a gap) when ``max_size`` reaches ``min_order`` (and at
+least one set). trading-core opens one instrument per signal, so these are
+measured, not traded: ``trading-polymarket arb`` (``research/arb_loop.py``)
+records them, and ``arb-report`` (``research/arb_report.py``) judges them
+against FEAT-102's rule (``docs/dev/runs/arb-1.md``).
 """
 
 from __future__ import annotations
 
-import asyncio
-import time
-from collections.abc import Callable, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
-from trading_polymarket.book import OrderBook
-from trading_polymarket.catalogue import BookCache
-from trading_polymarket.clients.clob import BookUnavailable
-from trading_polymarket.clients.gamma import GammaClient
-from trading_polymarket.markets import Market
+from trading_polymarket.book import Level, OrderBook
+from trading_polymarket.markets import Market, markets_from_event
 
-KIND_PAIR = "binary_pair"
-KIND_SET = "neg_risk_set"
+KIND_YES = "yes_set"
+KIND_NO = "no_set"
+KINDS = (KIND_YES, KIND_NO)
+DEFAULT_MIN_PROFIT = 0.005
+DEPTHS = (10, 50, 100)
+_EPS = 1e-9
 
 
 @dataclass(frozen=True)
-class Opportunity:
+class SetSpec:
+    """One full set of an event: its live markets, read on their Yes books."""
+
     kind: str
+    event_id: str
+    slug: str
     title: str
-    legs: int
-    cost: float  # per set of shares, fees included
-    profit: float  # per set: 1 - cost
-    size: float  # sets available on the thinnest leg at the best asks
+    tags: tuple[str, ...]
     augmented: bool
-    timestamp: float
+    markets: tuple[Market, ...]
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    @property
+    def key(self) -> str:
+        return f"{self.event_id}:{self.kind}"
+
+    @property
+    def payout(self) -> float:
+        return 1.0 if self.kind == KIND_YES else float(len(self.markets) - 1)
+
+    @property
+    def tokens(self) -> tuple[str, ...]:
+        return tuple(m.yes_token for m in self.markets)
+
+    def row(self) -> dict[str, Any]:
+        """What a gap's record says about its set."""
+        return {
+            "key": self.key,
+            "kind": self.kind,
+            "event_id": self.event_id,
+            "slug": self.slug,
+            "title": self.title,
+            "tags": list(self.tags),
+            "augmented": self.augmented,
+            "legs": len(self.markets),
+            "payout": self.payout,
+            "tokens": list(self.tokens),
+            "fee_legs": sum(not m.fee.free for m in self.markets),
+        }
 
 
-def _leg_cost(book: OrderBook, market: Market) -> tuple[float, float] | None:
-    if not book.asks:
+def _settled_no(market: Market) -> bool:
+    return market.resolved and market.outcome_prices[0] == 0.0
+
+
+def _left_out(market: Market, augmented: bool) -> bool:
+    """A market a full set does not need: resolved No, or an augmented
+    event's unlisted placeholder."""
+    if market.closed:
+        return _settled_no(market)
+    return augmented and not market.active
+
+
+def live_markets(
+    raw_count: int, markets: Sequence[Market], *, augmented: bool
+) -> tuple[Market, ...] | None:
+    """The markets a full set buys, or ``None`` when no full set exists
+    (see the module docstring, TP-13). ``raw_count`` is how many markets the
+    event listed: one that could not be parsed is an outcome we cannot buy."""
+    if raw_count != len(markets) or not all(m.neg_risk for m in markets):
         return None
-    best = book.asks[0]
-    return best.price + market.fee.per_share(best.price), best.size
+    live: list[Market] = []
+    for market in markets:
+        if market.tradable:
+            live.append(market)
+        elif not _left_out(market, augmented):
+            return None
+    return tuple(live) if len(live) >= 2 else None
 
 
-def _evaluate(
-    kind: str,
-    title: str,
-    legs: Sequence[tuple[OrderBook, Market]],
-    *,
-    augmented: bool,
-    min_profit: float,
-    min_size: float,
-    now: float,
-) -> Opportunity | None:
-    priced = [_leg_cost(book, market) for book, market in legs]
-    if not priced or any(p is None for p in priced):
-        return None
-    costs = [p for p in priced if p is not None]
-    cost = sum(c for c, _ in costs)
-    size = min(s for _, s in costs)
-    if 1.0 - cost < min_profit or size < min_size:
-        return None
-    return Opportunity(
-        kind, title, len(legs), round(cost, 5), round(1 - cost, 5), size, augmented, now
+def _other_tradable(raw: Sequence[Mapping[str, Any]]) -> bool:
+    """An augmented event's "Other" market accepts orders."""
+    return any(
+        m.get("negRiskOther")
+        and m.get("active")
+        and not m.get("closed")
+        and m.get("acceptingOrders")
+        for m in raw
     )
 
 
-class ArbScanner:
-    def __init__(
-        self,
-        gamma: GammaClient,
-        books: BookCache,
-        *,
-        min_profit: float = 0.005,
-        min_size: float = 5.0,
-        prefilter: float = 0.02,
-        clock: Callable[[], float] = time.time,
-    ) -> None:
-        self.gamma = gamma
-        self.books = books
-        self.min_profit = min_profit
-        self.min_size = min_size
-        self.prefilter = prefilter
-        self.clock = clock
-
-    async def _books(self, tokens: Sequence[str]) -> list[OrderBook]:
-        """Every leg's book, or none at all when one leg has no book."""
-        try:
-            return list(await asyncio.gather(*(self.books.get(t) for t in tokens)))
-        except BookUnavailable:
-            return []
-
-    async def _pair(self, market: Market, now: float) -> Opportunity | None:
-        """Yes + No of one binary market (Gamma's quotes pre-screen it)."""
-        if market.best_ask is None or market.best_bid is None:
-            return None
-        if market.best_ask + (1 - market.best_bid) > 1 + self.prefilter:
-            return None
-        books = await self._books(market.token_ids)
-        return _evaluate(
-            KIND_PAIR,
-            market.question,
-            [(book, market) for book in books],
-            augmented=False,
-            min_profit=self.min_profit,
-            min_size=self.min_size,
-            now=now,
+def event_sets(
+    event: Mapping[str, Any], markets: Sequence[Market] | None = None
+) -> list[SetSpec]:
+    """The Yes set and the No set of a neg-risk event (none when it has no
+    full set). ``markets`` are the event's parsed markets (parsed here when
+    not given)."""
+    raw = [m for m in event.get("markets") or [] if isinstance(m, Mapping)]
+    parsed = markets_from_event(event) if markets is None else list(markets)
+    augmented = bool(event.get("negRiskAugmented"))
+    if not event.get("negRisk", True) or (augmented and not _other_tradable(raw)):
+        return []
+    live = live_markets(len(raw), parsed, augmented=augmented)
+    if live is None:
+        return []
+    tags = live[0].tags
+    return [
+        SetSpec(
+            kind=kind,
+            event_id=str(event.get("id") or ""),
+            slug=str(event.get("slug") or ""),
+            title=str(event.get("title") or ""),
+            tags=tags,
+            augmented=augmented,
+            markets=live,
         )
-
-    async def _set(
-        self, event: Mapping[str, Any], live: list[Market], now: float
-    ) -> Opportunity | None:
-        """Every Yes of a neg-risk event (Gamma's asks pre-screen it)."""
-        if len(live) < 2 or not all(m.neg_risk for m in live):
-            return None
-        asks = [m.best_ask for m in live]
-        if any(a is None for a in asks) or sum(a or 0 for a in asks) > (
-            1 + self.prefilter
-        ):
-            return None
-        books = await self._books([m.yes_token for m in live])
-        return _evaluate(
-            KIND_SET,
-            str(event.get("title") or ""),
-            list(zip(books, live, strict=False)),
-            augmented=bool(event.get("negRiskAugmented")),
-            min_profit=self.min_profit,
-            min_size=self.min_size,
-            now=now,
-        )
-
-    async def scan(self, *, max_pages: int = 5) -> list[Opportunity]:
-        found: list[Opportunity] = []
-        now = self.clock()
-        for event, markets in await self.gamma.events(
-            max_pages=max_pages, closed=False, order="volume24hr", ascending=False
-        ):
-            live = [m for m in markets if m.tradable and len(m.token_ids) == 2]
-            for opportunity in [
-                *[await self._pair(market, now) for market in live],
-                await self._set(event, live, now),
-            ]:
-                if opportunity is not None:
-                    found.append(opportunity)
-        found.sort(key=lambda o: o.profit, reverse=True)
-        return found
+        for kind in KINDS
+    ]
 
 
-__all__ = ["ArbScanner", "KIND_PAIR", "KIND_SET", "Opportunity"]
+def ladder(kind: str, market: Market, book: OrderBook) -> list[Level]:
+    """One leg's levels, cheapest first, as cost per share with the fee: a
+    Yes leg's asks, or a No leg's asks read off the Yes bids (``1 - bid``)."""
+    if kind == KIND_YES:
+        prices = [(level.price, level.size) for level in book.asks]
+    else:
+        prices = [(1.0 - level.price, level.size) for level in book.bids]
+    return [Level(p + market.fee.per_share(p), size) for p, size in prices]
+
+
+def steps(ladders: Sequence[Sequence[Level]]) -> list[Level]:
+    """Walk every leg at once: ``(sets, marginal cost of each)``, in order,
+    until a leg runs out (marginal costs never fall)."""
+    if not ladders or any(not lad for lad in ladders):
+        return []
+    index = [0] * len(ladders)
+    left = [lad[0].size for lad in ladders]
+    walked: list[Level] = []
+    while all(i < len(lad) for i, lad in zip(index, ladders, strict=True)):
+        take = min(left)
+        cost = sum(lad[i].price for i, lad in zip(index, ladders, strict=True))
+        walked.append(Level(cost, take))
+        for leg, lad in enumerate(ladders):
+            left[leg] -= take
+            if left[leg] <= _EPS:
+                index[leg] += 1
+                left[leg] = lad[index[leg]].size if index[leg] < len(lad) else 0.0
+    return walked
+
+
+def cost_of(walked: Sequence[Level], sets: float) -> float | None:
+    """The total cost of ``sets`` sets, or ``None`` when the books are thinner."""
+    total, need = 0.0, sets
+    for step in walked:
+        take = min(need, step.size)
+        total += take * step.price
+        need -= take
+        if need <= _EPS:
+            return total
+    return None
+
+
+@dataclass(frozen=True)
+class SetQuote:
+    """A set priced on one read of its books (see the module docstring)."""
+
+    key: str
+    best_cost: float | None
+    max_size: float
+    max_profit: float
+    depth: float
+    costs: tuple[float | None, ...]  # for DEPTHS sets
+    min_order: float
+    open: bool
+
+    def best_profit(self, payout: float) -> float | None:
+        return None if self.best_cost is None else payout - self.best_cost
+
+    def row(self, payout: float) -> dict[str, Any]:
+        best = self.best_profit(payout)
+        return {
+            "best_cost": _round(self.best_cost),
+            "best_profit": _round(best),
+            "max_size": round(self.max_size, 4),
+            "max_profit": round(self.max_profit, 5),
+            "depth": round(self.depth, 4),
+            **{f"cost_{n}": _round(c) for n, c in zip(DEPTHS, self.costs, strict=True)},
+            "min_order": self.min_order,
+        }
+
+
+def _round(value: float | None) -> float | None:
+    return None if value is None else round(value, 6)
+
+
+def quote(
+    spec: SetSpec, books: Mapping[str, OrderBook], *, min_profit: float
+) -> SetQuote | None:
+    """``spec`` priced on ``books`` (by Yes token); ``None`` when a leg's
+    book is missing."""
+    legs = [books.get(token) for token in spec.tokens]
+    if any(book is None for book in legs):
+        return None
+    read = [book for book in legs if book is not None]
+    walked = steps(
+        [ladder(spec.kind, m, b) for m, b in zip(spec.markets, read, strict=True)]
+    )
+    worth = [s for s in walked if spec.payout - s.price >= min_profit - _EPS]
+    max_size = sum(s.size for s in worth)
+    min_order = max(
+        [
+            1.0,
+            *(
+                b.min_order_size or m.min_order_size
+                for m, b in zip(spec.markets, read, strict=True)
+            ),
+        ]
+    )
+    return SetQuote(
+        key=spec.key,
+        best_cost=walked[0].price if walked else None,
+        max_size=max_size,
+        max_profit=sum(s.size * (spec.payout - s.price) for s in worth),
+        depth=sum(s.size for s in walked),
+        costs=tuple(cost_of(walked, n) for n in DEPTHS),
+        min_order=min_order,
+        open=max_size >= min_order - _EPS,
+    )
+
+
+def leg_levels(
+    spec: SetSpec, books: Mapping[str, OrderBook], *, levels: int = 5
+) -> list[list[list[float]]]:
+    """Each leg's first ``levels`` ladder levels before the fee
+    ``[[price, size], ...]``, for an observation's record."""
+    out: list[list[list[float]]] = []
+    for token in spec.tokens:
+        book = books.get(token)
+        side: Iterable[Level] = ()
+        if book is not None:
+            if spec.kind == KIND_YES:
+                side = book.asks
+            else:
+                side = (Level(round(1.0 - lv.price, 6), lv.size) for lv in book.bids)
+        out.append([[lv.price, lv.size] for lv in list(side)[:levels]])
+    return out
+
+
+__all__ = [
+    "DEFAULT_MIN_PROFIT",
+    "DEPTHS",
+    "KINDS",
+    "KIND_NO",
+    "KIND_YES",
+    "SetQuote",
+    "SetSpec",
+    "cost_of",
+    "event_sets",
+    "ladder",
+    "leg_levels",
+    "live_markets",
+    "quote",
+    "steps",
+]

@@ -43,7 +43,7 @@ starts or stops; link the record.
 | Crossvenue lane | **Stage 0 not started**: no pair is approved (`pairs approve`); its Stage 0 is a recorded dry run (§3.3) | [`../STRATEGY.md` §5](../STRATEGY.md#5-fed-and-crossvenue-polymarket-against-kalshi) |
 | Favourite lane | **Stage 0: NO-GO** (2026-10-28): every variant loses out of sample; off | [`RESULTS.md`](RESULTS.md) |
 | Momentum lane | Research only, off; no stage | – |
-| Arbitrage scanner | Record only; no execution exists | – |
+| Full-set scanner | Record only; no execution exists. FEAT-102 built (Unreleased): `arb --loop` and `arb-report`; its week is the run `arb-1`, pre-registered for the next release | [`runs/arb-1.md`](runs/arb-1.md) |
 | Live execution | **Not built.** Every live order and the balance read are refused | [`../LIVE-TRADING.md`](../LIVE-TRADING.md) |
 
 ---

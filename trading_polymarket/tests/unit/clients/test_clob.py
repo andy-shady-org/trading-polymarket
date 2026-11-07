@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from trading_polymarket.clients.clob import (
+    BOOKS_BATCH,
     REWARDS_END_CURSOR,
     BookUnavailable,
     ClobClient,
@@ -104,3 +107,30 @@ async def test_rewards_markets_page_limit() -> None:
     )
     found = await client(transport).rewards_markets(max_pages=3)
     assert len(found) == 3 and len(transport.calls) == 3
+
+
+async def test_books_reads_in_batches_and_skips_tokens_without_a_book() -> None:
+    def answer(url: str) -> list[object]:
+        return [
+            book_payload("a", bids=[(0.4, 10)], asks=[(0.6, 10)]),
+            book_payload("b"),
+            {"asks": []},  # no asset id: dropped
+            "junk",
+        ]
+
+    transport = FakeTransport({"/books": answer})
+    clob = ClobClient(fake_http(transport))
+    tokens = ["a", "b", "a", *[f"x{i}" for i in range(BOOKS_BATCH)]]
+    found = await clob.books(tokens)
+    assert sorted(found) == ["a", "b"]
+    assert found["a"].best_ask == 0.6
+    assert transport.count("/books") == 2  # 502 distinct tokens: two requests
+    first = json.loads(transport.bodies[0])
+    assert len(first) == BOOKS_BATCH and first[0] == {"token_id": "a"}
+    assert len(json.loads(transport.bodies[1])) == 2
+    assert await clob.books([]) == {}
+
+
+async def test_books_ignores_a_reply_that_is_not_a_list() -> None:
+    clob = ClobClient(fake_http(FakeTransport({"/books": {"error": "x"}})))
+    assert await clob.books(["a"]) == {}

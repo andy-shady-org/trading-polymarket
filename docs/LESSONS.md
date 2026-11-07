@@ -279,6 +279,11 @@ any lane.
     were closed on minute data; second-level prints showed cheap asks lifted
     within a second of a spot move, +163% a trade where spot and fill
     coincide.)*
+23. **A cheap set is usually an incomplete one.** Before calling a basket of
+    outcomes arbitrage, prove from the venue's own market states that every
+    outcome that can still win is in it and can be bought. *(trading-polymarket
+    TP-13, 2026-11-07: 65 neg-risk sets read "open" in one sweep, the best at
+    12 c for $1; each left out an inactive or not-yet-tradable outcome.)*
 
 ## 3. Paper, replay and parity
 
@@ -590,3 +595,5 @@ any lane.
   momentum lane (ADR-012); this line added on 2026-11-07.
 - 2026-11-07: §11 lesson 5, from the documentation sweep of every
   repository; the copies brought level with this page.
+- 2026-11-07: §2 lesson 23, from trading-polymarket TP-13 (FEAT-102's first
+  pass over every neg-risk event).

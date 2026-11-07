@@ -8,6 +8,12 @@
   markets included. Both ends of the window must be given (``endTs`` alone
   is a 400), and ``interval=max`` returns an *empty* series at hourly
   fidelity for long-lived markets, so research always asks for a window.
+* ``POST /books`` with ``[{"token_id": ...}, ...]`` - many books in one
+  request, at most :data:`BOOKS_BATCH` (500; 1,000 answers 400 "Payload
+  exceeds the limit", checked 2026-11-07); tokens without a book are left
+  out of the reply. A binary market's second token's book is the first's
+  mirror (its asks are ``1 - bid`` of the first at the same sizes; 39 of 39
+  neg-risk markets, 2026-11-07), so one book per market is enough.
 * ``GET /rewards/markets/current?next_cursor=`` - every market paying
   liquidity rewards today, 500 a page, until the cursor ``LTE=``: its
   ``condition_id``, ``rewards_max_spread`` (cents from the midpoint),
@@ -19,7 +25,7 @@ Published limits: ``/book`` 1500 / 10 s, ``/prices-history`` 1000 / 10 s.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,6 +33,7 @@ from trading_polymarket.book import OrderBook
 from trading_polymarket.clients.http import HttpError, JsonHttp, build_url
 
 CLOB_URL = "https://clob.polymarket.com"
+BOOKS_BATCH = 500
 REWARDS_END_CURSOR = "LTE="  # base64 "-1": the last page
 MAX_REWARD_PAGES = 100
 
@@ -93,6 +100,23 @@ class ClobClient:
             )
         return book
 
+    async def books(self, token_ids: Iterable[str]) -> dict[str, OrderBook]:
+        """Every listed token's book that the CLOB has, by token, read
+        :data:`BOOKS_BATCH` at a time with ``POST /books`` (duplicates read
+        once; a token without a book is simply absent)."""
+        tokens = list(dict.fromkeys(str(t) for t in token_ids))
+        found: dict[str, OrderBook] = {}
+        url = build_url(self.base_url, "/books")
+        for start in range(0, len(tokens), BOOKS_BATCH):
+            batch = tokens[start : start + BOOKS_BATCH]
+            payload = await self.http.post_json(url, [{"token_id": t} for t in batch])
+            for row in payload if isinstance(payload, list) else []:
+                if isinstance(row, Mapping):
+                    book = OrderBook.from_clob(row)
+                    if book.token_id:
+                        found[book.token_id] = book
+        return found
+
     async def rewards_markets(
         self, *, max_pages: int = MAX_REWARD_PAGES
     ) -> list[dict[str, Any]]:
@@ -145,6 +169,7 @@ class ClobClient:
 
 
 __all__ = [
+    "BOOKS_BATCH",
     "BookUnavailable",
     "CLOB_URL",
     "MAX_REWARD_PAGES",

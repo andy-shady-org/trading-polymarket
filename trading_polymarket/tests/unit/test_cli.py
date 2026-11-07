@@ -13,6 +13,8 @@ import pytest
 from trading_polymarket import cli
 from trading_polymarket.clients.http import Response
 from trading_polymarket.module import PolymarketModule
+from trading_polymarket.research import arb as arb_mod
+from trading_polymarket.research import arb_report
 from trading_polymarket.research.records import append_jsonl
 from trading_polymarket.research.ticks import TickWriter
 from trading_polymarket.research.updown import (
@@ -29,6 +31,7 @@ from trading_polymarket.tests.support.factories import (
     forecast_payload,
     gamma_market,
     history_row,
+    market,
     metar_row,
     weather_event,
 )
@@ -160,27 +163,101 @@ def test_record(transport: FakeTransport, tmp_path: Path) -> None:
     assert (tmp_path / "rec" / "2026-10-28.jsonl").is_file()
 
 
-def test_arb(
-    transport: FakeTransport, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    pair = gamma_market(bestAsk=0.48, bestBid=0.53, feeSchedule=None, feesEnabled=False)
+def arb_venue(monkeypatch: pytest.MonkeyPatch) -> FakeTransport:
+    free = {"feeSchedule": None, "feesEnabled": False, "negRisk": True}
+    legs = [
+        gamma_market(id="1", yes="y1", no="n1", **free),
+        gamma_market(id="2", yes="y2", no="n2", **free),
+    ]
+    other = {"id": "e2", "title": "Thin", "negRisk": True, "markets": legs[:1]}
     fake = routes(
         **{
             "/events/keyset": {
                 "events": [
-                    {"title": "Pair", "negRiskAugmented": True, "markets": [pair]}
+                    {
+                        "id": "e1",
+                        "title": "Who wins?",
+                        "negRisk": True,
+                        "markets": legs,
+                    },
+                    other,
+                    {"id": "e3", "title": "Plain", "markets": []},
                 ]
             },
-            "/book": book_payload(asks=[(0.47, 100)]),
+            # "/book" also matches ".../books"; the batch read answers both
+            "/book": [
+                book_payload("y1", bids=[(0.30, 100)], asks=[(0.40, 100)]),
+                book_payload("y2", bids=[(0.40, 100)], asks=[(0.50, 100)]),
+            ],
         }
     )
     monkeypatch.setattr(
         cli, "PolymarketModule", partial(PolymarketModule, http=fake_http(fake))
     )
-    out = tmp_path / "arb.jsonl"
-    code, lines = run("arb", "--out", str(out))
-    assert code == 0 and lines[0].startswith("binary_pair")
-    assert out.is_file() and "1 opportunities" in lines[-1]
+    return fake
+
+
+def test_arb_once_lists_the_sets_closest_to_a_gap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    arb_venue(monkeypatch)
+    code, lines = run("arb", "--top", "5")
+    assert code == 0
+    assert lines[0].startswith("3 events, 2 neg-risk, 2 full sets")
+    assert lines[1].startswith("yes_set") and "OPEN" in lines[1]
+    assert "$10.00" in lines[1]
+    assert lines[2].startswith("no_set") and "OPEN" not in lines[2]
+    assert lines[-1] == "1 sets open now (1 not augmented); nothing is ordered"
+
+
+def test_arb_once_marks_augmented_sets_and_missing_profit() -> None:
+    legs = (market(id="1", yes="y1", no="n1"), market(id="2", yes="y2", no="n2"))
+    spec = arb_mod.SetSpec(arb_mod.KIND_YES, "e", "s", "T", (), True, legs)
+    q = arb_mod.SetQuote(spec.key, None, 0.0, 0.0, 0.0, (None,) * 3, 5.0, False)
+    line = cli._set_line(spec, q)
+    assert "profit/set -" in line and line.endswith("(augmented)")
+
+
+def test_arb_loop_records_and_arb_report_reads_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    arb_venue(monkeypatch)
+    out = tmp_path / "arb"
+    code, lines = run("arb", "--loop", "--hours", "0", "--out", str(out))
+    assert code == 0 and lines[-1].startswith("stopped; rows written: nothing")
+    day = out / "2026-11-08"
+    day.mkdir(parents=True)
+    gap = {
+        "first_seen": NOW + 11 * 86400,
+        "augmented": False,
+        "qualify": 5.0,
+        "run_seconds": 12.0,
+        "lifetime": 20.0,
+        "peak_max_profit": 8.0,
+        "peak_max_size": 40.0,
+        "kind": "yes_set",
+        "tags": ["politics"],
+    }
+    (day / "gaps.jsonl").write_text(json.dumps(gap) + "\n")
+    (day / "sweeps.jsonl").write_text("{}\n")
+    summary = tmp_path / "summary.json"
+    code, lines = run("arb-report", "--input", str(out), "--json", str(summary))
+    assert code == 0
+    assert lines[0] == (
+        "2026-11-08: 1 sweeps (not covered), 1 gaps, 1 qualifying, 0 augmented"
+    )
+    assert "decision (FEAT-102, runs/arb-1.md): INCONCLUSIVE" in lines[-2]
+    assert json.loads(summary.read_text())["qualifying"] == 1
+    code, lines = run("arb-report", "--input", str(out), "--start", "2026-11-09")
+    assert code == 1 and lines[0].startswith("no recording")
+    code, lines = run("arb-report", "--input", str(out), "--end", "2026-11-09")
+    assert code == 0 and not any("summary written" in line for line in lines)
+
+
+def test_arb_report_lines_without_gaps() -> None:
+    summary = arb_report.summarize([], Counter({"2026-11-08": 3}))
+    lines = cli._arb_report_lines(summary)
+    assert "lifetime: -" in lines and "by kind: -" in lines
 
 
 def test_bias(transport: FakeTransport, tmp_path: Path) -> None:
