@@ -31,7 +31,6 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
       backtest from them.
 
 - [ ] **FEAT-147** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-147-updown-stale-quotes-after-a-spot-move)): built in 0.4.0. Run `ticks` on the Mac for at least three days ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)), then `ticks-report` for the decision on part 1 (our delay against how long stale asks live) and the data API's timestamp offset; if takeable, from 2026-11-18 collect 2026-11-04 to 11-17 and run `updown-backtest --rule stale --timestamp-offset <median>`.
-- [ ] **FEAT-103 on FEAT-146's backfill** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-103-expiry-fade-backtest)): the expiry fade (cheap side up to 35 c, spot flat) on the 30 days of trade prints, pre-registered first; its prior is lower after FEAT-146's NO-GO.
 - [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the tick recorder, 24–48 h, then the maker study), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
 
 ## 3. Later

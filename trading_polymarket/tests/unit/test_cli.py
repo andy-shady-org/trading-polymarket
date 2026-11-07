@@ -652,3 +652,25 @@ def test_lane_rows_writes_library_rows(tmp_path: Path) -> None:
         "-1",
     )
     assert code == 2 and "no updown-history collection" in lines[0]
+
+
+def test_updown_backtest_fade(tmp_path: Path) -> None:
+    data, out = tmp_path / "updown", tmp_path / "bt" / "fade.jsonl"
+    day = date(2026, 11, 5)
+    start = day_start(day) + 3600
+    trades = [[10, 0, 1, 0.30, 100, "0xw"], [61, 0, 1, 0.30, 100, "0xw"]]
+    market = UpDownMarket("m", "c", start, start + 300, 0, None, None, 0.07, 0)
+    path = day_path(data, "btc", "5m", day)
+    path.parent.mkdir(parents=True)
+    row = market.to_dict() | {"trades": trades}
+    path.write_bytes(gzip.compress((json.dumps(row) + "\n").encode()))
+    spot = spot_path(data, "BTCUSDT", day)
+    spot.parent.mkdir(parents=True)
+    spot_day = SpotDay("BTCUSDT", day_start(day), tuple([100_000.0] * 86400))
+    spot.write_bytes(gzip.compress(json.dumps(spot_day.to_dict()).encode()))
+    args = ("--start", "2026-11-05", "--end", "2026-11-06", "--input", str(data))
+    code, lines = run("updown-backtest", "--rule", "fade", *args, "--out", str(out))
+    primary = "fade 15c from 50c, 300-60s left, spot <6bp/60s"
+    assert code == 0 and lines[2].startswith(primary) and " 1 100.00%" in lines[2]
+    assert lines[-1].startswith(f"primary ({primary}): INCONCLUSIVE")
+    assert len(out.with_suffix(".summary.jsonl").read_text().splitlines()) == 7

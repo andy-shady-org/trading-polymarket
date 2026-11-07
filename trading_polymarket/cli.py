@@ -57,6 +57,7 @@ from trading_polymarket.research import rewards as rewards_mod
 from trading_polymarket.research import ticks as ticks_mod
 from trading_polymarket.research import ticks_report as treport
 from trading_polymarket.research import updown_backtest as ubt
+from trading_polymarket.research import updown_fade as ufade
 from trading_polymarket.research import updown_stale as ustale
 from trading_polymarket.research import weather_backtest as wbt
 from trading_polymarket.research.records import append_jsonl
@@ -280,6 +281,12 @@ def _updown_replay(
     args: argparse.Namespace, markets: Iterable[updown.UpDownMarket]
 ) -> tuple[int, Sequence[Any], dict[Any, list[ubt.Entry]]]:
     """(markets read, the rules in order, entries by rule) for ``--rule``."""
+    if args.rule == "fade":
+        spot = ustale.SpotSeries(args.input, updown.SPOT_SYMBOLS[args.asset])
+        count, fade = ufade.replay(
+            markets, spot, ufade.GRID, offset=args.timestamp_offset, stake=args.stake
+        )
+        return count, ufade.GRID, dict(fade)
     if args.rule == "stale":
         spot = ustale.SpotSeries(args.input, updown.SPOT_SYMBOLS[args.asset])
         count, stale = ustale.replay(
@@ -295,6 +302,8 @@ def _updown_replay(
 
 
 def _updown_verdict(args: argparse.Namespace, by_rule: dict[Any, ubt.Summary]) -> str:
+    if args.rule == "fade":
+        return ufade.verdict(by_rule[ufade.PRIMARY], by_rule[ufade.STRESS])
     if args.rule == "stale":
         return ustale.verdict(by_rule[ustale.PRIMARY], by_rule[ustale.STRESS])
     return "PASS" if by_rule[ubt.PRIMARY].passed else "FAIL"
@@ -319,7 +328,7 @@ async def cmd_updown_backtest(args: argparse.Namespace, out: Printer) -> int:
     by_rule = {r: ubt.summarise(r, count, entries[r], split=split) for r in rules}
     for summary in by_rule.values():
         out(_summary_line(summary, width))
-    primary = rules[0] if args.rule == "stale" else ubt.PRIMARY
+    primary = ubt.PRIMARY if args.rule == "longshot" else rules[0]
     target = args.out or f"data/backtest/updown-{args.rule}.jsonl"
     path = _write(target, ubt.audit_records(entries[primary], primary))
     _write(
@@ -721,14 +730,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--rule",
         default="longshot",
-        choices=["longshot", "stale"],
-        help="longshot: FEAT-146; stale: FEAT-147 (cheap side after a spot move)",
+        choices=["longshot", "stale", "fade"],
+        help="longshot: FEAT-146; stale: FEAT-147 (cheap side after a spot move); "
+        "fade: FEAT-103 (cheap side late, spot flat, and its mirror)",
     )
     p.add_argument(
         "--timestamp-offset",
         type=float,
         default=0.0,
-        help="stale: seconds the data API's time runs after the fill (ticks-report)",
+        help="stale, fade: seconds the data API's time runs after the fill "
+        "(ticks-report)",
     )
     p.add_argument("--stake", type=float, default=ubt.STAKE, help="USDC an entry")
     p.add_argument("--input", default=updown.DEFAULT_UPDOWN_DIR)
