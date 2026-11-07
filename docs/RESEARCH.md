@@ -139,7 +139,7 @@ trading-polymarket updown-backtest --rule stale --timestamp-offset 2.2 \
   5-minute day is about 7.7 MB gzipped and three minutes to read; it can be
   stopped and run again.
 - **updown-backtest**: the late-longshot rule pre-registered in
-  [`dev/PROPOSED-FEATURES.md`](dev/PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)
+  [`dev/DONE.md`](dev/DONE.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)
   (FEAT-146). A fill is the next real buy print after the signal, never the
   signal itself, and nothing after the window's close counts: the market
   keeps trading for a minute or so after it, when the outcome is all but
