@@ -27,13 +27,13 @@ still in paper. A lane only moves up when *its own* gate passes.
 
 ## 1. Current status
 
-Updated 2026-11-04. Update this table whenever a gate run finishes or a run
+Updated 2026-11-07. Update this table whenever a gate run finishes or a run
 starts or stops; link the record.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Next release | `v0.5.0` (MINOR, not scheduled): `rewards-scan` (FEAT-153), `lane-rows` (FEAT-149, with trading-core `>=0.6.0`), `updown-backtest --rule fade` (FEAT-103), `sports-gaps` and `sports-gaps-report` (FEAT-168), on `main` (`CHANGELOG.md` [Unreleased]); best released with trading-core `v0.8.0`, whose sweep has the price-dependent fee | [`TODO.md`](TODO.md) |
-| Latest release | **`v0.4.0`** (2026-11-04), the merge commit `da27223` on `main`: Up/Down research (FEAT-146, FEAT-147), trading-core `>=0.5.0,<0.8`; installed in `runtimes/polymarket` (`venvs/polymarket-v0.4.0`, with trading-core `v0.7.0`). Before it `v0.3.0` (`119daa2`, never installed) and `v0.2.1` (`541f15d`) | [`CHANGELOG.md`](../../CHANGELOG.md), [`releases/0.4.0.md`](releases/0.4.0.md) |
+| Next release | None planned (`CHANGELOG.md` [Unreleased] is empty) | [`TODO.md`](TODO.md) |
+| Latest release | **`v0.5.0`** (2026-11-07), the merge of `release/v0.5.0` on `main` (the signed tag goes on it): `sports-gaps` and `sports-gaps-report` (FEAT-168), `lane-rows` (FEAT-149), `rewards-scan` (FEAT-153), `updown-backtest --rule fade` (FEAT-103), trading-core `>=0.6.0,<0.8`; to be installed in `runtimes/polymarket` (`venvs/polymarket-v0.5.0`, with trading-core `v0.7.0`) for `sports-1`. Before it **`v0.4.0`** (2026-11-04, `da27223`), installed as `venvs/polymarket-v0.4.0`, which `weather-1` and `fed-1` keep; `v0.3.0` (`119daa2`, never installed) and `v0.2.1` (`541f15d`) | [`CHANGELOG.md`](../../CHANGELOG.md), [`releases/0.4.0.md`](releases/0.4.0.md) |
 | Release gate, `v0.2.1` | PASS locally (2026-10-30): Ruff, Black, flake8, mypy clean; 443 tests, 100% statement and branch coverage on Python 3.11, 3.12, 3.13 and 3.14 against trading-core 0.2.2. Not recorded yet: CI on the tag, the live smoke run and the kill-and-restart drill (the release record still says "pending") | [`releases/0.2.1.md`](releases/0.2.1.md) |
 | Earlier releases | `v0.2.0` (2026-10-29, 425 tests) and `v0.1.0` (2026-10-28, 320 tests) passed locally; CI on those tags was not recorded | [`releases/0.2.0.md`](releases/0.2.0.md), `CHANGELOG.md` 0.1.0 |
 | Counted runs in progress | **`weather-1`** and **`fed-1`** (paper, v0.4.0 on trading-core v0.7.0, each its own trading-core process in runtimes/polymarket), pre-registered on 2026-11-04 with the 0.2.1 runs' lane settings and rules; they start after the 0.4.0 smoke run and restart drill. Read-out: weather at 150 positions (about seven weeks), fed at 60, neither before 3 weeks after `run_started`. `weather-0.2.1` and `fed-0.2.1` were closed early on 2026-11-04, not judged (16 and 2 positions) | [`runs/weather-1.md`](runs/weather-1.md), [`runs/fed-1.md`](runs/fed-1.md), [`releases/0.2.1.md`](releases/0.2.1.md#read-out) |

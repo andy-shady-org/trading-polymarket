@@ -9,6 +9,7 @@ so they live here and the changelog links them
 
 | Release | Record |
 |---|---|
+| `v0.5.0` | [`0.5.0.md`](0.5.0.md) |
 | `v0.4.0` | [`0.4.0.md`](0.4.0.md) |
 | `v0.3.0` | [`0.3.0.md`](0.3.0.md) |
 | `v0.2.1` | [`0.2.1.md`](0.2.1.md) |
@@ -17,4 +18,4 @@ so they live here and the changelog links them
 
 Files written before 2026-10-31 are frozen: only their links change. From
 `v0.2.2` on, records were to be named `vX.Y.Z.md` (trading-core's
-standard); `0.3.0.md` and `0.4.0.md` kept the earlier `X.Y.Z.md` form.
+standard); `0.3.0.md`, `0.4.0.md` and `0.5.0.md` kept the earlier `X.Y.Z.md` form.

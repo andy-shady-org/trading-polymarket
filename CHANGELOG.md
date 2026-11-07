@@ -9,11 +9,24 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-07
+
+Research commands, record-only: the sports listing-gap recorder and its
+report (FEAT-168, for the run `sports-1`), strategy-library rows from the
+collected data (FEAT-149), the liquidity-rewards scan (FEAT-153) and the
+expiry-fade backtest (FEAT-103, NO-GO). No lane, setting or fill changes, so
+no run's result changes; `weather-1` and `fed-1` stay on `v0.4.0`. Tested on
+trading-core `v0.7.0`; needs trading-core 0.6.0 or later. Release record:
+[`docs/dev/releases/0.5.0.md`](docs/dev/releases/0.5.0.md).
+
 ### Added
 - `trading-polymarket sports-gaps` and `sports-gaps-report` (FEAT-168, `research/sports_gaps.py`, `research/sports_gaps_report.py`): record-only, tennis and esports matches on both venues from listing. Every 2 minutes, for each match listed on Polymarket (Gamma's newest moneyline markets, leagues `atp` `wta` `itf` `cs2` `dota2` `val` `lol` `codmw` `mlbb` `ow`) and Kalshi (13 match series), paired by start time and side names (one to one, never guessed): Polymarket's best bid and ask with sizes (the first outcome's book; the second mirrors it) and Kalshi's for each side, until 3 h after the start; each venue's listing time. The report finds gaps (ask plus fee at least 0.02 below Kalshi's mid, Kalshi's spread at most 0.05, $5 at the ask) as events, by hours after listing, settles them from Gamma and gives the pre-registered `sports-1` decision (`docs/dev/runs/sports-1.md`). From the 2026-10-30 study's listing-time lead.
 - `trading-polymarket updown-backtest --rule fade` (FEAT-103, `research/updown_fade.py`): the expiry fade, pre-registered before its run: late in a window with spot flat, buy the side 15 c or more from 0.50 (and its mirror, the favourite), next buy print, held to settlement, judged by FEAT-147's bar with a 3 s stress rule. Result on the 30-day BTC 5-minute backfill: NO-GO, −8.0% on stake over 6,139 trades (`docs/dev/RESULTS.md`).
 - `trading-polymarket lane-rows` (FEAT-149, `research/lane_rows.py`): data already collected (`history`, `weather-history`, `fed-history`, `updown-history`) as trading-core's strategy-library rows, for `trading-core-lanes sweep`: each outcome token an instrument with a listing (`resolves_at`), a reading per price point (Kalshi's last closed mid as `reference` for the Fed buckets), a trade print per Up/Down taker trade (wallet, price × shares; `--print-offset` for FEAT-147's offset) and an outcome at settlement. `--fee-rate` keeps one taker rate, so each sweep runs at one rate with trading-core's `--price-fee-rate`. Needs trading-core `>=0.6.0` (the library's rows); the requirement's floor rises from 0.5.0.
 - `trading-polymarket rewards-scan` (FEAT-153): every market paying liquidity rewards today, its terms, the shares already resting inside its reward spread, and a one-snapshot estimate of a two-sided quote's reward, ranked, with ended markets and wide books flagged (`research/rewards.py`); `ClobClient.rewards_markets`, `GammaClient.raw_markets_by_condition_ids`.
+
+### Changed
+- `trading-core>=0.6.0,<0.8` (was `>=0.5.0`): `lane-rows` writes trading-core's strategy-library rows (`trading_core.lanes`, 0.6.0).
 
 ## 0.4.0: crypto Up/Down research (2026-11-04)
 
