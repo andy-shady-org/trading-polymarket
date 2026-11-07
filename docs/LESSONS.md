@@ -351,6 +351,17 @@ any lane.
     *(trading-polymarket FEAT-147: the data API's times run 2.2 s after the
     fill; a "2 s" reaction was really instant, and the rule built on it lost
     once corrected.)*
+19. **A resting order's replay is an upper bound, not an estimate.** Filling
+    a simulated quote whenever a trade prints through its price credits it
+    with fills it would often not get (the queue ahead of it, a maker who
+    reprices first), and the fills it does get are the adversely selected
+    ones. Only live fills judge a maker or liquidity-provider rule; a replay
+    can only rule one out. *(trading-polymarket FEAT-101, 2026-11-07: a
+    maker always at the top of BTC 5-minute books earned +1.82 c a share on
+    prints, 99.8% of those fills within 250 ms of the price reaching the
+    top, and every phase lost from 25 ms of delay. An outside live-money
+    report agrees: a tennis book that made +125% on prints went 0 for 78
+    live, per agiprolabs/claude-trading-skills, `prediction-market-live-ops`.)*
 
 ## 4. Costs and execution
 
@@ -597,3 +608,6 @@ any lane.
   repository; the copies brought level with this page.
 - 2026-11-07: §2 lesson 23, from trading-polymarket TP-13 (FEAT-102's first
   pass over every neg-risk event).
+- 2026-11-07: §3 lesson 19, from trading-polymarket FEAT-101's maker study
+  and an outside repository read the same day (project note
+  `trading-skills-review-2026-11-07`).

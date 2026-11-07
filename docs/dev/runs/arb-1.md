@@ -103,4 +103,16 @@
   the release copy. **Planned end:** about 2026-11-15 14:45 UTC (192 h);
   the covered days are then 8 to 14 November.
 
+- **A check added 2026-11-07, after the start and before any read
+  (reported, not deciding; the verdict above is unchanged):** for each
+  qualifying gap, whether its legs' levels persist from read to read
+  (`observations.jsonl.gz` keeps each leg's top 5 levels on every read): the
+  share of its reads at which every leg still shows at least the first
+  read's price and the size the gap's `max_size` needs, and the qualifying
+  count recomputed on those gaps only. Levels that come and go between reads
+  can be depth nobody could take (an outside report of phantom penny levels,
+  agiprolabs/claude-trading-skills, `prediction-market-strategy`; project
+  note `trading-skills-review-2026-11-07`). `arb` records no trade prints,
+  so whether a gap's levels were ever traded is not known from this run.
+
 ## Read-out (added at the end)
