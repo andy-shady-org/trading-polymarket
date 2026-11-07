@@ -182,6 +182,16 @@ pre-registered test; without it the idea stays closed.
 | Time of day and weekend | Trade only in good hours or days | rc.8 to rc.11 | Sign changes between captures | NO-GO | — | — |
 | New non-graduate PumpSwap pools (FEAT-80, pools-1) | Buy new SOL pools at the first reading or at 60–90 s | 3,122 pools in 71.7 h | −12.5% a trade at the first reading; −2.3% at 60–90 s (−10.9% and −0.4% at a 30 bps fee); 92% lose four fifths of their SOL within an hour | NO-GO | Liquidity withdrawn; no rule positive at either fee | — |
 
+*Momentum re-read 2026-11-04 under ADR-012.* rc.9's "NO-GO on count" would
+be **EXTEND** today, but the captures after it decide it: on rc.8, rc.9 and
+rc.11 the best rule (adaptive target, 30 min) makes −0.1%, −0.4% and −0.5% a
+trade at 0.02 SOL (2.5% fee, 0.5% haircut, 0.35% fixed). Size does not
+rescue it on PumpSwap: at 0.05–0.1 SOL the worst capture improves by 0.15
+points to −0.34%, and from 0.3 SOL the pools' depth (median 101 SOL at entry)
+costs more than the fixed part saved (worst −0.70% at 0.3 SOL, −2.0% at
+1 SOL). The mechanism's gross edge (about +3% a trade before costs) stands;
+scout-2 and evm-1 test it where the round trip is a quarter as large.
+
 ### 3.3 Liquid Solana tokens (FEAT-65 slow lane, 2026-10-23 to 10-29)
 
 | Strategy | What it did | Evidence | Result | Verdict | Why | Reopen if |
@@ -214,7 +224,7 @@ pre-registered test; without it the idea stays closed.
 | Crossvenue (any reviewed Polymarket / Kalshi pair) | The Fed rule on pairs a human approves | First `pairs suggest`: 53 candidates, mostly long-dated, with traps a title match cannot see | — | Built; no Stage 0 (no pair approved) | Arbitrary pairs have no history | Approved pairs and a recorded dry run of two weeks or more |
 | Momentum (research) | Buy markets that moved ≥ 8% in the last hour, record attention | Never run | — | Off; no stage | No edge claimed | Its own pre-registered Stage 0 |
 | Full-set scanner (FEAT-102) | `ask(Yes)+ask(No)+fees < 1` | Never run | — | Not started | Legs cannot be bought atomically | ≥ 10 gaps a day of ≥ $5 lasting ≥ 10 s for a week |
-| Expiry fade (FEAT-103) | Buy the cheap side in the last minutes | Not run | — | Not started; prior lower after FEAT-146 | FEAT-146 lost on the cheapest side (≤ 10 c); FEAT-103's band (up to 35 c, spot flat) is not tested | Positive after fees on FEAT-146's trade backfill, confirmed on ticks |
+| Expiry fade (FEAT-103) | Buy the side 15 c or more from 0.50 with 5 to 1 minutes left and spot flat (under 6 bp in a minute); its mirror buys the favourite (CloddsBot's rule) | Every taker trade of FEAT-146's 8,615 BTC 5-minute markets and one-second spot; pre-registered 2026-11-07 | Primary: −8.0% on stake over 6,139 entries (halves −11.1% / −4.7%; −15.2% without the best 1%); won 26.5% at an average 26.8 c. Mirror −1.4% (7,335); 10 c, 25 c, no spot filter and 3 s late all lose | NO-GO | Both sides win about as often as priced; the fee, largest near 0.50, is the loss | — |
 | Crypto Up/Down late longshot (FEAT-146) | Buy the side at ≤ 5 c from 240 s into a BTC 5-minute window, filled at the next real buy print, held to settlement; the pattern of the wallet `@vega7` (+$33.7K on $81.8K) | Every taker trade of 8,615 BTC 5-minute markets, 2026-10-05 to 11-03; pre-registered | Primary: −$3,802 on 4,500 entries (−16.9% on stake; halves −26.9% / −7.8%; −84.5% without the best 1%); won 2.07% at an average 2.23 c. All 9 other caps (2–10 c) and start times (from 0 to 270 s) lose 17–44% | NO-GO | Cheap sides win slightly less often than priced and the fee is ~7% of the stake; the wallet's profit is selection or luck in a few fat-tailed wins (without its 50 best markets it lost) | A pre-registered condition known at entry (spot against the start price, say) that is positive in both halves of a new window |
 | Crypto Up/Down stale quotes after a spot move (FEAT-147) | Buy a side priced ≤ 5 c right after Binance moves to or past the start price in its favour, before makers reprice; what the bot `@vega7` appears to do | Study of 2026-11-04 on FEAT-146's backfill (in-sample): every cheap buy print in the last 3 minutes of 8,615 markets against one-second Binance spot; then a 6-minute live recording (`ticks`) | Read against the data API's print times: +163% on stake with spot 2 s before the print, −30% at 5 s. But those times run a median 2.2 s **after** the fill (1,302 fills matched by transaction hash): "2 s before" is about the fill's own moment. With that correction the pre-registered rule loses even in-sample (−4.3%; 1 s late −7.2%; every variant ≤ +1.7%) | Lead; pre-registered; recorder built (0.4.0) | Stale asks are lifted within a second of the move; whether we can be that fast is what the recorder measures | — |
 
@@ -332,6 +342,14 @@ one has cost a run before.
     count, the `"baseline"` breaker reference, per-lane limits, and engine
     exits empty when the lane has its own. Smoke-test the runtime on live
     data first. *(rc.9, rc.11, TC-11.)*
+    **Verdicts scale with the evidence** (ADR-012, 2026-11-04): GO when the
+    lower bound of the mean net is above zero and the bound on total losses
+    (about 3/*n* with none seen) is below the lane's break-even rate;
+    **EXTEND**, not NO-GO, when the mean is positive but the bounds are not
+    there yet; NO-GO only when the lane is confidently below its costs.
+    State costs split into fixed, proportional and price impact, and the
+    sizes at which the lane is positive. A lane need not pay for a module
+    on its own: the platform adds its GO lanes up.
 11. **Live at the smallest size only after a Stage 1 GO,** and compare live
     fills with paper fills before scaling.
 
@@ -375,7 +393,7 @@ venue, or says why it is not brought back.
 | Returns from price lists without a sale check | **Everywhere** | Honeypots and taxes look like wins | — | Not brought back |
 | Day-ahead weather, favourite–longshot on Polymarket | Polymarket | The market is better calibrated | Category or event-level calibration on a new window | — (Polymarket lanes) |
 | Major-sports cross-venue gaps | Polymarket / Kalshi | Half a cent; fee is larger | — | — |
-| Buying the cheap side late in crypto Up/Down windows, unconditionally | Polymarket | 4,500 entries at ≤ 5 c lost 16.9%; every cap and start time lost (FEAT-146) | A condition known at entry, pre-registered and positive on a new window | — |
+| Buying the cheap side late in crypto Up/Down windows, unconditionally | Polymarket | 4,500 entries at ≤ 5 c lost 16.9%; every cap and start time lost (FEAT-146); up to 35 c with spot flat lost 8.0%, and the favourite 1.4% (FEAT-103) | A condition known at entry, pre-registered and positive on a new window | — |
 | Raydium migration sniping | Pump.fun / PumpSwap | Pump.fun graduates migrate to PumpSwap | — | Not brought back (the venue is gone) |
 | Relaxing a holder or creator screen to get more trades | **Everywhere** | Rejected movers lost ~10% a trade against 6% for watched coins: insider pumps | — | — |
 | A trade-feed stop trigger, or Yellowstone gRPC for a 60 s signal | Pump.fun / PumpSwap | The feed crossed the stop 0.07 s before the curve read, at the same price; migration events already arrive within ~1 s | A lane whose edge is lost to latency, shown in live fills | — |
@@ -478,3 +496,7 @@ runs a venue's captures (converted to the records by its module:
 - 2026-11-04: FEAT-147 corrected: the data API's trade times run 2.2 s
   after the fill, so the "2–5 s" edge is under a second in fill time, and
   the rule loses in-sample once corrected (§1, §3.5, §7).
+- 2026-11-07: §3.5 and §6: the crypto Up/Down expiry fade (trading-polymarket
+  FEAT-103) NO-GO on FEAT-146's 30 days (−8.0% on stake; the mirror −1.4%).
+  ADR-012 accepted: verdicts that scale with the evidence are built into
+  `trading-core-audit verdict`.

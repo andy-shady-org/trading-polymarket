@@ -365,7 +365,11 @@ any lane.
 4. **Faster reads do not fix a one-slot dump.** *(trading-pump §6.20: 160
    of 171 instant stops came on 2 s reads and still filled at −33%.)*
 5. **A larger order changes nothing but risk** when the fee is a share of
-   the order. *(PUMP-12-PLAN, "Not in pump-12".)*
+   the order. *(PUMP-12-PLAN, "Not in pump-12".)* Measure it by size, though:
+   on PumpSwap's momentum lane the fixed part was 0.35% of a 0.02 SOL round
+   trip; 0.05–0.1 SOL recovered 0.15 points, and above 0.3 SOL the pools'
+   depth (about 100 SOL) cost more than that. *(2026-11-04 size re-check,
+   ADR-012.)*
 6. **Close what you open.** Every buy that opens an account pays rent; a
    full exit closes it, and every trade record carries its fees, tip and
    rent. *(BUG-96.)*
@@ -553,6 +557,18 @@ any lane.
 3. **Completion claims track code.** Verify before ticking. *(pumpfun-trading
    TODO item 25.)*
 4. **Rewrite links by path, not by anchor.**
+5. **A feature's docs change in the commit that builds it, and its status
+   changes when it ships.** The commit that builds a proposal moves it whole
+   to `DONE.md` (a one-line pointer stays), lists it in `FEATURES.md`, sets
+   its registry row in trading-core's `PROPOSED-FEATURES.md` and an ADR it
+   carries out to Accepted; the tag and the install update `RELEASE-GATE.md`
+   §1 and `TODO.md`; a shared page changed in trading-core is copied to every
+   repository in the same change. Docs left for a later sweep drift.
+   *(2026-11-07 sweep: trading-core ADR-011 still "Proposed" after 0.6.0
+   built it; 52 built proposals across five repositories still listed as
+   proposed; `RELEASE-GATE.md` pages calling tagged releases "to be
+   tagged"; this page and `STRATEGY-LEDGER.md` three days behind trading-core
+   in every copy.)*
 
 ## 12. History of this page
 
@@ -570,3 +586,7 @@ any lane.
 - 2026-11-04: §2 lesson 22, from trading-polymarket FEAT-147.
 - 2026-11-04: §3 lesson 18, and §2 lesson 22's evidence corrected, from
   FEAT-147's first recording (the data API's 2.2 s lag).
+- 2026-11-04: §4 lesson 5, the fixed cost measured by size on PumpSwap's
+  momentum lane (ADR-012); this line added on 2026-11-07.
+- 2026-11-07: §11 lesson 5, from the documentation sweep of every
+  repository; the copies brought level with this page.

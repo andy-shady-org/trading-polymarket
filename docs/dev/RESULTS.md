@@ -134,7 +134,7 @@ Up/Down market, with spot flat, is the side at least 15 c from 0.50
 underpriced? And its mirror: is the favourite?
 
 **Rule.** As pre-registered in
-[`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-103-expiry-fade-backtest)
+[`DONE.md`](DONE.md#feat-103-expiry-fade-backtest)
 and `research/updown_fade.py` (sha256 `9fec4f68…3ae0f`, commit `0cc5157`)
 before the run, with no change: the first second with 300 to 60 s left at
 which spot moved under 6 bp over the 60 s before and one side's last print
@@ -183,7 +183,7 @@ Chainlink's start and end prices (7 markets have none); Up won 49.6%. All
 540 of the wallet's trades in these markets are in the data.
 
 **Rule.** As pre-registered in
-[`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)
+[`DONE.md`](DONE.md#feat-146-updown-trade-backfill-and-late-longshot-backtest)
 before the run, with no change: the first buy print of an outcome at or
 below the cap from the start second is the signal; the fill is the next buy
 print of that outcome in a later second with at least $5 notional at most
