@@ -32,7 +32,7 @@ starts or stops; link the record.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Next release | `v0.5.0` (MINOR, not scheduled): `rewards-scan` (FEAT-153), `lane-rows` (FEAT-149, with trading-core `>=0.6.0`), `updown-backtest --rule fade` (FEAT-103), on `main` (`CHANGELOG.md` [Unreleased]); best released with trading-core `v0.8.0`, whose sweep has the price-dependent fee | [`TODO.md`](TODO.md) |
+| Next release | `v0.5.0` (MINOR, not scheduled): `rewards-scan` (FEAT-153), `lane-rows` (FEAT-149, with trading-core `>=0.6.0`), `updown-backtest --rule fade` (FEAT-103), `sports-gaps` and `sports-gaps-report` (FEAT-168), on `main` (`CHANGELOG.md` [Unreleased]); best released with trading-core `v0.8.0`, whose sweep has the price-dependent fee | [`TODO.md`](TODO.md) |
 | Latest release | **`v0.4.0`** (2026-11-04), the merge commit `da27223` on `main`: Up/Down research (FEAT-146, FEAT-147), trading-core `>=0.5.0,<0.8`; installed in `runtimes/polymarket` (`venvs/polymarket-v0.4.0`, with trading-core `v0.7.0`). Before it `v0.3.0` (`119daa2`, never installed) and `v0.2.1` (`541f15d`) | [`CHANGELOG.md`](../../CHANGELOG.md), [`releases/0.4.0.md`](releases/0.4.0.md) |
 | Release gate, `v0.2.1` | PASS locally (2026-10-30): Ruff, Black, flake8, mypy clean; 443 tests, 100% statement and branch coverage on Python 3.11, 3.12, 3.13 and 3.14 against trading-core 0.2.2. Not recorded yet: CI on the tag, the live smoke run and the kill-and-restart drill (the release record still says "pending") | [`releases/0.2.1.md`](releases/0.2.1.md) |
 | Earlier releases | `v0.2.0` (2026-10-29, 425 tests) and `v0.1.0` (2026-10-28, 320 tests) passed locally; CI on those tags was not recorded | [`releases/0.2.0.md`](releases/0.2.0.md), `CHANGELOG.md` 0.1.0 |

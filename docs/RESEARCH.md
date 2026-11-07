@@ -204,6 +204,29 @@ favourite-longshot and day-ahead weather results it revisits are NO-GO
 (STRATEGY-LEDGER §3.5), and only a pre-registered run on fresh data
 decides.
 
+## 4e. Sports listing-time gaps (FEAT-168)
+
+```bash
+trading-polymarket sports-gaps --out data/sports-1          # until Ctrl-C or --hours
+trading-polymarket sports-gaps-report --input data/sports-1
+```
+
+The 2026-10-30 study found major-league sports priced alike on Polymarket
+and Kalshi to half a cent, too little to pay Polymarket's taker fee. Its one
+lead: in tennis and esports, a few gaps of 2 to 18 c in the first hours
+after Polymarket listed a match (0.68 against Kalshi's 0.86, closed within
+an hour), which an hourly price history could not show were takeable.
+`sports-gaps` records them forward: both venues' best prices and sizes for
+every matched match every 2 minutes from when it is found to 3 h after its
+start, with each venue's own listing time, so `sports-gaps-report` can say
+how many gaps there were, how long after listing, for how long, in what
+size, and what holding them to settlement earned. Pairing is by names and
+start time and never guessed (a match with two candidates is left out); on
+2026-11-07 one cycle paired 72 of 98 Polymarket tennis and esports matches,
+none ambiguous, with a median mid gap of 1 c on 211 rows where both books
+were quoted. The run that judges it is `sports-1`
+([`dev/runs/sports-1.md`](dev/runs/sports-1.md)).
+
 ## 5. Dry-run recording and arbitrage logging (during a paper run)
 
 ```bash

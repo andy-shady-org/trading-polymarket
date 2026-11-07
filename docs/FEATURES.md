@@ -94,6 +94,8 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 | Book and spot recorder (`ticks`) | 0.4.0 | The current and next Up/Down markets' best bid and ask, every fill (with its transaction hash) and the asset's Binance trades, to the millisecond, with round trips to the CLOB (FEAT-147, FEAT-101's recorder) |
 | Recording report (`ticks-report`) | 0.4.0 | Our receive delay and round trip, the data API's timestamp offset, how long stale asks live after a spot move, and FEAT-147's part-1 decision |
 | Strategy-library rows (`lane-rows`) | Unreleased | Collected history, weather, Fed and Up/Down data as trading-core's library rows (listings, readings with Kalshi's reference, trade prints, outcomes), one fee rate at a time, for `trading-core-lanes sweep` with its price-dependent fee (FEAT-149) |
+| Sports listing-gap recorder (`sports-gaps`) | Unreleased | Tennis and esports matches on both venues from listing: Polymarket's and Kalshi's best prices and sizes for each side every 2 minutes, with each venue's listing time (FEAT-168) |
+| Sports gap report (`sports-gaps-report`) | Unreleased | Gaps after Polymarket's fee as events, by sport and hours after listing, settled, and `sports-1`'s decision (FEAT-168) |
 | Liquidity-rewards scan (`rewards-scan`) | Unreleased | Every market paying liquidity rewards, its terms (daily pool, minimum size, reward spread), the shares already resting inside its spread, and a one-snapshot estimate of a quote's reward, ranked; ended markets and wide books flagged (FEAT-153) |
 | Calibration (`calibrate`) | 0.1.0 | The favourite lane's table (price × hours bins, shrunk win rates) with a train/test split and its sha256 |
 | Favourite backtest (`backtest favourite`) | 0.1.0 | Calibrates before a split date, replays after it |
@@ -109,10 +111,11 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 
 ## 7. Command line
 
-`trading-polymarket` (since 0.1.0) has seventeen commands: `scan`,
+`trading-polymarket` (since 0.1.0) has twenty commands: `scan`,
 `weather`, `record`, `arb`, `bias`, `metars`, `history`, `weather-history`,
 `updown-history`, `updown-backtest`, `ticks`, `ticks-report`,
-`rewards-scan`, `fed-history`, `calibrate`, `backtest` and `pairs`. An API failure is
+`rewards-scan`, `sports-gaps`, `sports-gaps-report` (FEAT-168, Unreleased),
+`fed-history`, `calibrate`, `backtest`, `pairs` and `lane-rows`. An API failure is
 reported as `error: HTTP …` with exit code 2 (0.2.0). Every flag:
 [`CLI.md`](CLI.md).
 

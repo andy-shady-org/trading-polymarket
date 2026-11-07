@@ -31,6 +31,7 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
       backtest from them.
 
 - [ ] **FEAT-147** ([`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-147-updown-stale-quotes-after-a-spot-move)): built in 0.4.0. Run `ticks` on the Mac for at least three days ([`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)), then `ticks-report` for the decision on part 1 (our delay against how long stale asks live) and the data API's timestamp offset; if takeable, from 2026-11-18 collect 2026-11-04 to 11-17 and run `updown-backtest --rule stale --timestamp-offset <median>`.
+- [ ] **`sports-1`** ([`runs/sports-1.md`](runs/sports-1.md), FEAT-168, pre-registered 2026-11-07): start `sports-gaps --out data/sports-1` on the Mac from `main` with FEAT-168 (the commit in `data/sports-1/RUN.txt`), record 14 days, then `sports-gaps-report --input data/sports-1`; record-only, beside the running lanes
 - [ ] **Research from the CloddsBot review** ([`PROPOSED-FEATURES.md` §2](PROPOSED-FEATURES.md#2-proposed-with-an-id-2026-10-31)): FEAT-102 first (extend `arb`, then a week of records against the pre-written decision rule), FEAT-101 (the tick recorder, 24–48 h, then the maker study), FEAT-103 (an hour's backtest; stop if negative after fees). None places an order.
 
 ## 3. Later
