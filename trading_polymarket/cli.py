@@ -16,6 +16,8 @@ these commands collect evidence and look at what the lanes see:
 ``ticks``          record Up/Down books, fills and spot to the millisecond
 ``ticks-report``   latency, stale asks and timestamp offset from a recording
 ``rewards-scan``   markets paying liquidity rewards, their terms, the competition
+``sports-gaps``    record tennis and esports books on both venues from listing
+``sports-gaps-report`` gaps after Polymarket's fee, by hours after listing
 ``weather-history``collect resolved temperature events + price histories
 ``fed-history``    collect settled Fed meetings on Polymarket and Kalshi
 ``calibrate``      build the favourite lane's calibration table
@@ -54,6 +56,8 @@ from trading_polymarket.research import lane_rows as lane_mod
 from trading_polymarket.research import metar_archive, recorder, updown
 from trading_polymarket.research import pairs_suggest as suggest_mod
 from trading_polymarket.research import rewards as rewards_mod
+from trading_polymarket.research import sports_gaps as sports_mod
+from trading_polymarket.research import sports_gaps_report as sreport
 from trading_polymarket.research import ticks as ticks_mod
 from trading_polymarket.research import ticks_report as treport
 from trading_polymarket.research import updown_backtest as ubt
@@ -455,6 +459,72 @@ async def cmd_rewards_scan(args: argparse.Namespace, out: Printer) -> int:
     return 0
 
 
+async def cmd_sports_gaps(args: argparse.Namespace, out: Printer) -> int:
+    module = build_module(args)
+    venues = sports_mod.Venues(
+        module.gamma, module.clob, module.http, kalshi_url=module.settings.kalshi_url
+    )
+    counts = await sports_mod.record(
+        venues,
+        directory=args.out,
+        hours=args.hours,
+        interval=args.interval,
+        log=lambda message: out(f"{datetime.now():%H:%M:%S} {message}"),
+    )
+    written = ", ".join(f"{n} {counts[n]}" for n in sorted(counts)) or "nothing"
+    out(f"stopped; rows written: {written} (in {args.out})")
+    return 0
+
+
+def _sports_lines(summary: dict[str, Any]) -> list[str]:
+    def num(value: float | None, spec: str) -> str:
+        return "-" if value is None else format(value, spec)
+
+    halves = " / ".join(num(h, "+.1%") for h in summary["net_per_dollar_halves"])
+    ages = ", ".join(f"{k} {v}" for k, v in summary["by_hours_after_listing"].items())
+    sports = ", ".join(f"{k} {v}" for k, v in summary["by_sport"].items()) or "none"
+    return [
+        f"gap events: {summary['events']} on {summary['matches']} matches ({sports})",
+        f"  hours after both venues listed: {ages}",
+        f"  Polymarket listed first: {summary['pm_listed_first']}",
+        f"  median edge {num(summary['median_edge'], '.3f')}, "
+        f"offered ${num(summary['median_notional'], ',.0f')}, "
+        f"lasted {num(summary['median_minutes'], '.0f')} min",
+        f"  settled {summary['settled']}, won {summary['won']}, "
+        f"net per $ {num(summary['net_per_dollar'], '+.1%')} (halves {halves})",
+    ]
+
+
+async def cmd_sports_gaps_report(args: argparse.Namespace, out: Printer) -> int:
+    recording = sreport.load_recording(args.input)
+    if not recording.quotes:
+        out(f"no recording in {args.input}: run `trading-polymarket sports-gaps`")
+        return 1
+    rule = sreport.GapRule(
+        gap=args.gap,
+        max_kalshi_spread=args.max_kalshi_spread,
+        min_notional=args.min_notional,
+    )
+    events = sreport.find_events(recording.pairs, recording.quotes, rule)
+    if events and args.settle:
+        module = build_module(args)
+        winners = await sreport.fetch_winners(module.gamma, [e.slug for e in events])
+        sreport.settle(events, winners)
+    times = [float(q[0]) for q in recording.quotes]
+    summary = sreport.summarize(events, (min(times) + max(times)) / 2.0)
+    out(
+        f"recorded {recording.days[0]} to {recording.days[-1]} "
+        f"({len(recording.days)} days): {recording.listings} listings, "
+        f"{len(recording.pairs)} pairs, {len(recording.quotes)} quotes"
+    )
+    for line in _sports_lines(summary):
+        out(line)
+    path = _write(args.out, [e.to_dict() for e in events])
+    out(f"events written to {path}")
+    out(f"decision (sports-1): {sreport.decision(len(recording.days), summary)}")
+    return 0
+
+
 async def cmd_weather_history(args: argparse.Namespace, out: Printer) -> int:
     module = build_module(args)
     written = await wbt.collect_weather(
@@ -777,6 +847,33 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--show", type=int, default=30, help="rows printed")
     p.add_argument("--out", help="default data/rewards/rewards-<UTC time>.jsonl")
 
+    p = command("sports-gaps", "record tennis and esports books (FEAT-168)")
+    p.add_argument("--hours", type=float, help="stop after this long (default: Ctrl-C)")
+    p.add_argument(
+        "--interval",
+        type=float,
+        default=sports_mod.DEFAULT_INTERVAL_SECONDS,
+        help="seconds between snapshots",
+    )
+    p.add_argument("--out", default=sports_mod.DEFAULT_SPORTS_DIR)
+
+    p = command("sports-gaps-report", "gaps after the fee, by listing age (FEAT-168)")
+    p.add_argument("--input", default=sports_mod.DEFAULT_SPORTS_DIR)
+    p.add_argument("--gap", type=float, default=sreport.PRIMARY.gap, help="dollars")
+    p.add_argument(
+        "--max-kalshi-spread", type=float, default=sreport.PRIMARY.max_kalshi_spread
+    )
+    p.add_argument(
+        "--min-notional", type=float, default=sreport.PRIMARY.min_notional, help="USDC"
+    )
+    p.add_argument(
+        "--no-settle",
+        dest="settle",
+        action="store_false",
+        help="skip Gamma's settled results",
+    )
+    p.add_argument("--out", default="data/backtest/sports-gaps-events.jsonl")
+
     p = command("weather-history", "collect resolved temperature events")
     p.add_argument("--start", required=True)
     p.add_argument("--end", required=True)
@@ -867,6 +964,8 @@ COMMANDS = {
     "ticks": cmd_ticks,
     "ticks-report": cmd_ticks_report,
     "rewards-scan": cmd_rewards_scan,
+    "sports-gaps": cmd_sports_gaps,
+    "sports-gaps-report": cmd_sports_gaps_report,
     "weather-history": cmd_weather_history,
     "calibrate": cmd_calibrate,
     "fed-history": cmd_fed_history,

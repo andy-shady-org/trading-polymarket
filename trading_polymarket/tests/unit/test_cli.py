@@ -595,6 +595,95 @@ def test_ticks_report(transport: FakeTransport, tmp_path: Path) -> None:
     assert lines[3].endswith(": none") and lines[4].startswith("signals")
 
 
+def test_sports_gaps_records_until_stopped(
+    transport: FakeTransport, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    seen: dict[str, Any] = {}
+
+    async def fake_record(venues: Any, **options: Any) -> Counter[str]:
+        seen.update(options, venues=venues)
+        options["log"]("3 pairs, 3 quotes, 0 ambiguous, 9 listings")
+        return Counter({"pairs": 3, "quotes": 3})
+
+    monkeypatch.setattr(cli.sports_mod, "record", fake_record)
+    code, lines = run(
+        "sports-gaps", "--hours", "2", "--interval", "60", "--out", str(tmp_path)
+    )
+    assert code == 0 and seen["hours"] == 2.0 and seen["interval"] == 60.0
+    assert seen["venues"].kalshi_url.startswith("https://api.elections.kalshi.com")
+    assert lines[0].endswith(" 3 pairs, 3 quotes, 0 ambiguous, 9 listings")
+    assert lines[-1] == f"stopped; rows written: pairs 3, quotes 3 (in {tmp_path})"
+    monkeypatch.setattr(cli.sports_mod, "record", lambda *a, **k: _empty())
+    assert run("sports-gaps", "--out", str(tmp_path))[1][-1].startswith(
+        "stopped; rows written: nothing"
+    )
+
+
+def test_sports_gaps_report(transport: FakeTransport, tmp_path: Path) -> None:
+    code, lines = run("sports-gaps-report", "--input", str(tmp_path / "none"))
+    assert code == 1 and lines[0].startswith("no recording in")
+    day = tmp_path / "rec" / "2026-10-28"
+    day.mkdir(parents=True)
+    pair = {
+        "pair": "itf-a-b|K",
+        "sport": "tennis",
+        "pm_slug": "itf-a-b",
+        "pm_fee": {"rate": 0.05},
+        "pm_created": NOW - 1800,
+        "kalshi_created": NOW - 600,
+        "start": NOW + 3600,
+    }
+    (day / "pairs.jsonl").write_text(json.dumps(pair) + "\n")
+    with gzip.open(day / "quotes.jsonl.gz", "at") as handle:
+        for rx in (NOW, NOW + 120):
+            row = [
+                rx,
+                "itf-a-b|K",
+                0.40,
+                50,
+                0.42,
+                50,
+                0.46,
+                9,
+                0.48,
+                9,
+                0.5,
+                9,
+                0.6,
+                9,
+            ]
+            handle.write(json.dumps(row) + "\n")
+    closed = gamma_market(slug="itf-a-b", prices=["1", "0"], closed=True)
+    transport.add("/markets?", [closed])
+    out = tmp_path / "events.jsonl"
+    code, lines = run(
+        "sports-gaps-report", "--input", str(tmp_path / "rec"), "--out", str(out)
+    )
+    assert code == 0
+    assert lines[0] == (
+        "recorded 2026-10-28 to 2026-10-28 (1 days): 0 listings, 1 pairs, 2 quotes"
+    )
+    assert lines[1] == "gap events: 1 on 1 matches (tennis 1)"
+    assert lines[2].startswith("  hours after both venues listed: 0-1 h 1")
+    assert lines[4].startswith("  median edge 0.038, offered $21, lasted 2 min")
+    assert lines[5].startswith("  settled 1, won 1, net per $ +131.4%")
+    assert lines[-1] == "decision (sports-1): too early: 1 of at least 7 days"
+    (event,) = [json.loads(line) for line in out.read_text().splitlines()]
+    assert event["won"] is True and event["snapshots"] == 2
+    code, lines = run(
+        "sports-gaps-report",
+        "--input",
+        str(tmp_path / "rec"),
+        "--out",
+        str(out),
+        "--no-settle",
+        "--gap",
+        "0.1",
+    )
+    assert lines[1] == "gap events: 0 on 0 matches (none)"
+    assert lines[4] == "  median edge -, offered $-, lasted - min"
+
+
 def test_rewards_scan(transport: FakeTransport, tmp_path: Path) -> None:
     terms = {
         "condition_id": "0xr",
