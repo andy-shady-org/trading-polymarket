@@ -434,6 +434,9 @@ stands now.
 | Polymarket intraday weather and Fed | trading-polymarket paper runs | Stage 0 INCONCLUSIVE (data- and sample-limited) | Each lane's own Stage 1 verdict |
 | Crypto Up/Down stale quotes after a spot move | trading-polymarket FEAT-147 | Cheap asks left stale by a Binance move are lifted within a second, an edge minute data cannot see (it was on §6 as "latency trades: an artefact of minute data" until 2026-11-04). In fill time it is gone within a second: the pre-registered rule loses in-sample once the data API's 2.2 s lag is removed. Part 1 (2026-11-07): we are fast enough for 89.9% of signals | The pre-registered rule on the fresh window 4–17 Nov, `--timestamp-offset 2.20`, from 18 Nov |
 | Learning under a frozen rule (FEAT-105 selector, FEAT-106 crash model) | trading-pump, for any reopened lane | Adaptive rules cut losses | Walk-forward beats the best fixed rule on every capture |
+| DAMM v2 pools by creator (added 2026-11-07) | trading-meteora `damm-2`, a dated exploratory check | damm-1: creators of 100+ pools drained 57% within 1 h, one-off creators 18% (crash rates, not trades; §3.4) | damm-2's split on positions in both halves, then a pre-registered fresh capture |
+| Rug calls seen pending on EVM (added 2026-11-07) | trading-evm FEAT-172, `trading-evm mempool` | No on-chain warning before a pull (§3.4), so a pending pull is the only early sign left; outside bots claim 80–85% on Ethereum and BSC, where the public mempool is shrinking | A 24 h record on BSC, only if a BSC arm of evm-1 is GO: the share of pulls seen pending and how early |
+| Shorts before large token unlocks (added 2026-11-07) | Not built | Keyrock: about 90% of 16,000+ unlocks came with selling from about 30 days before, team unlocks worst; `listings-1` (§3.6) tested listing dates only | A pre-registered Stage 0 study on an unlock calendar with intraday prices and funding, after an access check |
 
 ## 8. The strategy library
 
@@ -528,3 +531,5 @@ runs a venue's captures (converted to the records by its module:
   `claude/rug-backtests-2026-11-07.md`): locked-liquidity launchpads,
   liquidity custody and the EVM precursor tripwire on scout-2, DAMM v2 pools
   by creator on damm-1, and study `listings-1` (FEAT-173, NO LEAD).
+- 2026-11-07: §7: three leads from the rug-strategy work (DAMM v2 pools by
+  creator, rug calls seen pending on EVM, shorts before token unlocks).

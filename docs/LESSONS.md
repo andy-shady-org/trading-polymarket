@@ -493,6 +493,13 @@ any lane.
     yours. *(trading-polymarket, Open-Meteo.)*
 13. **Zero means refetch.** Freshness is `age < max_age`, so `max_age=0`
     always reads. *(trading-polymarket TP-3.)*
+14. **A pruned node answers old logs with nothing.** Asked for logs older
+    than it keeps, a node returns an empty list, not an error, so "no events"
+    and "not kept" look the same. Before reading history, probe the oldest
+    block the endpoint serves with a range known to hold logs, write the
+    reach next to it, and report anything older as not read. *(trading-evm
+    FEAT-170, 2026-11-07: BSC publicnode kept about 2 days; 48 Club served
+    900k blocks back but not 1.5M; Base publicnode about 2.5M blocks.)*
 
 ## 7. Streams
 
@@ -611,3 +618,5 @@ any lane.
 - 2026-11-07: §3 lesson 19, from trading-polymarket FEAT-101's maker study
   and an outside repository read the same day (project note
   `trading-skills-review-2026-11-07`).
+- 2026-11-07: §6 lesson 14, from trading-evm FEAT-170's custody backfill on
+  scout-2's trades.
