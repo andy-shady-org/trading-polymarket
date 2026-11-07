@@ -25,6 +25,7 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 | Date | Data | Lane | Config | Positions | Net | Verdict |
 |---|---|---|---|---|---|---|
+| 2026-11-07 | `data/updown`, FEAT-146's 8,615 BTC 5-minute markets, 5 Oct – 3 Nov, and one-second Binance spot | crypto Up/Down expiry fade (FEAT-103; research, no lane) | pre-registered: 300–60 s left, spot under 6 bp over 60 s, the side at 35 c or less, $5, next buy print within 5 s, held to settlement | 6,139 | −8.0% on stake | NO-GO: FAIL on every check; the mirror and the 4 other variants all lose; FEAT-103 closed |
 | 2026-11-04 | `weather-0.2.1`, `fed-0.2.1` (paper, closed early) | weather, fed | pre-registered 0.2.1 configs | 16 / 2 | −$67.27 / −$0.29 adjusted | not judged: 16 of 150 and 2 of 60 positions; closed in favour of `weather-1`, `fed-1` |
 | 2026-11-04 | a 6-minute `ticks` recording (2 markets, 1,302 fills); FEAT-146's 30 days | FEAT-147's timing, corrected (study) | pre-registered rule, `--timestamp-offset 2.2`, in-sample | 959 | −4.3% on stake | none: a study; the "2 s" edge was in the data API's time, 2.2 s after the fill |
 | 2026-11-04 | `data/updown` (FEAT-146's 30 days) and one-second Binance spot | crypto Up/Down: who wins, and cheap buys after a spot move (studies) | – | – | takers −$3.88M in total | none: studies; the spot-move lead is pre-registered as FEAT-147 |
@@ -125,6 +126,47 @@ measures whether we are fast enough
 About 4% of trade rows are exact repeats (runs of up to six or more,
 mostly at mid prices: bots repeating orders, most likely; the collector
 does not keep transaction hashes).
+
+### 2026-11-07 — crypto Up/Down expiry fade (FEAT-103): NO-GO
+
+**Question.** CloddsBot's "expiry fade": in the last 1–5 minutes of an
+Up/Down market, with spot flat, is the side at least 15 c from 0.50
+underpriced? And its mirror: is the favourite?
+
+**Rule.** As pre-registered in
+[`PROPOSED-FEATURES.md`](PROPOSED-FEATURES.md#feat-103-expiry-fade-backtest)
+and `research/updown_fade.py` (sha256 `9fec4f68…3ae0f`, commit `0cc5157`)
+before the run, with no change: the first second with 300 to 60 s left at
+which spot moved under 6 bp over the 60 s before and one side's last print
+was 0.35 or less; the fill the next buy print of it in a later second within
+5 s, at most 1 c above, with at least $5 notional; held to settlement, taker
+fee `0.07 × p(1 − p)` a share. Halves split on 20 Oct, as FEAT-146's.
+
+**Data.** FEAT-146's backfill (8,615 markets, 12.9 million taker trades)
+and its one-second Binance spot. Every taker print to the second, not the
+minute prices the proposal named: finer data, so the minute-data caution
+matters less.
+
+**Result** (`trading-polymarket updown-backtest --rule fade --start
+2026-10-05 --end 2026-11-04`, 21 s):
+
+| Rule | Trades | Won | Average price | Return on stake | Halves | Without the best 1% |
+|---|---|---|---|---|---|---|
+| **fade, 15 c** (primary) | 6,139 | 26.5% | 0.268 | **−8.0%** | −11.1% / −4.7% | −15.2% |
+| favourite, 15 c (mirror) | 7,335 | 73.0% | 0.727 | −1.4% | −0.8% / −1.9% | −2.2% |
+| fade, 15 c, 3 s late (stress) | 5,785 | 25.4% | 0.258 | −8.5% | −10.3% / −6.6% | −16.0% |
+| fade, 10 c | 6,071 | 29.1% | 0.292 | −7.1% | −9.4% / −4.8% | −14.2% |
+| fade, 25 c | 5,944 | 19.6% | 0.203 | −10.9% | −12.5% / −9.3% | −18.7% |
+| fade, 15 c, any spot | 7,271 | 30.6% | 0.311 | −5.9% | −7.1% / −4.6% | −10.1% |
+| favourite, 25 c | 7,480 | 79.3% | 0.788 | −0.8% | −0.6% / −1.0% | −1.4% |
+
+**Verdict: NO-GO** (FAIL). The cheap side wins about as often as its price
+says (26.5% against 26.8%), so nothing is left to pay the fee, which is
+largest near the middle and costs a 27 c buy about 5% of its stake. The
+favourite is priced about right too, and its smaller fee still loses. This
+is the favourite-longshot pattern the prior expected: no mispricing to fade
+in either direction. By the stop rule, FEAT-103 is closed; no ticks
+confirmation is needed.
 
 ### 2026-11-04 — crypto Up/Down late longshot (FEAT-146): NO-GO
 
