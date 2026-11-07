@@ -179,6 +179,31 @@ to size a quote. On 2026-11-04, 107 of the 300 best-paid markets had ended
 reward spread: rewards keep paying where quoting means trading against
 people who know the outcome.
 
+## 4d. The strategy-library sweep (FEAT-149)
+
+```bash
+trading-polymarket lane-rows --from history --input data/history/markets.jsonl \
+  --fee-rate 0.04 --out data/lanes/markets-004.jsonl.gz
+trading-core-lanes sweep --capture markets=data/lanes/markets-004.jsonl.gz \
+  --entries probability_band \
+  --fee-bps 0 --stress-fee-bps 50 --price-fee-rate 0.04 --haircut-bps 100 --delay 0 \
+  --no-gates --out data/sweeps/markets-004
+```
+
+`lane-rows` turns a collection into the library's rows; the sweep tries
+trading-core's outcome-market rules (`probability_band`, and
+`reference_gap` on `fed-history`'s Kalshi reference) with Polymarket's
+taker fee, `--price-fee-rate` (`rate × p(1 − p)` a share; settlement is
+free; the built-in `rule_exit` set holds a position to settlement). The fee rate differs by category, so convert and sweep one rate at a
+time: the command prints how many markets each rate has. The rows carry
+hourly points (minute points for Up/Down trades), so a fill is the next
+point after `--delay`, and `--haircut-bps` stands in for the half spread
+the backtests model (`--half-spread`). Split a collection by time into two
+captures to judge a rule on both. A shortlist is not a verdict: the
+favourite-longshot and day-ahead weather results it revisits are NO-GO
+(STRATEGY-LEDGER §3.5), and only a pre-registered run on fresh data
+decides.
+
 ## 5. Dry-run recording and arbitrage logging (during a paper run)
 
 ```bash

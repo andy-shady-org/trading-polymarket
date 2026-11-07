@@ -69,7 +69,13 @@ unreadable file or invalid settings, or an API failure, printed as one
 Backtests print a one-line JSON summary and the exact `trading-core-audit
 verdict` command to judge them. Examples are in [`RESEARCH.md`](RESEARCH.md).
 
-### 2.4 Cross-venue pairs
+### 2.4 Strategy-library rows (FEAT-149)
+
+| Command | What it does | Flags (default) |
+|---|---|---|
+| `lane-rows` | Writes data already collected as trading-core's strategy-library rows, for `trading-core-lanes sweep`: each outcome token an instrument, a `listing` at its first price point (`resolves_at` the market's end), a `reading` per price point, an `outcome` at settlement; `fed-history` readings carry Kalshi's last closed mid as `reference`; `updown-history` writes each Up/Down side with a `reading` and a `trade` (the taker's wallet, price × shares) per taker trade. Prints the rows written, the markets by fee rate and what it skipped (prices outside (0, 1], points at or after the end, other fee rates) | `--from history\|weather-history\|fed-history\|updown-history` (required), `--input FILE` (or the `updown-history` folder; required), `--out` (a new `.jsonl` or `.jsonl.gz`; required), `--fee-rate R` (keep only markets at that taker rate: one sweep, one rate), `--asset` (`btc`), `--window` (`5m`), `--start` / `--end` (updown days), `--print-offset S` (0: seconds added to every updown print, FEAT-147's offset) |
+
+### 2.5 Cross-venue pairs
 
 | Command | What it does | Flags (default) |
 |---|---|---|

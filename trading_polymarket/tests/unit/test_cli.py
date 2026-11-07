@@ -621,3 +621,34 @@ def test_rewards_scan(transport: FakeTransport, tmp_path: Path) -> None:
     transport.add("/markets?condition_ids", [])
     code, lines = run("rewards-scan", "--out", str(out), "--quote-shares", "5")
     assert lines[2].endswith("0xr (no book)")
+
+
+def test_lane_rows_writes_library_rows(tmp_path: Path) -> None:
+    source = tmp_path / "markets.jsonl"
+    append_jsonl(source, [history_row(fee_rate=0.04)])
+    out = tmp_path / "rows.jsonl.gz"
+    code, lines = run(
+        "lane-rows", "--from", "history", "--input", str(source), "--out", str(out)
+    )
+    assert (
+        code == 0 and lines[0] == "1 markets written: 2 listing, 2 outcome, 4 reading"
+    )
+    assert lines[1] == "markets by fee rate: 0.04: 1" and out.is_file()
+    code, lines = run(
+        "lane-rows",
+        "--from",
+        "updown-history",
+        "--input",
+        str(tmp_path),
+        "--out",
+        str(tmp_path / "updown.jsonl"),
+        "--start",
+        "2026-10-01",
+        "--end",
+        "2026-10-02",
+        "--fee-rate",
+        "0.07",
+        "--print-offset",
+        "-1",
+    )
+    assert code == 2 and "no updown-history collection" in lines[0]
