@@ -19,7 +19,11 @@ gaps a day of at least $5 each at a fillable size, lasting at least 10 s.
   NO-GO otherwise.
 
 Everything else is reported, not deciding: gaps by kind and by the event's
-first tag, augmented events apart, lifetimes, sizes and profits.
+first tag, augmented events apart, lifetimes, sizes and profits, and for the
+qualifying gaps the days until their set resolves and the return a year on
+the money a set ties up (profit over cost at the first read's ``max_size``,
+per year to resolution): a gap that pays 2.5 c a set two years out is less
+than cash earns (two such sets were open on 2026-11-07).
 """
 
 from __future__ import annotations
@@ -108,6 +112,24 @@ def _quantiles(values: Sequence[float]) -> dict[str, float] | None:
     }
 
 
+def annualized(gap: Mapping[str, Any]) -> float | None:
+    """The first read's profit over the money its sets tie up, a year."""
+    days = days_to_resolution(gap)
+    size = float(gap.get("first_max_size") or 0.0)
+    profit = float(gap.get("first_max_profit") or 0.0)
+    capital = size * float(gap.get("payout") or 0.0) - profit
+    if days is None or days <= 0 or capital <= 0:
+        return None
+    return profit / capital * 365.0 / days
+
+
+def days_to_resolution(gap: Mapping[str, Any]) -> float | None:
+    resolves = gap.get("resolves")
+    if resolves is None:
+        return None
+    return (float(resolves) - float(gap["first_seen"])) / 86400.0
+
+
 def verdict(per_day: Mapping[str, int], covered: Sequence[str]) -> str:
     if len(covered) < MIN_DAYS:
         return INCONCLUSIVE
@@ -161,6 +183,12 @@ def summarize(
         "qualifying_peak_profit": round(
             sum(float(g["peak_max_profit"]) for g in good), 2
         ),
+        "qualifying_days_to_resolution": _quantiles(
+            [d for d in (days_to_resolution(g) for g in good) if d is not None]
+        ),
+        "qualifying_annualized": _quantiles(
+            [a for a in (annualized(g) for g in good) if a is not None]
+        ),
         "covered_days": len(covered),
         "verdict": verdict(per_day, covered),
     }
@@ -176,6 +204,8 @@ __all__ = [
     "MIN_RUN_SECONDS",
     "MIN_SWEEPS",
     "NO_GO",
+    "annualized",
+    "days_to_resolution",
     "gap_day",
     "load",
     "qualifies",

@@ -255,7 +255,10 @@ folder a UTC day: `gaps.jsonl` (each gap's lifetime, size and profit, and its
 longest run at $5 or more), `observations.jsonl.gz` (every read of an open
 gap with each leg's top levels), `sweeps.jsonl` and `catalogue.jsonl`
 (coverage). `arb-report` counts the gaps that meet FEAT-102's rule and gives
-its decision ([`dev/runs/arb-1.md`](dev/runs/arb-1.md)).
+its decision ([`dev/runs/arb-1.md`](dev/runs/arb-1.md)), with each
+qualifying gap's days to resolution and return a year: a full set pays only
+when its event resolves, so a small gap on a far event can earn less than
+cash (two open on 2026-11-07 resolved in 2027 and 2028).
 
 ## 6. Results log
 

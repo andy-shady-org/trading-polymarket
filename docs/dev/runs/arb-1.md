@@ -53,7 +53,15 @@
 - **Reported, not deciding:** gaps by kind and by the event's first tag;
   augmented events' gaps apart; lifetimes, peak sizes and profits; the sum
   of the qualifying gaps' peak profit (an upper bound on what an executor
-  that won every one could take); censored gaps.
+  that won every one could take); censored gaps; and, for the qualifying
+  gaps, the days until their set resolves (its markets' latest end date)
+  and the return a year on the money the set ties up (the first read's
+  profit over its cost, per year to resolution). The verdict counts gaps as
+  FEAT-102's rule does, whatever their horizon; the smoke run's two open
+  sets paid 2.5 c and 0.7 c a set on events resolving in 2028 and April
+  2027, less than cash earns over that time, so a GO leads to an executor
+  design only for the gaps whose return a year clears a bar that design
+  sets out first.
 - **Planned end:** 192 hours (8 days) from the start, so that 7 full UTC
   days are covered; the recorder stops itself.
 - **Stage:** research, before Stage 0. GO leads to a design for a full-set

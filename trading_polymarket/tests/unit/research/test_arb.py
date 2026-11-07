@@ -53,6 +53,8 @@ def test_set_spec_key_payout_tokens_and_row() -> None:
     row = no.row()
     assert row["legs"] == 3 and row["payout"] == 2.0 and row["fee_legs"] == 1
     assert row["tags"] == ["politics"] and row["tokens"] == ["y1", "y2", "y3"]
+    assert row["resolves"] == max(m.end_time or 0 for m in legs)
+    assert spec(KIND_YES, (leg(1, endDate=None),)).resolves is None
 
 
 @pytest.mark.regression("TP-13")

@@ -86,6 +86,13 @@ class SetSpec:
     def tokens(self) -> tuple[str, ...]:
         return tuple(m.yes_token for m in self.markets)
 
+    @property
+    def resolves(self) -> float | None:
+        """The latest end date of its markets: when the set's money comes back
+        (a gap's return is per this long; ``None`` when no market says)."""
+        ends = [m.end_time for m in self.markets if m.end_time is not None]
+        return max(ends) if ends else None
+
     def row(self) -> dict[str, Any]:
         """What a gap's record says about its set."""
         return {
@@ -100,6 +107,7 @@ class SetSpec:
             "payout": self.payout,
             "tokens": list(self.tokens),
             "fee_legs": sum(not m.fee.free for m in self.markets),
+            "resolves": self.resolves,
         }
 
 

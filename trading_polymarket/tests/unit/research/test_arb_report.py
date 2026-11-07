@@ -13,6 +13,8 @@ from trading_polymarket.research.arb_report import (
     INCONCLUSIVE,
     MIN_SWEEPS,
     NO_GO,
+    annualized,
+    days_to_resolution,
     gap_day,
     load,
     qualifies,
@@ -117,6 +119,26 @@ def test_summarize_counts_by_day_kind_and_tag_with_augmented_apart() -> None:
     assert day1["augmented_gaps"] == 1 and not day1["covered"]
     assert summary["lifetime"]["p50"] == 30.0
     assert summary["peak_max_profit"]["max"] == 12.0
+
+
+def test_days_to_resolution_and_the_return_a_year() -> None:
+    # 100 sets of a $1 set at 0.95: $5 on $95, resolving in 365 days
+    g = gap(resolves=NOW + 365 * DAY, first_max_size=100.0, first_max_profit=5.0)
+    g["payout"] = 1.0
+    assert days_to_resolution(g) == pytest.approx(365.0)
+    assert annualized(g) == pytest.approx(5 / 95)
+    assert annualized({**g, "resolves": NOW + 730 * DAY}) == pytest.approx(5 / 190)
+    assert days_to_resolution(gap()) is None and annualized(gap()) is None
+    assert annualized({**g, "resolves": NOW - DAY}) is None  # already due
+    assert annualized({**g, "first_max_size": 0.0}) is None
+
+
+def test_summarize_reports_the_qualifying_gaps_horizon() -> None:
+    g = gap(resolves=NOW + 30 * DAY, first_max_size=100.0, first_max_profit=5.0)
+    g["payout"] = 1.0
+    summary = summarize([g, gap()], Counter())
+    assert summary["qualifying_days_to_resolution"]["p50"] == pytest.approx(30.0)
+    assert summary["qualifying_annualized"]["max"] == pytest.approx(5 / 95 * 365 / 30)
 
 
 def test_summarize_an_empty_recording() -> None:

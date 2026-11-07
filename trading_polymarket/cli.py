@@ -262,6 +262,8 @@ def _arb_report_lines(summary: dict[str, Any]) -> list[str]:
         q("lifetime", ",.1f"),
         q("peak_max_profit", ",.2f"),
         q("peak_max_size", ",.0f"),
+        q("qualifying_days_to_resolution", ",.0f"),
+        q("qualifying_annualized", ".1%"),
         "by kind: "
         + (", ".join(f"{k} {v}" for k, v in summary["by_kind"].items()) or "-"),
         "by tag: "
