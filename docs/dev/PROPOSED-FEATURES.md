@@ -46,7 +46,7 @@ orders.
 | FEAT-103 | Expiry-fade backtest | Research | A cheap test of one more taker rule; low prior |
 | FEAT-146 | Up/Down trade backfill and late-longshot backtest | Research | A profitable wallet's pattern, testable on every trade of past markets without waiting for a recorder. Built (0.4.0); the backtest is **NO-GO** (2026-11-04, [`RESULTS.md`](RESULTS.md)) |
 | FEAT-147 | Up/Down stale quotes after a spot move | Research, then a lane | Second-level prints show a 2–5 s edge after a Binance move, the edge the bot `@vega7` appears to trade; takeable only if we are fast enough |
-| FEAT-149 | Library rows from Polymarket's data (`lane-rows`) | Research tooling | Sweep trading-core's outcome-market rules (`reference_gap`, `probability_band`) over the history already collected. Not built |
+| FEAT-149 | Library rows from Polymarket's data (`lane-rows`) | Research tooling | Sweep trading-core's outcome-market rules (`reference_gap`, `probability_band`) over the history already collected. Built (Unreleased) |
 | FEAT-153 | Liquidity-rewards scan (`rewards-scan`) | Research tooling | Which markets pay makers to quote, on what terms and against how much competition: the subsidised maker seat. Built (Unreleased) |
 
 ### FEAT-101: Up/Down tick recorder and maker study
@@ -118,7 +118,7 @@ orders.
 * **First measurement (2026-11-04, 6 minutes): the data API's times run a median 2.2 s after the fill.** The study's lags were in that time, so the edge after a spot move is under a second, and the rule with the offset loses even in-sample (−4.3%; [`RESULTS.md`](RESULTS.md)). Part 1 now decides it: whether stale asks outlive our delay.
 
 ### FEAT-149: Library rows from Polymarket's data (`lane-rows`)
-* **Class / Priority:** Research tooling · P3 · added 2026-11-04. **Not built.**
+* **Class / Priority:** Research tooling · P3 · added 2026-11-04. **Built (Unreleased), 2026-11-07:** `research/lane_rows.py`, `trading-polymarket lane-rows` (CLI §2.4, RESEARCH §4d), with trading-core's `--price-fee-rate` (trading-core FEAT-149's core part, Unreleased). Every outcome token is its own instrument; `--fee-rate` keeps one category's rate; `ticks` rows (`Quote`, trading-core FEAT-148) are still to come.
 * **Goal:** run trading-core's venue sweep (`trading-core-lanes sweep`) over Polymarket's history with the library's outcome-market rules, `reference_gap` (FEAT-137) and `probability_band` (FEAT-138), the way trading-pump, trading-evm and trading-meteora feed theirs.
 * **Design:** `trading-polymarket lane-rows --input <collected file or folder> --out rows.jsonl.gz` writes the library's JSON rows from data already collected:
   - `history` and `weather-history`: a `Listing` per market (with `resolves_at`), a `Reading` per price point, an `Outcome` at settlement;

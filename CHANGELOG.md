@@ -10,6 +10,7 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 ## [Unreleased]
 
 ### Added
+- `trading-polymarket lane-rows` (FEAT-149, `research/lane_rows.py`): data already collected (`history`, `weather-history`, `fed-history`, `updown-history`) as trading-core's strategy-library rows, for `trading-core-lanes sweep`: each outcome token an instrument with a listing (`resolves_at`), a reading per price point (Kalshi's last closed mid as `reference` for the Fed buckets), a trade print per Up/Down taker trade (wallet, price × shares; `--print-offset` for FEAT-147's offset) and an outcome at settlement. `--fee-rate` keeps one taker rate, so each sweep runs at one rate with trading-core's `--price-fee-rate`. Needs trading-core `>=0.6.0` (the library's rows); the requirement's floor rises from 0.5.0.
 - `trading-polymarket rewards-scan` (FEAT-153): every market paying liquidity rewards today, its terms, the shares already resting inside its reward spread, and a one-snapshot estimate of a two-sided quote's reward, ranked, with ended markets and wide books flagged (`research/rewards.py`); `ClobClient.rewards_markets`, `GammaClient.raw_markets_by_condition_ids`.
 
 ## 0.4.0: crypto Up/Down research (2026-11-04)

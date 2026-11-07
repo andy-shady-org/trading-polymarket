@@ -34,7 +34,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Callable, Iterable, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +50,7 @@ from trading_polymarket.research import backtest as bt
 from trading_polymarket.research import bias as bias_mod
 from trading_polymarket.research import fed as fed_mod
 from trading_polymarket.research import history as hist
+from trading_polymarket.research import lane_rows as lane_mod
 from trading_polymarket.research import metar_archive, recorder, updown
 from trading_polymarket.research import pairs_suggest as suggest_mod
 from trading_polymarket.research import rewards as rewards_mod
@@ -578,6 +579,29 @@ async def cmd_backtest(args: argparse.Namespace, out: Printer) -> int:
     return 0
 
 
+def _day(text: str | None) -> date | None:
+    return None if text is None else date.fromisoformat(text)
+
+
+async def cmd_lane_rows(args: argparse.Namespace, out: Printer) -> int:
+    """Collected data as trading-core's strategy-library rows (FEAT-149)."""
+    request = lane_mod.LaneRowsRequest(
+        source=args.source,
+        input=args.input,
+        asset=args.asset,
+        window=args.window,
+        start=_day(args.start),
+        end=_day(args.end),
+        fee_rate=args.fee_rate,
+        print_offset=args.print_offset,
+    )
+    stats = lane_mod.write_lane_rows(request, args.out)
+    for line in lane_mod.describe(stats):
+        out(line)
+    out(f"rows written to {args.out}")
+    return 0
+
+
 async def cmd_pairs(args: argparse.Namespace, out: Printer) -> int:
     settings = PolymarketSettings.from_mapping(
         module_settings(getattr(args, "config", None))
@@ -791,6 +815,31 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-days-apart", type=float, default=3.0)
     p.add_argument("--limit", type=int, default=30)
     p.add_argument("--out", default=suggest_mod.DEFAULT_SUGGESTIONS)
+    p = command("lane-rows", "collected data as strategy-library rows (FEAT-149)")
+    p.add_argument("--from", dest="source", required=True, choices=lane_mod.SOURCES)
+    p.add_argument(
+        "--input",
+        required=True,
+        help="the collected file (history, weather-history, fed-history) or, for "
+        "updown-history, its folder",
+    )
+    p.add_argument("--out", required=True, help="a new .jsonl or .jsonl.gz file")
+    p.add_argument("--asset", default="btc", choices=sorted(updown.SPOT_SYMBOLS))
+    p.add_argument("--window", default="5m", choices=sorted(updown.WINDOWS))
+    p.add_argument("--start", default=None, help="updown days from YYYY-MM-DD")
+    p.add_argument("--end", default=None, help="updown days before YYYY-MM-DD")
+    p.add_argument(
+        "--fee-rate",
+        type=float,
+        default=None,
+        help="keep only markets at this taker fee rate (one sweep, one rate)",
+    )
+    p.add_argument(
+        "--print-offset",
+        type=float,
+        default=0.0,
+        help="seconds added to every updown trade print (FEAT-147's offset)",
+    )
     return parser
 
 
@@ -812,6 +861,7 @@ COMMANDS = {
     "fed-history": cmd_fed_history,
     "backtest": cmd_backtest,
     "pairs": cmd_pairs,
+    "lane-rows": cmd_lane_rows,
 }
 
 
