@@ -56,4 +56,14 @@
   which still said 0.4.0); it was stopped after one cycle, its rows moved
   to `data/sports-1-false-start/` unread, and they are not counted.
 
+- **A check added 2026-11-07, before any read (reported, not deciding;
+  the verdict above is unchanged):** settled events are reported by time
+  from entry to settlement (under 6 h, 6–24 h, over 24 h) with their net per
+  dollar, and no conclusion is drawn from the first-settled events alone.
+  Losing sides of a match can settle sooner than winning comebacks, so an
+  early read of the settled events can lean towards losses (an outside
+  live-money report, agiprolabs/claude-trading-skills,
+  `prediction-market-live-ops`; project note
+  `trading-skills-review-2026-11-07`).
+
 ## Read-out (added at the end)
