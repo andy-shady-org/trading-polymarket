@@ -32,7 +32,7 @@ starts or stops; link the record.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Next release | None planned (`CHANGELOG.md` [Unreleased] is empty) | [`TODO.md`](TODO.md) |
+| Next release | **`v0.6.0`** prepared on `release/v0.6.0` (2026-11-07): `arb --loop` and `arb-report` (FEAT-102), TP-13; to be tagged, signed, on the merge of that branch, then installed as `venvs/polymarket-v0.6.0` for `arb-1` | [`releases/0.6.0.md`](releases/0.6.0.md) |
 | Latest release | **`v0.5.0`** (2026-11-07), the merge commit `f0962b3` on `main`, signed tag: `sports-gaps` and `sports-gaps-report` (FEAT-168), `lane-rows` (FEAT-149), `rewards-scan` (FEAT-153), `updown-backtest --rule fade` (FEAT-103), trading-core `>=0.6.0,<0.8`; installed in `runtimes/polymarket` (`venvs/polymarket-v0.5.0`, with trading-core `v0.7.0`; `venvs/current` points at it), where `sports-1` runs on it. Before it **`v0.4.0`** (2026-11-04, `da27223`), installed as `venvs/polymarket-v0.4.0`, which `weather-1` and `fed-1` keep; `v0.3.0` (`119daa2`, never installed) and `v0.2.1` (`541f15d`) | [`CHANGELOG.md`](../../CHANGELOG.md), [`releases/0.4.0.md`](releases/0.4.0.md) |
 | Release gate, `v0.2.1` | PASS locally (2026-10-30): Ruff, Black, flake8, mypy clean; 443 tests, 100% statement and branch coverage on Python 3.11, 3.12, 3.13 and 3.14 against trading-core 0.2.2. Not recorded yet: CI on the tag, the live smoke run and the kill-and-restart drill (the release record still says "pending") | [`releases/0.2.1.md`](releases/0.2.1.md) |
 | Earlier releases | `v0.2.0` (2026-10-29, 425 tests) and `v0.1.0` (2026-10-28, 320 tests) passed locally; CI on those tags was not recorded | [`releases/0.2.0.md`](releases/0.2.0.md), `CHANGELOG.md` 0.1.0 |
@@ -43,7 +43,7 @@ starts or stops; link the record.
 | Crossvenue lane | **Stage 0 not started**: no pair is approved (`pairs approve`); its Stage 0 is a recorded dry run (§3.3) | [`../STRATEGY.md` §5](../STRATEGY.md#5-fed-and-crossvenue-polymarket-against-kalshi) |
 | Favourite lane | **Stage 0: NO-GO** (2026-10-28): every variant loses out of sample; off | [`RESULTS.md`](RESULTS.md) |
 | Momentum lane | Research only, off; no stage | – |
-| Full-set scanner | Record only; no execution exists. FEAT-102 built (Unreleased): `arb --loop` and `arb-report`; its week is the run `arb-1`, pre-registered for the next release | [`runs/arb-1.md`](runs/arb-1.md) |
+| Full-set scanner | Record only; no execution exists. FEAT-102 built for `v0.6.0`: `arb --loop` and `arb-report`; its week is the run `arb-1`, pre-registered, to start after the `v0.6.0` install | [`runs/arb-1.md`](runs/arb-1.md) |
 | Live execution | **Not built.** Every live order and the balance read are refused | [`../LIVE-TRADING.md`](../LIVE-TRADING.md) |
 
 ---

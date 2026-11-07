@@ -76,7 +76,7 @@ of a held token (TP-8, 0.2.0) and drops signals past a lane's
 ## 5. Full-set scanner (record only)
 
 Since 0.1.0 `trading-polymarket arb` checked binary pairs and neg-risk Yes
-sets at the best asks of the most active events. From Unreleased (FEAT-102):
+sets at the best asks of the most active events. From 0.6.0 (FEAT-102):
 every open neg-risk event's **Yes set and No set**, priced on full books with
 each market's fee (CLOB `POST /books`, 500 a request), with the depth that
 still earns 0.5 c a set; only complete sets (TP-13); `arb --loop` records
@@ -116,7 +116,7 @@ same `trading-core-audit` commands and verdict files judge backtests and runs
 ## 7. Command line
 
 `trading-polymarket` (since 0.1.0) has twenty-one commands: `scan`,
-`weather`, `record`, `arb`, `arb-report` (FEAT-102, Unreleased), `bias`,
+`weather`, `record`, `arb`, `arb-report` (FEAT-102, 0.6.0), `bias`,
 `metars`, `history`, `weather-history`,
 `updown-history`, `updown-backtest`, `ticks`, `ticks-report`,
 `rewards-scan`, `sports-gaps`, `sports-gaps-report` (FEAT-168, 0.5.0),

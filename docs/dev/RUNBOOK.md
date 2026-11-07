@@ -284,9 +284,16 @@ bin/install-release.sh v0.7.0 v0.6.0
 V=venvs/polymarket-v0.6.0/bin
 $V/trading-polymarket --version                               # must say 0.6.0
 tmux new -s arb
-$V/trading-polymarket arb --loop --hours 192 --out data/arb-1 # Ctrl-b d to detach
-$V/trading-polymarket arb-report --input data/arb-1           # any time
+bin/record.sh arb-1 polymarket-v0.6.0 arb --loop --hours 192 --out data/arb-1  # Ctrl-b d
+$V/trading-polymarket arb-report --input data/arb-1           # any time, another window
 ```
+
+`bin/record.sh` (in runtimes/polymarket, from 2026-11-07) is `bin/run.sh`
+for record-only research: it refuses a venv that is not a clean release
+copy and a run folder that already has a `RUN.txt`, writes `RUN.txt` (the
+start, host, venv, each package's version, tag and commit, the sha256 of
+every module under `trading_polymarket/research/`, the command), runs the
+command in the foreground and appends its end and exit code.
 
 Each tick (5 s) re-reads the open gaps; a full pass over Gamma's events
 takes about 3 minutes every 15, and a sweep of every set's books (about 230

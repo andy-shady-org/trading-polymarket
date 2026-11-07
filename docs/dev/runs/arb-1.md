@@ -14,10 +14,13 @@
   release copies in `runtimes/polymarket/releases/`, venv
   `polymarket-v0.6.0`. The tag's commit and the sha256 of
   `research/arb.py`, `research/arb_loop.py` and `research/arb_report.py` in
-  the release copy go in `data/arb-1/RUN.txt` with the start time.
+  the release copy go in `data/arb-1/RUN.txt` with the start time
+  (`bin/record.sh` writes them).
   Read-out by the same release's `arb-report`.
-- **Command:** `venvs/polymarket-v0.6.0/bin/trading-polymarket arb --loop
-  --hours 192 --out data/arb-1`, in its own tmux window, with every default
+- **Command:** `bin/record.sh arb-1 polymarket-v0.6.0 arb --loop --hours 192
+  --out data/arb-1` (runtimes/polymarket; it writes `RUN.txt` and runs
+  `venvs/polymarket-v0.6.0/bin/trading-polymarket` with those arguments), in
+  its own tmux window, with every default
   (no `--config`, so a fee-enabled market without a fee schedule is priced at
   `unknown_fee_rate`, 0.07): `--min-profit 0.005`, `--qualify 5`,
   `--watch-margin 0.03`, `--recheck 5`, `--watch 30`, `--sweep 300`,
