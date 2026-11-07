@@ -47,5 +47,13 @@
   paired (2026-11-07: 72 of 98 Polymarket matches paired in one cycle,
   none ambiguous); doubles and Kalshi's eSoccer and eBasketball are not
   recorded.
+- **Started (added 2026-11-07):** 2026-11-07 10:38:15 UTC on `v0.5.0`
+  (`f0962b37e45fdd00d6f12b3edc4ba21765c53ae1`) and trading-core `v0.7.0`
+  (`cceeed4e2c300eba612dedbd4d2699b6b863815e`), venv `polymarket-v0.5.0`,
+  host `M-FYRF96W7JH`, as `data/sports-1/RUN.txt` records. **Planned end:**
+  about 2026-11-21 10:38 UTC. A false start from 10:35 UTC ran on a first
+  `v0.5.0` tag placed on `61a499d` (the code before the release commit,
+  which still said 0.4.0); it was stopped after one cycle, its rows moved
+  to `data/sports-1-false-start/` unread, and they are not counted.
 
 ## Read-out (added at the end)
