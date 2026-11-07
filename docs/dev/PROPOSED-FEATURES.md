@@ -80,6 +80,12 @@ orders.
 * **Design:** a research command on the settled-market history (about 20,000 markets in six weeks; minute prices and `priceToBeat` / `finalPrice` from Gamma), buying at the next print after the signal plus the taker fee `0.07 × p(1 − p)`; the mirror rule (buy the favourite) beside it. Minute data overstated a taker edge once (the crypto-updown artefact), so a positive result must be confirmed on FEAT-101's ticks before anything else.
 * **Stop rule:** negative after fees on the minute data ends it.
 * **Dependencies:** the history collection; FEAT-101 for confirmation. **Impact:** about an hour to close a question.
+* **Pre-registered here, 2026-11-07, before any run** (built as `updown-backtest --rule fade`, `research/updown_fade.py`):
+  - **Data:** the FEAT-146 backfill, BTC 5-minute markets of 2026-10-05 to 2026-11-03 (30 days), every taker trade to the second and Binance's one-second spot; halves split at the middle day, as FEAT-146's. Not minute prices: the backfill is finer, so the minute-data caution applies less, and the ticks confirmation still applies.
+  - **Signal:** the first second `τ` with 300 to 60 seconds of the window left (for a 5-minute window: 60 s to 240 s in, the spot test needs 60 s of spot) at which spot moved less than 6 bp (0.06%) over the 60 seconds before, and one outcome's last print is 0.35 or less (the fade buys it) or, for the mirror, 0.65 or more (it buys that). With both past it, the further one.
+  - **Fill:** the first buy print of that outcome in a later second, within 5 s (0 s latency; 3 s in the stress rule), at most 1 c above the price seen, with at least the $5 stake's notional, at its price; settlement at 1 or 0, the taker fee `0.07 × p(1 − p)` a share on the entry.
+  - **Verdict, primary rule (the fade at 15 c):** FEAT-147's bar: PASS when return on stake is above zero in both halves and without the best 1% of markets, the win rate is above the average fill price at binomial p < 0.05, and the stress rule does not lose; INCONCLUSIVE below 200 entries; FAIL otherwise. The mirror, 10 c and 25 c, and no spot filter are reported, not judged.
+  - **What follows:** FAIL closes FEAT-103 (the stop rule); PASS is confirmed on FEAT-101's ticks before anything else.
 
 ### FEAT-146: Up/Down trade backfill and late-longshot backtest
 * **Class / Priority:** Research · P2 · added 2026-11-04.
