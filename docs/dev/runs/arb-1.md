@@ -93,5 +93,14 @@
     augmented; 1,919 events without one), the catalogue in 195 s, a sweep of
     59,505 books in 62 s with none missing; 2 sets open (2.5 c a set on 321
     sets, $2.89; 0.7 c on 347, $2.11), 126 watched.
+- **Started (added 2026-11-07):** 2026-11-07 14:45:07 UTC on `v0.6.0`
+  (`312d52450f051bb5e8911eb895443a19e4caf435`, the signed tag on the merge)
+  and trading-core `v0.7.0` (`cceeed4e2c300eba612dedbd4d2699b6b863815e`),
+  venv `polymarket-v0.6.0`, host `M-FYRF96W7JH`, with `bin/record.sh` and
+  the command above, as `data/arb-1/RUN.txt` records. Its sha256 of
+  `research/arb.py` `09d10251…4e986ef2`, `research/arb_loop.py`
+  `ad97ebe7…7738ff` and `research/arb_report.py` `6f58e6c2…c07e54e` match
+  the release copy. **Planned end:** about 2026-11-15 14:45 UTC (192 h);
+  the covered days are then 8 to 14 November.
 
 ## Read-out (added at the end)

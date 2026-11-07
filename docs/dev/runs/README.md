@@ -34,7 +34,7 @@ their release record, and they keep the names they were given:
 | `weather-1` | weather | 0.4.0 | pre-registered 2026-11-04; starts after the 0.4.0 smoke run | [`weather-1.md`](weather-1.md) |
 | `fed-1` | fed | 0.4.0 | pre-registered 2026-11-04; starts after the 0.4.0 smoke run | [`fed-1.md`](fed-1.md) |
 | `sports-1` | none (record-only, FEAT-168) | 0.5.0 | running since 2026-11-07 10:38:15 UTC; 14 days | [`sports-1.md`](sports-1.md) |
-| `arb-1` | none (record-only, FEAT-102) | 0.6.0 | pre-registered 2026-11-07; starts after the 0.6.0 install; 8 days | [`arb-1.md`](arb-1.md) |
+| `arb-1` | none (record-only, FEAT-102) | 0.6.0 | running since 2026-11-07 14:45:07 UTC; 8 days | [`arb-1.md`](arb-1.md) |
 
 ## 4. The template
 

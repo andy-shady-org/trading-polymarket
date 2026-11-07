@@ -18,7 +18,8 @@ releases are in [`CHANGELOG.md`](../../CHANGELOG.md).
 
 ## 2. Next
 
-- [ ] **Release `v0.6.0`** ([`releases/0.6.0.md`](releases/0.6.0.md)): merge `release/v0.6.0`, pull `main`, tag the merge commit (`git tag -s v0.6.0 <merge>`), `bin/install-release.sh v0.7.0 v0.6.0` and check it prints 0.6.0; then start `arb-1` ([`runs/arb-1.md`](runs/arb-1.md), [`RUNBOOK.md` §9](RUNBOOK.md#9-research-from-a-release-copy)) and write its start in `RUN.txt`, the run record, §1 and here. pip-audit and the package build passed here; CI on the tag and Python 3.14 are CI's
+- [ ] **Release `v0.6.0`** (tagged on the merge `312d524` and installed 2026-11-07, [`releases/0.6.0.md`](releases/0.6.0.md)): CI on the tag and Python 3.14 (pip-audit and the package build passed on the build host)
+- [ ] **`arb-1`** ([`runs/arb-1.md`](runs/arb-1.md), FEAT-102): running on `v0.6.0` since 2026-11-07 14:45:07 UTC (`bin/record.sh`, its own tmux window); it stops itself about 2026-11-15 14:45 UTC. Then `venvs/polymarket-v0.6.0/bin/trading-polymarket arb-report --input data/arb-1 --json data/arb-1/report.json`, the read-out in its record and `RESULTS.md`, and the ledger
 - [ ] **Release `v0.5.0`** (tagged on `f0962b3` and installed 2026-11-07, [`releases/0.5.0.md`](releases/0.5.0.md)): pip-audit and the package build, and CI on the tag
 - [ ] **Release `v0.4.0`** (tagged and installed 2026-11-04): pip-audit and the package build, and CI on the tag ([`releases/0.4.0.md`](releases/0.4.0.md))
 - [ ] **Evidence:** re-run `weather-history --start 2026-08-01` once to pick
