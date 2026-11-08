@@ -255,6 +255,40 @@ maker. What stays open is a passive quote **behind** the top, joining a
 queue it can see: the recorder keeps the top only, so that needs a
 recording with depth at each level.
 
+*Added 2026-11-08 (exploratory, changes no verdict):* **latency, measured,
+and the maker edge between 10 and 25 ms.**
+- **From where.** A standalone probe (`latency_probe.py`, outside the
+  repositories; the operator's `speed_test/` folder), run on 8 Nov at home
+  and on the operator's server in a UK data centre, both clocks within 1 ms
+  of NTP. Medians: Polymarket's book feed 32.7 ms home, **4.6 ms** UK; a
+  warm `GET /time` to the CLOB 67.8 ms home, **18.4 ms** UK; Binance's spot
+  feed 134.6 ms home, 111.2 ms UK (it is served from Tokyo, so no European
+  server does much better). Polymarket's geoblocking FAQ names its primary
+  servers as AWS eu-west-2 (London).
+- **The 117 ms above was mostly reconnecting.** `ticks` probed every 30 s,
+  after its connection had gone idle: a warm round trip from home was 68 ms
+  and a new connection 49 ms more (TCP 19, TLS 30). A live client keeps its
+  connection warm.
+- **The maker edge, finer** (`maker.py` unchanged, `--latency 10 12 15 18
+  20 25`; 10 and 25 ms reproduce the table above exactly; output
+  `ticks-3d/maker-3d-10-25ms-fine.txt`):
+
+  | L | Fills | After rebate | 90% by market | Phases earning |
+  |---|---|---|---|---|
+  | 12 ms | 26,639 | +1.53 c | +1.02 to +2.02 | 5 of 6 |
+  | 15 ms | 18,563 | +1.64 c | +1.06 to +2.18 | 5 of 6 |
+  | 18 ms | 13,452 | +1.35 c | +0.62 to +2.07 | 4 of 6 |
+  | 20 ms | 15,143 | +0.25 c | −0.41 to +0.90 | 1 of 6 |
+
+  The edge holds to 18 ms and is gone by 20 ms. From the UK server a
+  reprice could land roughly 14–17 ms after the change (the feed's 4.6 ms
+  plus half the round trip, before any processing or the order's own
+  handling), so at the edge of the cliff, not safely inside it.
+- **But the UK is blocked:** Polymarket's geoblock list marks GB as
+  "Blocked" for placing orders, so that server cannot be the maker's seat.
+  Any other location is a question of the terms first and latency second;
+  the verdict above (no maker seat at our speed) stands.
+
 **Scripts** (in `runtimes/polymarket/analysis/`, outside this repository;
 run with the v0.4.0 package on the path), sha256:
 - `maker.py` `40f894cedc0ab8a5bb849eb4c826faefd85ba094bcd87d6dfbbc7bf7d5b74e34`
