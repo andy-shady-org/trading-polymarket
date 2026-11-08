@@ -181,6 +181,7 @@ pre-registered test; without it the idea stays closed.
 | Per-lane pause (trading-core FEAT-81) | Stop a lane after a losing streak | rc.11's first night only (22 entries); rc.9 replay | Trimmed the loss at TP +50% (−0.091 → −0.078 SOL); at TP +30% turned −0.029 into +0.016 SOL on 18 trades (noise-sized); the adaptive gate, which does the same, failed the design gate | Kept as risk control | — | — |
 | Supply-map filter | Holders at the migration from the curve's transactions (identical balances, holder count, top-5 share) | 902 instant graduates | Predicts crashes (81% vs 42% on rc.9, p < 0.001; same direction on all three); the lane still loses without the bundled coins | NO-GO as a filter (§6.21) | Bundled coins also pump highest first | Record it on any reopened lane; judge per trade |
 | Operator tags, creator funders, mayhem flag | Name seen before, shared funders, fresh or busy creators | 2,086 graduates (A5) | No tag separates crashes on all three captures with a matching lane result | NO-GO | — | — |
+| Launch-and-dump features (2026-11-08) | Skip coins with bundled creation-slot buys, bot metadata hosts (j7tracker and others), or creators who sold early or through a router | The momentum lane's 187 trades on rc.8, rc.9, rc.11 under ee-1's and arm 3's exits; features from Helius (trading-pump RESULTS §6.23) | No filter of 25 holds on all three captures under both exits; never near the 75%-of-rugs bar; the launch-and-dump coins did better than the rest on rc.9 and rc.11 | NO-GO (exploratory) | They rug after the quick exit has made its gain | A filter that holds on ee-1's or a later capture |
 | Stall exit, rug alarm (FEAT-93, FEAT-100) | Exit when activity stops before a dump | 18 crashed coins' transactions (A6) | Nothing a 1–2 s reader can act on; dumps are ~20 identical sells in one slot | NO-GO | — | Slot-level reads of the mapped holders |
 | Time of day and weekend | Trade only in good hours or days | rc.8 to rc.11 | Sign changes between captures | NO-GO | — | — |
 | New non-graduate PumpSwap pools (FEAT-80, pools-1) | Buy new SOL pools at the first reading or at 60–90 s | 3,122 pools in 71.7 h | −12.5% a trade at the first reading; −2.3% at 60–90 s (−10.9% and −0.4% at a 30 bps fee); 92% lose four fifths of their SOL within an hour | NO-GO | Liquidity withdrawn; no rule positive at either fee | — |
@@ -536,3 +537,5 @@ runs a venue's captures (converted to the records by its module:
   creator, rug calls seen pending on EVM, shorts before token unlocks).
 - 2026-11-08: §3.5: the steady-winners study on FEAT-146's backfill
   (trading-polymarket RESULTS, 2026-11-08): NO LEAD.
+- 2026-11-08: §3.2: launch-and-dump features as momentum-lane filters
+  (trading-pump RESULTS §6.23): NO-GO.
