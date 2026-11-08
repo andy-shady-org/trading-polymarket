@@ -25,6 +25,7 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 | Date | Data | Lane | Config | Positions | Net | Verdict |
 |---|---|---|---|---|---|---|
+| 2026-11-08 | `data/updown`, FEAT-146's 8,615 BTC 5-minute markets, 5 Oct – 3 Nov, fetched again; one-second Binance spot | crypto Up/Down: what steady winners do differently (study) | – | 492 wallets; 16 rule variants in-sample | steady winners +$550K, −$37K without each one's best 1% of markets | none: a study, **NO LEAD**; one cell reported beside FEAT-147 part 2 |
 | 2026-11-07 | `data/ticks`, 3 days 0 h 9 min of the Mac's recording (4 Nov 12:31:56 to 7 Nov 12:41:03 UTC), 865 settled BTC 5-minute markets | FEAT-147 part 1 (are we fast enough), and the FEAT-101 maker study on 3 days (research, no lane) | pre-registered decision in `ticks-report` (v0.4.0); the maker rule as written on 2026-11-05 | 276 signals; 50,920 simulated maker fills | – | FEAT-147 part 1 **takeable** (89.9% of signals; offset 2.20 s): part 2 runs from 18 Nov. Maker at our speed: **NO-GO** (every phase loses from 25 ms; our round trip is 117 ms) |
 | 2026-11-07 | `data/updown`, FEAT-146's 8,615 BTC 5-minute markets, 5 Oct – 3 Nov, and one-second Binance spot | crypto Up/Down expiry fade (FEAT-103; research, no lane) | pre-registered: 300–60 s left, spot under 6 bp over 60 s, the side at 35 c or less, $5, next buy print within 5 s, held to settlement | 6,139 | −8.0% on stake | NO-GO: FAIL on every check; the mirror and the 4 other variants all lose; FEAT-103 closed |
 | 2026-11-04 | `weather-0.2.1`, `fed-0.2.1` (paper, closed early) | weather, fed | pre-registered 0.2.1 configs | 16 / 2 | −$67.27 / −$0.29 adjusted | not judged: 16 of 150 and 2 of 60 positions; closed in favour of `weather-1`, `fed-1` |
@@ -43,6 +44,86 @@ Newest first; net is in USDC after fees, as the audit tools report it.
 
 Record every Stage 0 run here (newest first): window, data size, config,
 rules sha256, verdict and the checks that failed. A NO-GO is a result too.
+
+### 2026-11-08 — crypto Up/Down: what steady winners do differently (study): NO LEAD
+
+**Question** (the November roadmap): what do the wallets positive in both
+halves of FEAT-146's 30 days do differently at entry, written as hypotheses
+for a fresh window?
+
+**Data.** FEAT-146's backfill fetched again with `updown-history` (the
+first copy went with the chat that collected it): 8,615 markets, 12,934,769
+taker trades (the same counts as 2026-11-04) and Binance's one-second spot;
+now kept in the Mac's `runtimes/polymarket/data/updown/`. Every trade valued
+at settlement, net of the taker fee `0.07 × p(1 − p)` a share; prints after
+a window's close dropped; halves split on 20 Oct. Spot is read at the print
+time moved 2.20 s earlier (the data API's lag, FEAT-147 part 1), from the
+one-second candle that *ended* then, as `updown_stale` reads it. A first
+pass read the candle that opened then, a second ahead of the print, which
+doubled the spot-move edge below; it was found and every spot number here
+is from the corrected run. Scripts and outputs:
+`runtimes/polymarket/analysis/steady-2026-11-08/` (`SHA256SUMS`).
+
+**Reproduced.** 47,159 taker wallets, takers −$3.84M; 7,291 wallets in 100
+or more markets, **492** of them positive in both halves (487 on
+2026-11-04); of the 3,177 wallets with 50 markets in each half, 343 (10.8%)
+positive in both against 263 (8.3%) if the halves were unrelated.
+
+**The steady winners** made +$549,728 on $30.8M (1.8%), median +$126 a
+wallet, the top 20 holding 49% of it. **Without each wallet's best 1% of
+markets they lose $36,605** (333 of 492 stay positive). Described against
+the other 6,799 wallets in 100+ markets, they win in every price band and
+the others lose in every band, which is what choosing them for winning does;
+they sell less (2.8% of trades against 16.2%) and enter later (median first
+buy 123 s against 93 s). A simple fair value (spot against the start price,
+the time left, five minutes' one-second volatility) does not separate their
+trades: its sign agrees with the result half the time in both groups.
+
+**What predicts the next half** (traits on 5–19 Oct, result on 20 Oct – 3
+Nov, the 3,177 wallets with 50+ markets in each: 26.8% positive next half,
+−$1.03M together). By fifths of the trait; a trait many wallets have at
+zero has that group pooled instead of its lowest fifth (`pooled.py`):
+
+| Trait (first half) | Low: positive next half, next-half pnl | High (top fifth) |
+|---|---|---|
+| Share of notional sold | Never sell (1,306): 34%, −$146,276 | 14%, −$147,833 (45% or more sold) |
+| Median first buy, s into the window | 22%, −$364,015 (by 28 s) | 37%, −$9,905 (192–295 s) |
+| Share of markets bought on both sides | Never (1,030): 32%, −$37,788 | 21%, −$275,010 (25% or more) |
+| Share of buys at 95 c or more | None (1,102): 25%, −$217,790 | 38%, +$3,856 (61% or more) |
+| First-half return on notional | 25%, −$183,750 | 37%, −$82,786 |
+| Buys after a 10-s spot move their way | 27%, −$322,646 | 29%, −$45,793 |
+
+Holding to settlement on one side, entering late and buying near-certain
+favourites persist, though only the last group is above zero, by $3,856;
+the spot habit does not, once spot is read at the true fill time.
+
+**Every taker buy** by window time and the 10-s spot move toward the side
+before it, held to settlement (first half / second half): buying against a
+move of 2 bp or more loses 3.5–11% in every window; with a move of 2–5 bp at
+180–240 s +1.24% / +0.67%. At 180–300 s, prices up to 95 c, a move of 2 bp
+or more: **+1.06% / +2.28%** when the move ended at the fill, **+0.58% /
++0.78%** 1 s before, +0.49% / +0.59% 2 s before, −0.21% / +0.53% 3 s
+before. Moves of 5 bp or more disagree between the halves.
+
+**As a rule** (`rule.py`: one entry a market, the first second from 180 or
+240 s with a move of 2 or 3 bp toward a side whose last print is in 5–95 c
+or 20–80 c, filled by the first buy print of at least $5 within 3 s after a
+delay `L` of 1 or 2 s, at most 1 c above that last print, $5 held to
+settlement): **15 of 16 variants fail FEAT-147's bar** (a losing half, or a
+loss without the best 1%). The one that passes, from 240 s, 3 bp, 20–80 c,
+`L` 1 s: 243 entries, +9.35% on stake, halves +12.30% / +6.86%, +3.34%
+without the best 1%, won 40.3% at an average 35.2 c (p 0.046); at `L` 2 s
+it is −5.20% in the first half. One cell of sixteen, and it fails its own
+stress.
+
+**Reading.** The steady winners' edge is thin and fat-tailed. The habits
+that persist are holding to settlement on one side and entering late; what
+pays across all markets is the sub-second lead of spot over the book that
+FEAT-147 already tests, and it is mostly gone two seconds after the move.
+Nothing earns its own counted run. The passing cell is reported beside
+FEAT-147 part 2 on its fresh window (dated in `PROPOSED-FEATURES.md`
+FEAT-147), not judged there; positive there, it would need a pre-registered
+run of its own.
 
 ### 2026-11-07 — `ticks` on 3 days: FEAT-147 part 1 takeable; no maker seat at our speed (FEAT-101)
 
