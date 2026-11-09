@@ -289,6 +289,61 @@ and the maker edge between 10 and 25 ms.**
   Any other location is a question of the terms first and latency second;
   the verdict above (no maker seat at our speed) stands.
 
+*Added 2026-11-09 (exploratory, changes no verdict):* **which spot feed
+shows BTC's moves first, from home and from the UK server.**
+- **What was run:** the operator ran `feed_race.py` (the same `speed_test/`
+  folder) for 15 minutes on each machine. The UK server started at 12:50:37
+  UTC and home at 12:51:37 UTC, so 14 minutes overlap. Both clocks were
+  within 1 ms of NTP. The files: `feeds-uk-dc-2026-11-09T125037Z.jsonl.gz`
+  (UK) and `…T125137Z` (home; it carries the same `uk-dc` label, but its
+  host is the Mac).
+- **Feed delay** (receipt minus the exchange's own trade time, median ms,
+  UK / home):
+
+  | Feed | UK | Home |
+  |---|---|---|
+  | Kraken | 17 | 50 |
+  | Bitstamp | 28 | 42 |
+  | Coinbase | 55 | 69 |
+  | Bybit | 82 | 107 |
+  | Binance | 112 | 134 |
+  | OKX | 122 | 143 |
+  | Polymarket RTDS (Binance) | 258 | 259 |
+  | Polymarket RTDS (Chainlink) | 295 | 317 |
+
+- **The same updates at both machines:** matched by exchange time and
+  price, the UK server got every exchange's update **14–31 ms sooner**
+  (medians: Coinbase 14, Bitstamp 15, OKX 21, Binance 22, Bybit 24,
+  Kraken 31), first in 94–100% of matches. Polymarket's own price stream
+  arrived at the same moment at both (medians −1 and −16 ms, about
+  half-and-half): it is batched at the source.
+- **Who shows a move first** (`feed_lead.py`, unchanged; Binance moves of
+  2 bp or more within 1 s: 32 in the UK window, 26 at home):
+  - no exchange leads Binance by much. Bybit was −35 ms in the UK and −4 ms
+    at home; Coinbase +8 and −17; OKX about 0;
+  - the best-lag correlations are 0 to ±20 ms, except Bitstamp's −180 ms in
+    the UK on 9 moves seen;
+  - Kraken and Bitstamp reach a European server fastest (17 and 28 ms) but
+    show moves later (+69 to +243 ms): their prices follow, they don't lead;
+  - Polymarket's Binance-relay stream showed moves 458–558 ms after
+    Binance's own, and first on 0–4% of them.
+- **What it means:**
+  - Binance's stream stays the right signal for FEAT-147. A nearer exchange
+    saves at most a few tens of milliseconds on a move, within the noise of
+    26–32 moves.
+  - Anything reading Polymarket's own price stream is half a second late.
+  - The UK server saves about 20 ms on every exchange feed, on top of its
+    gains on Polymarket's book, but it cannot place Polymarket orders (GB is
+    blocked), so FEAT-147 part 2 (18 Nov) is judged at home speeds as
+    planned.
+  - 15 minutes is a small sample: these are indications, not
+    measurements to plan a seat on.
+- **In both files, about a quarter of the rows** (9,659 UK, 8,851 home) are
+  exact repeats of another row (same feed, receipt time, exchange time and
+  price): several trades in one message. They change no median above, as
+  the matching takes the first receipt of each update and `feed_lead.py`
+  works on price paths.
+
 **Scripts** (in `runtimes/polymarket/analysis/`, outside this repository;
 run with the v0.4.0 package on the path), sha256:
 - `maker.py` `40f894cedc0ab8a5bb849eb4c826faefd85ba094bcd87d6dfbbc7bf7d5b74e34`
