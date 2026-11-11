@@ -38,7 +38,9 @@ Contents: [1. The short version](#1-the-short-version) ·
 
 From pumpfun-trading's first commit (2026-10-09) and first paper pilot
 (v0.2.0, 2026-10-16) to 2026-11-03: **no lane has passed a pre-registered verdict, and no money has
-been traded live.** Every result below was measured in paper, replay or
+been traded live.** On 2026-11-10 the first three passed, all on new pools
+of EVM chains (item 6); they are in Stage 1 paper, and still no money has
+been traded live. Every result below was measured in paper, replay or
 offline on recorded data, with every fee priced in.
 
 1. **Buying Pump.fun launches loses, whatever the exit.** About 25,000 paper
@@ -65,10 +67,18 @@ offline on recorded data, with every fee priced in.
 5. **A slow trend rule on liquid Solana tokens is cheap to trade and has no
    edge:** −37.8% compounded over four unseen half-years (§6.15).
 6. **Other chains look good on price lists and are not trusted until a sale
-   is simulated.** four.meme is NO-GO (too few graduates). Meteora DAMM v2
-   on Solana, PancakeSwap v2 on BSC and Uniswap v2 on Base were positive in
-   an exploratory re-reading of scout-1 and are being measured properly
-   (§7).
+   is simulated.** four.meme is NO-GO (too few graduates). On chain, at
+   block speed and with a sale simulated before every exit (trading-evm
+   `evm-1`, 7 days), three pre-registered rules are **GO**: buying new
+   PancakeSwap v2 pairs on BSC at 1.2× a minute or two after creation and
+   leaving within 30 minutes (+13.3% a trade on 3,592) or 3 minutes
+   (+17.3%), and Robinhood Chain's v2 pairs with a trailing stop (+33.4% on
+   809, driven by a few operators). They outrun the pull, which comes a
+   median 6–7 minutes after entry, and they hold only at small sizes (about
+   0.1–0.25 BNB). They are in Stage 1 paper. Robinhood Chain's v4 pools
+   passed their design gate and go to a fresh capture; Base v4, Arc and
+   Ethereum are being captured, and Meteora DAMM v2 on Solana measured
+   (§3.4, §7).
 7. **Polymarket:** day-ahead weather and the favourite–longshot bias are
    NO-GO; the market forecasts better than our models. Intraday weather and
    the Fed lane (Polymarket against Kalshi) are in paper on limited
@@ -217,6 +227,14 @@ scout-2 and evm-1 test it where the round trip is a quarter as large.
 | Liquidity custody at entry (FEAT-170) | Enter only pairs whose LP is 90%+ burned or held by a contract | scout-2's 366 v2 trades re-read with `trading-evm custody` (exploratory) | 89–100% of trades had 90% or more of their LP in wallets; the 35 with secured LP were never pulled (the rest 99% on BSC), but 79% of BSC's were trapped through the token instead; BSC mean +9.8% (34) against +4.5% (285) | Exploratory; too few to judge | A pull needs the LP in a wallet; a honeypot does not | A capture where secured pairs are common, judged per trade with its sale checks |
 | Precursor tripwire on EVM v2 pulls (FEAT-170) | Sell on the token's own events or LP-token moves before a pull | The same 366 trades: 323 pulls | **0 of 323** pulls had any token event or LP move before them; the LP never moved before it was removed, a median 6–7 minutes after entry (BSC: 5% within 3 minutes, 78% within 10) | NO-GO | The first thing on chain is the pull itself, as on pump.fun (§3.2) | — |
 | DAMM v2 pools by creator (damm-1) | Drained and crashed shares by how many pools the creator made | damm-1's capture (exploratory) | Creators of 100+ pools (5,876 of 6,518 pools read): 57% drained, 49% below half within 30 minutes; one-off creators (194): 18% and 6% | Exploratory | One wallet made 5,370 of the capture's 12,307 pools | `damm-2`'s launcher split (its run record, dated 2026-11-07) |
+| scout-2: new pools by group, first check only | The FEAT-76 rule on four pre-registered groups, a sale simulated at entry, a trap at the 30-minute check counted against the group | scout run `scout-2`, 72 h, 30 s snapshots (trading-scout run `scout-2`, read 2026-11-06) | Robinhood Chain v4: 228 trades, +9.06% (halves +7.99% / +10.34%), lower bound at 1.25% +2.77%, traps 40.5%. Base v4: 9 trades. Base v2: +23.1% on 24, traps 82%. BSC v2: +5.23% on 322, traps 93% | Robinhood v4 **GO**; the other three NO-GO (too few trades; traps; traps) | By the 30-minute check most of BSC's and Base's v2 pairs are traps or pulled; Robinhood's v4 pools mostly are not | — (each GO goes on chain: `evm-1`) |
+| rugrace: BSC PancakeSwap v2 at block speed (trading-evm FEAT-156) | Signal at 1.2× the first reading 60–120 s after it; entry 3 s after both the signal and a clean first sale (≤ 1,000 bps); take profit 1.2×, stop 0.85×, 30 minutes; a pull or a failed sale while held a total loss; 0.005 BNB a trade | trading-evm run `evm-1-rugrace`, pre-registered 2026-11-05, on pairs created 6–10 Nov in evm-1's capture (trading-evm RESULTS §6) | 3,592 trades, **+13.3%** (95% lower bound +12.3%), halves +13.6% / +13.0%; total losses 8.0% (bound 8.8%, break-even 18.9%); fills 10 s late +14.0%. On the recorded reserves the mean falls with size: +15.4% at 0.1 BNB, +12.4% at 0.25, about 0 at 1 | **GO** | Most pairs are pulled, but a median 6–7 minutes after entry, and the rule is out first; all 21 six-hour blocks positive | — (Stage 1 paper: `evm-4-bsc`, rugrace3) |
+| rugrace3: the same with a 3-minute hold | rugrace with `MAX_HOLD` 180 s | trading-evm run `evm-1-rugrace3` (a second arm, its own record) | 3,592 trades, **+17.3%** (+16.7%), halves +17.3% / +17.3%; total losses 3.5% (4.0% / 17.8%); 2,220 trades on one launch family (token addresses ending `7777`, +15.8%) | **GO** | A shorter hold leaves before more of the pulls | — (Stage 1 paper: trading-evm `evm-4-bsc`, 10–13 Nov) |
+| trailrace: Robinhood Chain v2 (trading-evm FEAT-159) | Entry 30–150 s after creation behind a clean first sale, with 1 ETH or more in the pair; −15% stop, a trailing stop at 0.9 of the high once +20%, 30 minutes; 0.001 ETH a trade | trading-evm run `evm-1-trailrace`, pre-registered 2026-11-05, pairs created 6–10 Nov | 809 trades, **+33.4%** (+27.9%), halves +27.7% / +39.3%; total losses 28.6% (31.3% / 46.6%); the top 5% of trades gave 29% of the total. The 4.21 ETH seed, +82% before the window, lost 55.8% a trade in it; pairs seeded with 1.00–1.12 ETH made +67% to +106% | **GO** (operator-driven) | Operators seed pairs with set amounts and buy them up before draining them; which operators are active changes within days | — (Stage 1 paper: trading-evm `evm-4-robinhood`, 10–13 Nov) |
+| Robinhood Chain v4 at block speed (design gate for scout-2's GO) | rugrace's rule on evm-1's v4 swaps, 0.001 ETH, a drain a total loss | evm-1's capture, all 7 days (trading-evm RESULTS §6) | 5,255 trades, +7.1% (halves +5.5% / +8.8%), +5.1% at twice the cost; with a 3-minute hold +8.1%; the hookless pools carry it (5,094, +7.5%) | Design gate passed | Few pulls (5% of pools drained within 30 minutes) and many small moves | — (a fresh pre-registered capture: trading-evm `evm-2`) |
+| Base v2 and v4, BSC v4 on chain (evm-1, exploratory) | rugrace's rule | evm-1, read after the verdicts | Base v4: 159 trades, +7.7% (hookless 95, +17.8%). Base v2: 76 trades, +24%, all on 3–4 Nov, none met the signal after that. BSC v4: 23 trades, −16% | Exploratory | Base's v2 flow stopped after 4 Nov | Base v4: a pre-registered fresh capture, trading-evm `evm-5` (10–17 Nov) |
+| scout-3: the November chain census (trading-scout FEAT-154) | New pools, checkable share, clean entries, round trip and gas per chain, 72 h | trading-scout run `scout-3`, 6–9 Nov (RESULTS §10) | Ethereum 854 pools, 559 entered, gas 1.46% of 0.001 ETH; Polygon 53 and 18; Arbitrum 14 and 1, 36% checkable; X Layer 93 and 67; TON 229, 84% dead by 1 h | Ethereum DROPPED AT THIS SIZE; Polygon EXTEND (read again at 144 h and 216 h); Arbitrum and TON DROPPED; X Layer earns a screening run | Of 45 EVM chains only BSC, Robinhood Chain, Base and Ethereum have a steady flow of new pools with volume (2026-11-08) | Ethereum: its own capture at 0.01 ETH, trading-evm `evm-6`, since rugrace is GO; its v2 pairs are the same rug family on a slower clock (pulled ~28 minutes after the first snapshot) |
+| X Layer v3 screen | scout-2's rule on `uniswap-v3-x-layer` | trading-scout run `scout-3-screen` | 67 entered, 0 rule trades: one launch template that takes ~18 opening buys, rises about 1.2× before the first check, then never moves | NO-GO | The climb is over before a check can be made | — |
 
 ### 3.5 Polymarket (trading-polymarket, 2026-10-28 to 11-03)
 
@@ -424,20 +442,22 @@ venue, or says why it is not brought back.
 
 ## 7. Leads not yet judged
 
-As of 2026-11-03; each repository's `RELEASE-GATE.md` §1 says where each
+As of 2026-11-11; each repository's `RELEASE-GATE.md` §1 says where each
 stands now.
 
 | Lead | Where | Why it is a lead | What decides it |
 |---|---|---|---|
 | Meteora DAMM v2 new pools | trading-pump `damm-1` (FEAT-107, record-only), then trading-meteora (FEAT-113) | scout-1 re-reading +16.3% a trade on 156 trades, both halves and every day positive (the pre-registered rule with only the first check: 29 trades, +21.3%, interval +13.0% to +29.6%); no freeze authority; liquidity ~$21,000 at entry. **Warning:** exits came ~1.6 min after entry, the same fast pump-and-dump shape as PumpSwap's instant graduates, whose +17.7% in-sample became −20.7% a day later; prices were 30 s list snapshots and Jupiter's best route, not the pool | A design that passes the design gate on several on-chain captures from different days, with the launch fee read from the pool |
-| BSC PancakeSwap v2, Base Uniswap v2 and v4, Robinhood Chain v4 | trading-scout `scout-2` (four groups, pre-registered) | scout-1 re-reading +7.8% and +16.9% a trade | scout-2's verdict per group; sale simulated before every exit |
-| EVM new pools on chain | trading-evm `evm-1` (record-only, 7 days) | On-chain capture at block speed with sales at fixed ages | A design that passes the design gate on evm-1's capture, for a group scout-2 calls GO |
+| The EVM paper lanes (added 2026-11-11) | trading-evm `evm-4` (rugrace3 on BSC, trailrace on Robinhood Chain, 10–13 Nov) | Both GO on evm-1 (§3.4) | Each lane's paper verdict, and the real fill delay against the replays' 3 s |
+| Robinhood Chain v4 new pools (added 2026-11-11) | trading-evm `evm-2` (record-only, 7 days, pre-registered 2026-11-11) | scout-2 GO; the design gate on evm-1 passed (+7.1%) | rugrace with a 3-minute hold on its v4 pools (`v4race`), ADR-012; trailrace again on its v2 pairs |
+| Base v4 and Arc v4 new pools (added 2026-11-11) | trading-evm `evm-5` (Base, 10–17 Nov), `evm-3` (Arc, 9–16 Nov) | Base v4 on evm-1: 161 trades, +7.9%; Arc's pools lose their liquidity 2–6 minutes after creation | rugrace with a 3-minute hold on their v4 pools (`v4race`), each pre-registered, ADR-012 |
+| Ethereum v2 new pairs (added 2026-11-11) | trading-evm `evm-6` (record-only, 10–24 Nov) | scout-3: the BSC rug family on a slower clock (§3.4) | A rule designed on the first week, written in its own record, judged on the second |
 | Meteora DBC graduates | trading-scout FEAT-104 | +7.4% a trade on 59 in scout-1's re-reading; creator liquidity can be locked | Whether locked liquidity dumps less, on an on-chain capture |
 | Polymarket intraday weather and Fed | trading-polymarket paper runs | Stage 0 INCONCLUSIVE (data- and sample-limited) | Each lane's own Stage 1 verdict |
 | Crypto Up/Down stale quotes after a spot move | trading-polymarket FEAT-147 | Cheap asks left stale by a Binance move are lifted within a second, an edge minute data cannot see (it was on §6 as "latency trades: an artefact of minute data" until 2026-11-04). In fill time it is gone within a second: the pre-registered rule loses in-sample once the data API's 2.2 s lag is removed. Part 1 (2026-11-07): we are fast enough for 89.9% of signals | The pre-registered rule on the fresh window 4–17 Nov, `--timestamp-offset 2.20`, from 18 Nov |
 | Learning under a frozen rule (FEAT-105 selector, FEAT-106 crash model) | trading-pump, for any reopened lane | Adaptive rules cut losses | Walk-forward beats the best fixed rule on every capture |
 | DAMM v2 pools by creator (added 2026-11-07) | trading-meteora `damm-2`, a dated exploratory check | damm-1: creators of 100+ pools drained 57% within 1 h, one-off creators 18% (crash rates, not trades; §3.4) | damm-2's split on positions in both halves, then a pre-registered fresh capture |
-| Rug calls seen pending on EVM (added 2026-11-07) | trading-evm FEAT-172, `trading-evm mempool` | No on-chain warning before a pull (§3.4), so a pending pull is the only early sign left; outside bots claim 80–85% on Ethereum and BSC, where the public mempool is shrinking | A 24 h record on BSC, only if a BSC arm of evm-1 is GO: the share of pulls seen pending and how early |
+| Rug calls seen pending on EVM (added 2026-11-07) | trading-evm FEAT-172, `trading-evm mempool`; run `mempool-1` (BSC, 24 h from 2026-11-11) | No on-chain warning before a pull (§3.4), so a pending pull is the only early sign left; outside bots claim 80–85% on Ethereum and BSC, where the public mempool is shrinking. A 10-minute check (2026-11-11): the public feed heard 30–57% of BSC's transactions a minute, with a median lead of about 0 s on 0.45 s blocks | `mempool-1`: the share of pulls seen pending at least one block ahead, in minutes the feed was hearing the chain |
 | Shorts before large token unlocks (added 2026-11-07) | Not built | Keyrock: about 90% of 16,000+ unlocks came with selling from about 30 days before, team unlocks worst; `listings-1` (§3.6) tested listing dates only | A pre-registered Stage 0 study on an unlock calendar with intraday prices and funding, after an access check |
 
 ## 8. The strategy library
@@ -539,3 +559,8 @@ runs a venue's captures (converted to the records by its module:
   (trading-polymarket RESULTS, 2026-11-08): NO LEAD.
 - 2026-11-08: §3.2: launch-and-dump features as momentum-lane filters
   (trading-pump RESULTS §6.23): NO-GO.
+- 2026-11-11: §1, §3.4, §7: scout-2's group verdicts (Robinhood Chain v4
+  GO; trading-scout run `scout-2`), evm-1's read-outs (rugrace, rugrace3
+  and trailrace GO, the first pre-registered GOs; the Robinhood v4 design
+  gate passed; trading-evm RESULTS §6) and scout-3's census and screen
+  (trading-scout RESULTS §10). §7 lists the EVM runs that follow them.
