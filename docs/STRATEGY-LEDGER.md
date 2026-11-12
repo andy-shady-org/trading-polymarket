@@ -78,7 +78,8 @@ offline on recorded data, with every fee priced in.
    0.1–0.25 BNB). They are in Stage 1 paper. Robinhood Chain's v4 pools
    passed their design gate and go to a fresh capture; Base v4, Arc and
    Ethereum are being captured, and Meteora DAMM v2 on Solana measured
-   (§3.4, §7).
+   (§3.4, §7). Seeing BSC's pulls in the public mempool in time to sell
+   first is NO-GO: 0.3% of 2,486 were seen a block ahead (§3.4).
 7. **Polymarket:** day-ahead weather and the favourite–longshot bias are
    NO-GO; the market forecasts better than our models. Intraday weather and
    the Fed lane (Polymarket against Kalshi) are in paper on limited
@@ -89,6 +90,9 @@ offline on recorded data, with every fee priced in.
    on a fresh window from 18 Nov (FEAT-147, §7). Making the market there
    earns only for a maker who reprices within milliseconds: at our speed
    every phase loses (FEAT-101).
+8. **Hyperliquid's outcome markets (HIP-4)** trade about $8M a day, 89% of
+   it sports made to a fraction of a cent; the short-dated price binaries
+   are fairly priced at their asks (§3.7). No module.
 
 What carries forward is not a strategy but a **method** (§2), a set of
 **facts about these markets** (§4), a **playbook for the next venue** (§5)
@@ -226,6 +230,7 @@ scout-2 and evm-1 test it where the round trip is a quarter as large.
 | Locked-liquidity launchpads (by launcher in scout-2) | The FEAT-76 first-check rule split by launchpad | scout run `scout-2`, 72 h (trading-scout RESULTS §4; project note `claude/rug-backtests-2026-11-07.md`) | No traps on Base `bankr` (120 entered), `o1-launchpad` (71) or Robinhood `clanker` (7), against 82% on Base v2 pairs and 93% on BSC v2; but only 0–1.7% of their pools reached 1.2× in 15 minutes (47–77% for v2 pairs), and the rule made no trade on them | NO-GO as a venue for this rule | No rug and no move: what makes them safe also keeps the price still | A launchpad with locked liquidity whose pools move |
 | Liquidity custody at entry (FEAT-170) | Enter only pairs whose LP is 90%+ burned or held by a contract | scout-2's 366 v2 trades re-read with `trading-evm custody` (exploratory) | 89–100% of trades had 90% or more of their LP in wallets; the 35 with secured LP were never pulled (the rest 99% on BSC), but 79% of BSC's were trapped through the token instead; BSC mean +9.8% (34) against +4.5% (285) | Exploratory; too few to judge | A pull needs the LP in a wallet; a honeypot does not | A capture where secured pairs are common, judged per trade with its sale checks |
 | Precursor tripwire on EVM v2 pulls (FEAT-170) | Sell on the token's own events or LP-token moves before a pull | The same 366 trades: 323 pulls | **0 of 323** pulls had any token event or LP move before them; the LP never moved before it was removed, a median 6–7 minutes after entry (BSC: 5% within 3 minutes, 78% within 10) | NO-GO | The first thing on chain is the pull itself, as on pump.fun (§3.2) | — |
+| Selling ahead of a pending pull (BSC, trading-evm FEAT-172) | See a pull (a router's liquidity removal or a pair burn) in BSC's public pending feed at least one block (0.45 s) before its block, to sell first | trading-evm run `mempool-1`, 24 h from 2026-11-11 07:27 UTC, publicnode's keyless feed, pre-registered (trading-evm RESULTS §8) | 2,834 pulls, 2,486 in minutes the feed heard the chain (85.9% of the time); **8 seen in time (0.3%, lower bound 0.2%)**. 22.5% of pulls were seen pending at all, against 52% of all transactions; the seen ones arrived a median 0.13 s *after* their block's time, and the feed's ordinary transactions 0.04 s after | NO-GO | The public feed hears a transaction after the validator already has it; pulls are sent privately more often than other transactions | A feed that delivers ahead of the block (a builder's or validator's), shown on a fresh pre-registered run |
 | DAMM v2 pools by creator (damm-1) | Drained and crashed shares by how many pools the creator made | damm-1's capture (exploratory) | Creators of 100+ pools (5,876 of 6,518 pools read): 57% drained, 49% below half within 30 minutes; one-off creators (194): 18% and 6% | Exploratory | One wallet made 5,370 of the capture's 12,307 pools | `damm-2`'s launcher split (its run record, dated 2026-11-07) |
 | scout-2: new pools by group, first check only | The FEAT-76 rule on four pre-registered groups, a sale simulated at entry, a trap at the 30-minute check counted against the group | scout run `scout-2`, 72 h, 30 s snapshots (trading-scout run `scout-2`, read 2026-11-06) | Robinhood Chain v4: 228 trades, +9.06% (halves +7.99% / +10.34%), lower bound at 1.25% +2.77%, traps 40.5%. Base v4: 9 trades. Base v2: +23.1% on 24, traps 82%. BSC v2: +5.23% on 322, traps 93% | Robinhood v4 **GO**; the other three NO-GO (too few trades; traps; traps) | By the 30-minute check most of BSC's and Base's v2 pairs are traps or pulled; Robinhood's v4 pools mostly are not | — (each GO goes on chain: `evm-1`) |
 | rugrace: BSC PancakeSwap v2 at block speed (trading-evm FEAT-156) | Signal at 1.2× the first reading 60–120 s after it; entry 3 s after both the signal and a clean first sale (≤ 1,000 bps); take profit 1.2×, stop 0.85×, 30 minutes; a pull or a failed sale while held a total loss; 0.005 BNB a trade | trading-evm run `evm-1-rugrace`, pre-registered 2026-11-05, on pairs created 6–10 Nov in evm-1's capture (trading-evm RESULTS §6) | 3,592 trades, **+13.3%** (95% lower bound +12.3%), halves +13.6% / +13.0%; total losses 8.0% (bound 8.8%, break-even 18.9%); fills 10 s late +14.0%. On the recorded reserves the mean falls with size: +15.4% at 0.1 BNB, +12.4% at 0.25, about 0 at 1 | **GO** | Most pairs are pulled, but a median 6–7 minutes after entry, and the rule is out first; all 21 six-hour blocks positive | — (Stage 1 paper: `evm-4-bsc`, rugrace3) |
@@ -260,6 +265,13 @@ scout-2 and evm-1 test it where the round trip is a quarter as large.
 | Strategy | What it did | Evidence | Result | Verdict | Why | Reopen if |
 |---|---|---|---|---|---|---|
 | Short newly listed perpetuals (FEAT-173) | Short Hyperliquid perps from day 1, 3 or 7 after listing for 30 or 90 days, squeeze stop at 2×, funding and 4.5 bps a side | Study `listings-1` (trading-scout `docs/dev/runs/listings-1.md`, pre-registered), 235 coins, daily candles | Primary cell −8.7% over 224 shorts (median +4.9%, 54% won); 22% hit the squeeze stop; the same short 180+ days after listing +5.6% | NO LEAD | Most listings fall, but the few that run wipe out the rest, and newness adds nothing over shorting older coins | A venue or data that names a coin's true first listing, with intraday prices |
+
+### 3.7 Hyperliquid outcome markets (HIP-4; trading-scout, 2026-11-04 to 11-12)
+
+| Strategy | What it did | Evidence | Result | Verdict | Why | Reopen if |
+|---|---|---|---|---|---|---|
+| The venue as a whole (FEAT-152) | Record every outcome's mid, mark and 24 h notional each minute, the top of each traded book every 5 minutes, and the list every 10 minutes | trading-scout `hip4 record`, 7.7 days, 8,453 outcomes, 396,851 books (trading-scout RESULTS §11) | About $8.1M a day: sports 89% (match winners $4.3M, participants $1.9M), short-dated price binaries $0.27M, recurring price markets $0.24M, price touches $0.17M, IPO caps $0.09M, Fed $0.07M. Sports books 0–0.5 c wide; price binaries median 5.4 c with a median $79 at the top | Census: no module | The flow is sports, already made to a fraction of a cent; the rest is thin | A pre-registered cross-venue test of the same sports events, if Polymarket and Kalshi's (`sports-1`) shows a gap |
+| Short-dated price binaries at the ask (exploratory) | Buy the side the underlying is on at the recorded ask in the last 10 minutes, held to settlement (settled from each binary's terms on Hyperliquid's 1-minute candles; 498 of 498 agree with the venue's own clear settlements) | The census's books on 2,544 settled binaries, 8–12 Nov | 1,182 entries: cost 0.830, won 0.831, **+0.09 c a contract before fees**; every cut of price, distance or time left between −2.3 c and +3.4 c, none more than 1.5 standard errors from zero, on $19–$248 at the top. Minute mids look badly calibrated near expiry, but they are the frozen mids of untraded books (69% of the settled binaries never had a book) | NO LEAD | The asks are fair; the mispricing is in quotes no one can trade | — |
 
 ## 4. What the markets taught us
 
@@ -438,6 +450,8 @@ venue, or says why it is not brought back.
 | Moonshot | Moonshot | 18 pools in 38 h: no verdict is reachable | Its share of launches grows | — |
 | Another record-only week of PumpSwap graduates | Pump.fun / PumpSwap | rc.11, rc.11-tp20, pools-1 and the supply map already hold it | A new lane design that passes the design gate on that data | — |
 | Tripwires on events before a pull (token events, LP moves) | **Everywhere** (new pools) | pump.fun dumps (§3.2 A6) and 323 EVM v2 pulls (§3.4): nothing on chain comes first | A chain where a pull is seen pending (FEAT-172's mempool watch) | — |
+| Selling ahead of pulls seen in the public mempool | BSC | `mempool-1`: 0.3% of pulls seen a block ahead; the public feed hears transactions after their block's time | A builder's or validator's feed shown to deliver ahead of the block | — |
+| Taking short-dated price binaries at the ask | Hyperliquid (HIP-4) | 1,182 entries at the recorded asks: +0.09 c a contract before fees | — | — |
 | Shorting new listings on daily candles | Hyperliquid perpetuals | `listings-1`: the squeeze tail beats the median fall | Intraday data and a true first-listing date | — |
 
 ## 7. Leads not yet judged
@@ -457,7 +471,7 @@ stands now.
 | Crypto Up/Down stale quotes after a spot move | trading-polymarket FEAT-147 | Cheap asks left stale by a Binance move are lifted within a second, an edge minute data cannot see (it was on §6 as "latency trades: an artefact of minute data" until 2026-11-04). In fill time it is gone within a second: the pre-registered rule loses in-sample once the data API's 2.2 s lag is removed. Part 1 (2026-11-07): we are fast enough for 89.9% of signals | The pre-registered rule on the fresh window 4–17 Nov, `--timestamp-offset 2.20`, from 18 Nov |
 | Learning under a frozen rule (FEAT-105 selector, FEAT-106 crash model) | trading-pump, for any reopened lane | Adaptive rules cut losses | Walk-forward beats the best fixed rule on every capture |
 | DAMM v2 pools by creator (added 2026-11-07) | trading-meteora `damm-2`, a dated exploratory check | damm-1: creators of 100+ pools drained 57% within 1 h, one-off creators 18% (crash rates, not trades; §3.4) | damm-2's split on positions in both halves, then a pre-registered fresh capture |
-| Rug calls seen pending on EVM (added 2026-11-07) | trading-evm FEAT-172, `trading-evm mempool`; run `mempool-1` (BSC, 24 h from 2026-11-11) | No on-chain warning before a pull (§3.4), so a pending pull is the only early sign left; outside bots claim 80–85% on Ethereum and BSC, where the public mempool is shrinking. A 10-minute check (2026-11-11): the public feed heard 30–57% of BSC's transactions a minute, with a median lead of about 0 s on 0.45 s blocks | `mempool-1`: the share of pulls seen pending at least one block ahead, in minutes the feed was hearing the chain |
+| Rug calls seen pending on Ethereum (added 2026-11-07; narrowed 2026-11-12) | trading-evm FEAT-172 (`trading-evm mempool`), not scheduled | BSC's public feed is NO-GO (§3.4, `mempool-1`); Ethereum's 12 s blocks leave more time, and its public mempool is larger | A pre-registered run beside `evm-6`'s successor: the share of Ethereum pulls seen pending a block ahead |
 | Shorts before large token unlocks (added 2026-11-07) | Not built | Keyrock: about 90% of 16,000+ unlocks came with selling from about 30 days before, team unlocks worst; `listings-1` (§3.6) tested listing dates only | A pre-registered Stage 0 study on an unlock calendar with intraday prices and funding, after an access check |
 
 ## 8. The strategy library
@@ -564,3 +578,8 @@ runs a venue's captures (converted to the records by its module:
   and trailrace GO, the first pre-registered GOs; the Robinhood v4 design
   gate passed; trading-evm RESULTS §6) and scout-3's census and screen
   (trading-scout RESULTS §10). §7 lists the EVM runs that follow them.
+- 2026-11-12: §1, §3.4, §6, §7: trading-evm's `mempool-1` read out (NO-GO:
+  BSC's public pending feed sees 0.3% of pulls a block ahead); the mempool
+  lead narrowed to Ethereum.
+- 2026-11-12: §1, §3.7, §6: the HIP-4 census read out (trading-scout RESULTS
+  §11): no module; short-dated price binaries at the ask NO LEAD.
