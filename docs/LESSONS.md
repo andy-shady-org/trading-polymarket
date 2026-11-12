@@ -570,6 +570,17 @@ any lane.
 6. **No stash in a shared tree; one editor per file.**
 7. **The Mac folder cannot delete;** deliver commits as bundles fetched
    into a branch, never state-changing git there.
+8. **Merge two copies into the union of their fixes, then prove it live.**
+   Copies of one function drift: one repository fixes its copy and the
+   other keeps the bug (trading-meteora's lane rows let a listing go after
+   a wait; trading-evm's copy had no limit, and that was EVM-10). When
+   copies become one shared function, take every fix from every copy, run
+   each module's whole suite against the shared one, and replay a finished
+   capture through each module before and after: the audit trail must
+   match row for row. *(trading-evmlib FEAT-185: the HTTP pacer's lock and
+   the immediate error for a lasting failure were in trading-scout's copy,
+   not trading-evm's; trading-core FEAT-184: evm-1 and damm-1 replayed
+   identical, 2026-11-12.)*
 
 ## 11. Documents and history
 
@@ -620,3 +631,6 @@ any lane.
   `trading-skills-review-2026-11-07`).
 - 2026-11-07: §6 lesson 14, from trading-evm FEAT-170's custody backfill on
   scout-2's trades.
+- 2026-11-12: §10 lesson 8, from trading-evmlib FEAT-185 and trading-core
+  FEAT-184 (ADR-013); copied into every repository, trading-evmlib's
+  included.
