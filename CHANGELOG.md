@@ -9,6 +9,21 @@ headings (`## 0.2.1: pilot fixes (2026-10-30)`) and are not edited.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-12
+
+A PATCH release so this module can run on trading-core 0.8.0: no code
+changes.
+
+### Changed
+- `trading-core>=0.6.0,<0.9` (was `<0.8`): 0.8.0 adds the modules' shared plumbing (FEAT-184) and changes nothing this module uses. Its own HTTP client (`clients/http.py`) stays here for now: it paces per host, posts bodies and counts for the dashboard, which trading-core's `ops.http` does not yet (trading-core `docs/dev/TODO.md`).
+
+### Release record – v0.6.1 (2026-11-12)
+- Commit: the head of `release/v0.6.1` (the tag goes on its merge commit on `main`)
+- Release gate: PASS on Linux for every item that runs here: `nox -s format` (no changes), `lint` (ruff, black, flake8 with complexity ≤ 7: 0 findings), `mypy` (0 issues), `tests-3.11` to `tests-3.14`, `audit` (no known vulnerability), `package` (a private wheel of 58 files, no tests); still to do: CI on the merge and the signed tag, which the operator makes
+- Tests: 628 collected, all passed on 3.11, 3.12, 3.13 and 3.14; coverage 100% of statements and branches on each
+- Checked: the suite on trading-core `v0.8.0`'s tree (`feature/feat-184`); no code changed
+- Used by: no run moves onto it; `weather-1`, `fed-1`, `arb-1`, `sports-1` and `ticks-2` keep their release copies
+
 ## [0.6.0] - 2026-11-07
 
 The full-set scanner (FEAT-102), record-only, for the run `arb-1`: every
